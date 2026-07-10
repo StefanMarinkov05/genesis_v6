@@ -451,6 +451,51 @@ public class TemplateEmissionTests
         Assert.Contains("/Client/Catalogues/Picker", code);        // AJAX picker endpoint
         Assert.Contains("Добави в каталог", code);
     }
+
+    // Task 14 (v6 Package E): admin image management controller + view for multi-image models.
+    [Fact]
+    public void Product_images_controller_renders_upload_and_delete_actions()
+    {
+        var (spec, engine) = Arrange();
+        var product = spec.Models.First(m => m.Name == "Product");
+        var code = engine.RenderFile(
+            Path.Combine("templates", "controllers", "product_images_controller.sbn"),
+            new { model = product });
+        Assert.Contains("ProductImagesController", code);
+        Assert.Contains("ImageService", code);                     // injected dependency
+        Assert.Contains("IActionResult> Upload(int id", code);     // upload action
+        Assert.Contains("IActionResult> DeleteImage(int id", code);// delete action
+        Assert.Contains("Save{{ model.name }}ImageAsync".Replace("{{ model.name }}", "Product"), code);
+    }
+
+    [Fact]
+    public void Product_images_view_has_gallery_and_multifile_form()
+    {
+        var (spec, engine) = Arrange();
+        var product = spec.Models.First(m => m.Name == "Product");
+        var code = engine.RenderFile(
+            Path.Combine("templates", "views", "admin_product_images.sbn"),
+            new { model = product });
+        Assert.Contains("ProductImage", code);                     // view model type
+        Assert.Contains("multiple", code);                         // multi-file input
+        Assert.Contains("asp-action=\"DeleteImage\"", code);       // per-image delete
+        Assert.Contains("asp-action=\"Upload\"", code);            // upload form action
+        Assert.Contains("Добави снимки", code);                    // Bulgarian label
+    }
+
+    [Fact]
+    public void Admin_table_has_images_button_for_models_with_images()
+    {
+        var (spec, engine) = Arrange();
+        var product = spec.Models.First(m => m.Name == "Product");
+        var page = spec.Views!.Pages.First(p => p.Kind == "adminTable" && p.File.Contains("Products"));
+        var owner = spec.Controllers.First(c => c.Name == "ProductsController" && c.Area == "Admin");
+        var code = engine.RenderFile(
+            Path.Combine("templates", "views", "admin_table.sbn"),
+            new { model = product, owner, page });
+        Assert.Contains("ProductImages", code);                    // controller name in button
+        Assert.Contains("Снимки", code);                           // Bulgarian label
+    }
 }
 
 public class DeviationTests

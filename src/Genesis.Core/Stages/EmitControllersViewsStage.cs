@@ -39,7 +39,18 @@ public sealed class EmitControllersViewsStage : IStage
                 engine.RenderFile(ctx.Template("views/image_upload_partial.sbn")), ct);
             await EmitModelsStage.WriteAsync(ctx, "Views/Shared/_ImageGalleryPartial.cshtml",
                 engine.RenderFile(ctx.Template("views/image_gallery_partial.sbn")), ct);
-            // Per-model {Model}Image tables (reference-project style); ImageService emits methods per model.
+            // Task 14: per-model Admin image-management controller + view (template-generated,
+            // not scaffold-based — avoids fragile scaffold transforms on Create/Edit actions).
+            foreach (var imgModel in spec.Models.Where(m => m.Images is not null))
+            {
+                var extra = new { model = imgModel };
+                await EmitModelsStage.WriteAsync(ctx,
+                    $"Areas/Admin/Controllers/{imgModel.Name}ImagesController.cs",
+                    engine.RenderFile(ctx.Template("controllers/product_images_controller.sbn"), extra), ct);
+                await EmitModelsStage.WriteAsync(ctx,
+                    $"Areas/Admin/Views/{imgModel.Name}Images/Index.cshtml",
+                    engine.RenderFile(ctx.Template("views/admin_product_images.sbn"), extra), ct);
+            }
         }
 
         // Task 15/16 (Package E): shared single-file upload helper (FileUploadService) - distinct from

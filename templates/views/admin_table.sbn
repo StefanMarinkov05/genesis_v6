@@ -92,6 +92,9 @@ end
 {{~ if non_key_count > 1 && !details_removed ~}}
                     <a class="btn btn-sm btn-outline-info" asp-action="Details" asp-route-id="@item.{{ model.properties[0].name }}">Детайли</a>
 {{~ end ~}}
+{{~ if model && model.images ~}}
+                    <a class="btn btn-sm btn-outline-primary" asp-area="Admin" asp-controller="{{ model.name }}Images" asp-action="Index" asp-route-id="@item.{{ model.properties[0].name }}">Снимки</a>
+{{~ end ~}}
                     <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@item.{{ model.properties[0].name }}">Изтриване</a>
                 </td>
             </tr>
