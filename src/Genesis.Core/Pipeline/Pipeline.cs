@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Genesis.Core.Spec;
-using Genesis.Core.Variation;
+using GenesisV6.Core.Spec;
+using GenesisV6.Core.Variation;
 
-namespace Genesis.Core.Pipeline;
+namespace GenesisV6.Core.Pipeline;
 
 /// <summary>
 /// Everything a stage needs. WorkDir = repo root of the GENERATED project

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Json.Schema;
 
-namespace Genesis.Core.Spec;
+namespace GenesisV6.Core.Spec;
 
 public sealed class SpecValidationException(string message, IReadOnlyList<string> errors) : Exception(message)
 {

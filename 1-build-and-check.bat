@@ -30,11 +30,11 @@ if not exist dps-nn.sln if not exist dps-nn.slnx (
     echo [2/4] First run: creating the solution and adding the 3 projects...
     dotnet new sln -n dps-nn
     if errorlevel 1 goto :error
-    dotnet sln add src\Genesis.Core\Genesis.Core.csproj
+    dotnet sln add src\Genesis.Core\GenesisV6.Core.csproj
     if errorlevel 1 goto :error
-    dotnet sln add src\Genesis.Cli\Genesis.Cli.csproj
+    dotnet sln add src\Genesis.Cli\GenesisV6.Cli.csproj
     if errorlevel 1 goto :error
-    dotnet sln add tests\Genesis.Tests\Genesis.Tests.csproj
+    dotnet sln add tests\Genesis.Tests\GenesisV6.Tests.csproj
     if errorlevel 1 goto :error
 ) else (
     echo [2/4] Solution already exists, skipping.

@@ -1,11 +1,11 @@
 using System.Text.Json;
-using Genesis.Core.Llm;
-using Genesis.Core.Pipeline;
-using Genesis.Core.Spec;
-using Genesis.Core.Util;
+using GenesisV6.Core.Llm;
+using GenesisV6.Core.Pipeline;
+using GenesisV6.Core.Spec;
+using GenesisV6.Core.Util;
 using Json.Schema;
 
-namespace Genesis.Core.Stages;
+namespace GenesisV6.Core.Stages;
 
 /// <summary>
 /// Stage 7 `seed` (ADR-003 symbolic refs):

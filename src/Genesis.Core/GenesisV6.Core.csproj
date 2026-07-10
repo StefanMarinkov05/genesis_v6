@@ -12,6 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Tests exercise internal seams (Validate, BuildSeedSchema, ViewFileToRoute, EnglishLeaks) -->
-    <InternalsVisibleTo Include="Genesis.Tests" />
+    <InternalsVisibleTo Include="GenesisV6.Tests" />
   </ItemGroup>
 </Project>

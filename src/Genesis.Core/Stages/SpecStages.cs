@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Genesis.Core.Llm;
-using Genesis.Core.Pipeline;
-using Genesis.Core.Spec;
-using Genesis.Core.Variation;
+using GenesisV6.Core.Llm;
+using GenesisV6.Core.Pipeline;
+using GenesisV6.Core.Spec;
+using GenesisV6.Core.Variation;
 using Json.Schema;
 
-namespace Genesis.Core.Stages;
+namespace GenesisV6.Core.Stages;
 
 /// <summary>
 /// Stage 1 `spec build`: raw notes file -> draft project-spec.json via LLM.

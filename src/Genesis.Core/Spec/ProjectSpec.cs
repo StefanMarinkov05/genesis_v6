@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Genesis.Core.Spec;
+namespace GenesisV6.Core.Spec;
 
 /// <summary>
 /// C# mirror of project-spec.json / project-spec.lock.json.

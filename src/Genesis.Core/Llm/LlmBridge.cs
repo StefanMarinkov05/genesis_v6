@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Json.Schema;
 
-namespace Genesis.Core.Llm;
+namespace GenesisV6.Core.Llm;
 
 /// <summary>
 /// Every LLM stage is a FILE CONTRACT (ADR-005):

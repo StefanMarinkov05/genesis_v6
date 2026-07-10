@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
-using Genesis.Core.Pipeline;
-using Genesis.Core.Spec;
-using Genesis.Core.Util;
+using GenesisV6.Core.Pipeline;
+using GenesisV6.Core.Spec;
+using GenesisV6.Core.Util;
 
-namespace Genesis.Core.Stages;
+namespace GenesisV6.Core.Stages;
 
 /// <summary>
 /// Stage 6 `emit controllers+views`.

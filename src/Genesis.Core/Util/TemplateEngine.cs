@@ -1,9 +1,9 @@
-using Genesis.Core.Spec;
-using Genesis.Core.Variation;
+using GenesisV6.Core.Spec;
+using GenesisV6.Core.Variation;
 using Scriban;
 using Scriban.Runtime;
 
-namespace Genesis.Core.Util;
+namespace GenesisV6.Core.Util;
 
 /// <summary>
 /// One Scriban wrapper for every emission in the pipeline, so ALL templates see the

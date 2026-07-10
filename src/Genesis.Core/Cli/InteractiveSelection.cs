@@ -1,4 +1,4 @@
-namespace Genesis.Core.Cli;
+namespace GenesisV6.Core.Cli;
 
 /// <summary>
 /// Pure logic behind "let the person pick one of several candidate files" - used by the

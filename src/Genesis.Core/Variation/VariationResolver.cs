@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Genesis.Core.Spec;
+using GenesisV6.Core.Spec;
 
-namespace Genesis.Core.Variation;
+namespace GenesisV6.Core.Variation;
 
 /// <summary>
 /// Resolves the variation profile for a project (ADR-004).

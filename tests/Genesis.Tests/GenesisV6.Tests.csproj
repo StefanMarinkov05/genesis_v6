@@ -10,7 +10,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="xunit" Version="2.*" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
-    <ProjectReference Include="..\..\src\Genesis.Core\Genesis.Core.csproj" />
+    <ProjectReference Include="..\..\src\Genesis.Core\GenesisV6.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\fixtures\**" CopyToOutputDirectory="PreserveNewest" LinkBase="fixtures" />

@@ -1,10 +1,10 @@
 using System.CommandLine;
-using Genesis.Core.Cli;
-using Genesis.Core.Llm;
-using Genesis.Core.Pipeline;
-using Genesis.Core.Spec;
-using Genesis.Core.Stages;
-using Genesis.Core.Variation;
+using GenesisV6.Core.Cli;
+using GenesisV6.Core.Llm;
+using GenesisV6.Core.Pipeline;
+using GenesisV6.Core.Spec;
+using GenesisV6.Core.Stages;
+using GenesisV6.Core.Variation;
 
 // dps-nn (ДПС-НН) - declarative ASP.NET MVC project generator. (internal assembly name: Genesis.Cli)
 // Command surface:

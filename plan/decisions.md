@@ -1,5 +1,10 @@
 # Decision log
 - ADR-001..009: see docs/adr/
+- **ADR-009 REVERSED (v6, 2026-07-11):** C# namespaces renamed `Genesis.Core.*` → `GenesisV6.Core.*`,
+  `Genesis.Cli` → `GenesisV6.Cli`, csproj files renamed `Genesis.Core.csproj` → `GenesisV6.Core.csproj` etc.
+  GitHub repo renamed `genesis-v5_26` → `genesis_v6`. VERSION file added (6.0.0). Working directory
+  moved to `D:/Projects/ДПС-НН`. Original rationale for ADR-009 (namespace churn) no longer applies
+  given the project is making a clean major version jump.
 - Expand review pass logs accepted LLM suggestions instead of auto-patching JSON pointers (conservative v1)
 - Feature fragments catalogues/personalization inject nothing by design - realized by built-in template behavior
 - Verify seeds nothing itself; it re-derives the admin password from the variation profile when absent from the lock

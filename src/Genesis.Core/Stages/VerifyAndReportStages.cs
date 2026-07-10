@@ -3,10 +3,10 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using Genesis.Core.Pipeline;
-using Genesis.Core.Spec;
+using GenesisV6.Core.Pipeline;
+using GenesisV6.Core.Spec;
 
-namespace Genesis.Core.Stages;
+namespace GenesisV6.Core.Stages;
 
 /// <summary>
 /// Stage 8 `verify` - THE blocking gate. Checks, in order (cheapest first):
