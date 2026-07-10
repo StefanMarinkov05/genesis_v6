@@ -201,13 +201,12 @@ void RecordProjectRegistry(FileInfo spec, DirectoryInfo outDir, StageContext bui
 }
 
 // ---- prompts/out/schemas + prompts/out/seeds: permanent per-project history ---------
-// "When a project is done, move the seed and the schema there... rename with the project
-// name." A real MOVE (not a copy) - these become the durable archived record of exactly
-// which spec + seed produced a given project. Both search paths above already include
-// these folders, so an archived spec/seed stays selectable in later runs. Overwrites any
-// previous archive entry for the same project name (matches logs/registry.json's own
-// "keep the latest" convention). Best-effort: never let archival failure mask a real
-// successful run.
+// Copies (not moves) the spec + lock + seed into the archive folders after a green run.
+// The originals are left untouched so a successful run never deletes the canonical dev
+// fixture. Both search paths above already include these folders, so the archived copy
+// stays selectable in later runs. Overwrites any previous archive entry for the same
+// project name (matches logs/registry.json's own "keep the latest" convention).
+// Best-effort: never let archival failure mask a real successful run.
 void ArchiveCompletedProject(FileInfo spec, StageContext lockCtx)
 {
     try
@@ -222,14 +221,12 @@ void ArchiveCompletedProject(FileInfo spec, StageContext lockCtx)
         {
             var destSpec = Path.Combine(schemasDir, $"{projectName}-schema.json");
             File.Copy(spec.FullName, destSpec, overwrite: true);
-            File.Delete(spec.FullName);
 
             var lockPath = Path.ChangeExtension(spec.FullName, null) + ".lock.json";
             if (File.Exists(lockPath))
             {
                 var destLock = Path.Combine(schemasDir, $"{projectName}-schema.lock.json");
                 File.Copy(lockPath, destLock, overwrite: true);
-                File.Delete(lockPath);
             }
         }
 
@@ -238,7 +235,6 @@ void ArchiveCompletedProject(FileInfo spec, StageContext lockCtx)
         {
             var destSeed = Path.Combine(seedsDir, $"{projectName}-seed.json");
             File.Copy(seedResponsePath, destSeed, overwrite: true);
-            File.Delete(seedResponsePath);
         }
 
         Console.WriteLine($"Archived this run's spec/seed under prompts/out/schemas/ and prompts/out/seeds/ as \"{projectName}-*\".");
