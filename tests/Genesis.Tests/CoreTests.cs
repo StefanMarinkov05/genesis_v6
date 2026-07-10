@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GenesisV6.Core.Cli;
 using GenesisV6.Core.Llm;
+using GenesisV6.Core.Pipeline;
 using GenesisV6.Core.Spec;
 using GenesisV6.Core.Stages;
 using GenesisV6.Core.Util;
@@ -943,5 +944,73 @@ public class InteractiveSelectionTests : IDisposable
     public void Parse_selection_with_zero_candidates_returns_null()
     {
         Assert.Null(InteractiveSelection.ParseSelection("1", []));
+    }
+}
+
+// GitHub issue #5: the pipeline's pure-emission fan-out runs across up to five named worker lanes
+// (Кольо, Наско, Иван, Мишо, Киро). These prove the executor's contract without needing a full
+// generate: every item runs exactly once, each runs under a named worker, failures propagate, and
+// empty input is a no-op.
+public class ParallelEmitTests
+{
+    [Fact]
+    public async Task Runs_every_work_item_exactly_once()
+    {
+        var counter = 0;
+        var items = Enumerable.Range(0, 50)
+            .Select(_ => ("item", new Func<Task>(() => { Interlocked.Increment(ref counter); return Task.CompletedTask; })))
+            .ToList();
+
+        await ParallelEmit.RunAsync(items);
+
+        Assert.Equal(50, counter);
+    }
+
+    [Fact]
+    public async Task Every_item_runs_under_a_bulgarian_worker_name()
+    {
+        var seen = new System.Collections.Concurrent.ConcurrentBag<string?>();
+        var items = Enumerable.Range(0, 30)
+            .Select(_ => ("item", new Func<Task>(() => { seen.Add(ParallelEmit.CurrentWorker.Value); return Task.CompletedTask; })))
+            .ToList();
+
+        await ParallelEmit.RunAsync(items);
+
+        Assert.Equal(30, seen.Count);
+        Assert.All(seen, name => Assert.Contains(name, ParallelEmit.WorkerNames));
+        // With 30 items across 5 lanes, work spreads beyond a single worker.
+        Assert.True(seen.Distinct().Count() > 1, "expected work to spread across multiple named lanes");
+    }
+
+    [Fact]
+    public void Worker_names_are_the_expected_bulgarian_crew_in_order()
+    {
+        Assert.Equal(new[] { "Кольо", "Наско", "Иван", "Мишо", "Киро" }, ParallelEmit.WorkerNames);
+    }
+
+    [Fact]
+    public async Task An_item_throwing_surfaces_as_a_thrown_exception()
+    {
+        var items = new List<(string, Func<Task>)>
+        {
+            ("ok", () => Task.CompletedTask),
+            ("boom", () => throw new InvalidOperationException("emit failed")),
+        };
+
+        await Assert.ThrowsAnyAsync<Exception>(() => ParallelEmit.RunAsync(items));
+    }
+
+    [Fact]
+    public async Task Empty_input_is_a_noop()
+    {
+        await ParallelEmit.RunAsync([]); // must not throw
+    }
+
+    [Fact]
+    public async Task Sequential_context_has_no_worker_tag_after_a_parallel_run()
+    {
+        await ParallelEmit.RunAsync([("item", () => Task.CompletedTask)]);
+        // The orchestrator thread never adopts a lane's AsyncLocal value.
+        Assert.Null(ParallelEmit.CurrentWorker.Value);
     }
 }

@@ -94,36 +94,41 @@ public sealed class EmitControllersViewsStage : IStage
             }
         }
 
+        // Everything from here to the build gate is TEMPLATE emission: pure Scriban renders to
+        // DISTINCT file paths, no external process, no read-after-write between items — so it fans
+        // out across the named worker lanes (issue #5). It runs AFTER the scaffold loop above (which
+        // MUST stay serial: each scaffold shells out to aspnet-codegenerator and mutates shared build
+        // state), so the rating feature's product Details still correctly overwrites the scaffolded
+        // one. Any per-block value (primary model, price property, page template) is computed HERE on
+        // the single orchestrator thread and captured; only RenderFile + WriteAsync run in parallel.
+        // Emit registers a lazy work item: the Scriban render (the CPU-heavy part) runs INSIDE the
+        // lane via the Func<string>, not here on the orchestrator thread — so the expensive work,
+        // not just the file write, is what actually parallelizes.
+        var work = new List<(string Label, Func<Task> Work)>();
+        void Emit(string relPath, Func<string> render) => work.Add((relPath, () => EmitModelsStage.WriteAsync(ctx, relPath, render(), ct)));
+
         // Written-from-scratch UsersController + its Index view (template-generated pair).
         if (spec.Identity?.ApplicationUser.Controller is { WrittenFromScratch: true } uc)
         {
-            await EmitModelsStage.WriteAsync(ctx, uc.File,
-                engine.RenderFile(ctx.Template("controllers/users_controller.sbn"), new { uc }), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Admin/Views/Users/Index.cshtml",
-                engine.RenderFile(ctx.Template("views/users_index.sbn")), ct);
+            Emit(uc.File, () => engine.RenderFile(ctx.Template("controllers/users_controller.sbn"), new { uc }));
+            Emit("Areas/Admin/Views/Users/Index.cshtml", () => engine.RenderFile(ctx.Template("views/users_index.sbn")));
             // Task 15: the Edit action previously returned View(user) with NO emitted view (a latent
             // 500). Emit the admin user Edit form (FirstName + profile-picture upload when present).
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Admin/Views/Users/Edit.cshtml",
-                engine.RenderFile(ctx.Template("views/users_edit.sbn")), ct);
+            Emit("Areas/Admin/Views/Users/Edit.cshtml", () => engine.RenderFile(ctx.Template("views/users_edit.sbn")));
             // Task 7: admin user Details page (aggregation via the shared UserProfileService). The
             // controller only exposes Details when posts||catalogues (the service exists), so gate the
             // view the same way to avoid emitting a view for a non-existent action.
             if (FeatureEnabled(spec, "posts") || FeatureEnabled(spec, "catalogues"))
-                await EmitModelsStage.WriteAsync(ctx, "Areas/Admin/Views/Users/Details.cshtml",
-                    engine.RenderFile(ctx.Template("views/users_details.sbn")), ct);
+                Emit("Areas/Admin/Views/Users/Details.cshtml", () => engine.RenderFile(ctx.Template("views/users_details.sbn")));
         }
 
         // Feature controller/view pairs - each enabled feature emits its full stack.
         if (FeatureEnabled(spec, "posts"))
         {
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Controllers/PostsController.cs",
-                engine.RenderFile(ctx.Template("controllers/posts_controller.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Posts/Index.cshtml",
-                engine.RenderFile(ctx.Template("views/posts_index.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Posts/Details.cshtml",
-                engine.RenderFile(ctx.Template("views/posts_details.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Posts/Create.cshtml",
-                engine.RenderFile(ctx.Template("views/posts_create.sbn")), ct);
+            Emit("Areas/Client/Controllers/PostsController.cs", () => engine.RenderFile(ctx.Template("controllers/posts_controller.sbn")));
+            Emit("Areas/Client/Views/Posts/Index.cshtml", () => engine.RenderFile(ctx.Template("views/posts_index.sbn")));
+            Emit("Areas/Client/Views/Posts/Details.cshtml", () => engine.RenderFile(ctx.Template("views/posts_details.sbn")));
+            Emit("Areas/Client/Views/Posts/Create.cshtml", () => engine.RenderFile(ctx.Template("views/posts_create.sbn")));
         }
         if (FeatureEnabled(spec, "orders"))
         {
@@ -131,53 +136,39 @@ public sealed class EmitControllersViewsStage : IStage
             var priceProp = spec.Models.First(m => m.Name == primary).Properties
                 .FirstOrDefault(pp => pp.Type == "decimal")?.Name ?? "Price";
             var extra = new { primary, price_property = priceProp };
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Controllers/CartController.cs",
-                engine.RenderFile(ctx.Template("controllers/cart_controller.sbn"), extra), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Cart/Index.cshtml",
-                engine.RenderFile(ctx.Template("views/cart_index.sbn"), extra), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Cart/Orders.cshtml",
-                engine.RenderFile(ctx.Template("views/cart_orders.sbn"), extra), ct);
+            Emit("Areas/Client/Controllers/CartController.cs", () => engine.RenderFile(ctx.Template("controllers/cart_controller.sbn"), extra));
+            Emit("Areas/Client/Views/Cart/Index.cshtml", () => engine.RenderFile(ctx.Template("views/cart_index.sbn"), extra));
+            Emit("Areas/Client/Views/Cart/Orders.cshtml", () => engine.RenderFile(ctx.Template("views/cart_orders.sbn"), extra));
             // A6: per-order details (read-only, own orders only).
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Cart/OrderDetails.cshtml",
-                engine.RenderFile(ctx.Template("views/cart_order_details.sbn"), extra), ct);
+            Emit("Areas/Client/Views/Cart/OrderDetails.cshtml", () => engine.RenderFile(ctx.Template("views/cart_order_details.sbn"), extra));
         }
         if (FeatureEnabled(spec, "follows"))
         {
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Controllers/FollowsController.cs",
-                engine.RenderFile(ctx.Template("controllers/follows_controller.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Follows/List.cshtml",
-                engine.RenderFile(ctx.Template("views/follows_list.sbn")), ct);
+            Emit("Areas/Client/Controllers/FollowsController.cs", () => engine.RenderFile(ctx.Template("controllers/follows_controller.sbn")));
+            Emit("Areas/Client/Views/Follows/List.cshtml", () => engine.RenderFile(ctx.Template("views/follows_list.sbn")));
         }
         if (FeatureEnabled(spec, "rating"))
         {
             var primary = FeaturePrimaryModel(spec, "rating");
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Controllers/ReviewsController.cs",
-                engine.RenderFile(ctx.Template("controllers/reviews_controller.sbn"), new { primary }), ct);
+            Emit("Areas/Client/Controllers/ReviewsController.cs", () => engine.RenderFile(ctx.Template("controllers/reviews_controller.sbn"), new { primary }));
             // A15: NO standalone Отзиви page - feedback lives only under its product's Details.
             // A3/A14: emit the rich product Details (carousel + props + feedback) into the
             // Client Products view folder, replacing the scaffolded Details.
-            await EmitModelsStage.WriteAsync(ctx, $"Areas/Client/Views/{primary}s/Details.cshtml",
-                engine.RenderFile(ctx.Template("views/product_details.sbn"), new { primary }), ct);
+            Emit($"Areas/Client/Views/{primary}s/Details.cshtml", () => engine.RenderFile(ctx.Template("views/product_details.sbn"), new { primary }));
         }
 
         // Catalogues feature: per-user named lists over the configured primary model.
         if (FeatureEnabled(spec, "catalogues"))
         {
             var primary = CataloguesPrimaryModel(spec);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Controllers/CataloguesController.cs",
-                engine.RenderFile(ctx.Template("controllers/catalogues_controller.sbn"), new { primary }), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Catalogues/Index.cshtml",
-                engine.RenderFile(ctx.Template("views/catalogues_index.sbn"), new { primary }), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Catalogues/_PickerPartial.cshtml",
-                engine.RenderFile(ctx.Template("views/catalogues_picker_partial.sbn"), new { primary }), ct);
+            Emit("Areas/Client/Controllers/CataloguesController.cs", () => engine.RenderFile(ctx.Template("controllers/catalogues_controller.sbn"), new { primary }));
+            Emit("Areas/Client/Views/Catalogues/Index.cshtml", () => engine.RenderFile(ctx.Template("views/catalogues_index.sbn"), new { primary }));
+            Emit("Areas/Client/Views/Catalogues/_PickerPartial.cshtml", () => engine.RenderFile(ctx.Template("views/catalogues_picker_partial.sbn"), new { primary }));
             // A5: public (anonymous) catalogue browsing.
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Catalogues/Public.cshtml",
-                engine.RenderFile(ctx.Template("views/catalogues_public.sbn"), new { primary }), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Catalogues/PublicDetails.cshtml",
-                engine.RenderFile(ctx.Template("views/catalogues_public_details.sbn"), new { primary }), ct);
+            Emit("Areas/Client/Views/Catalogues/Public.cshtml", () => engine.RenderFile(ctx.Template("views/catalogues_public.sbn"), new { primary }));
+            Emit("Areas/Client/Views/Catalogues/PublicDetails.cshtml", () => engine.RenderFile(ctx.Template("views/catalogues_public_details.sbn"), new { primary }));
             // Task 19: rename own catalogue.
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Catalogues/EditName.cshtml",
-                engine.RenderFile(ctx.Template("views/catalogues_edit_name.sbn"), new { primary }), ct);
+            Emit("Areas/Client/Views/Catalogues/EditName.cshtml", () => engine.RenderFile(ctx.Template("views/catalogues_edit_name.sbn"), new { primary }));
         }
 
         // A9 / Task 26 / Task 7: shared user-aggregation stack (view model + service + partial) reused by
@@ -186,26 +177,22 @@ public sealed class EmitControllersViewsStage : IStage
         // under the identical condition (kept in sync; drift = startup DI crash, see changelog 033).
         if (FeatureEnabled(spec, "posts") || FeatureEnabled(spec, "catalogues"))
         {
-            await EmitModelsStage.WriteAsync(ctx, "Models/UserProfileViewModel.cs",
-                engine.RenderFile(ctx.Template("models/user_profile_view_model.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Services/UserProfileService.cs",
-                engine.RenderFile(ctx.Template("controllers/user_profile_service.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Views/Shared/_UserProfileContent.cshtml",
-                engine.RenderFile(ctx.Template("views/user_profile_content_partial.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Controllers/ProfilesController.cs",
-                engine.RenderFile(ctx.Template("controllers/profiles_controller.sbn")), ct);
-            await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Profiles/Public.cshtml",
-                engine.RenderFile(ctx.Template("views/profiles_public.sbn")), ct);
+            Emit("Models/UserProfileViewModel.cs", () => engine.RenderFile(ctx.Template("models/user_profile_view_model.sbn")));
+            Emit("Services/UserProfileService.cs", () => engine.RenderFile(ctx.Template("controllers/user_profile_service.sbn")));
+            Emit("Views/Shared/_UserProfileContent.cshtml", () => engine.RenderFile(ctx.Template("views/user_profile_content_partial.sbn")));
+            Emit("Areas/Client/Controllers/ProfilesController.cs", () => engine.RenderFile(ctx.Template("controllers/profiles_controller.sbn")));
+            Emit("Areas/Client/Views/Profiles/Public.cshtml", () => engine.RenderFile(ctx.Template("views/profiles_public.sbn")));
         }
 
         // Views: layout replaced wholesale, then each declared page by kind.
         if (spec.Views is { } views)
         {
-            await EmitModelsStage.WriteAsync(ctx, views.Layout.File,
-                engine.RenderFile(ctx.Template("views/layout.sbn"),
-                    new { design_overlay_html = RenderDesignOverlay(ctx, engine) }), ct);
+            Emit(views.Layout.File, () => engine.RenderFile(ctx.Template("views/layout.sbn"),
+                new { design_overlay_html = RenderDesignOverlay(ctx, engine) }));
             foreach (var page in views.Pages)
             {
+                // Resolve the template kind eagerly (single-threaded) so an unknown-kind spec still
+                // fails loud HERE, before any lane starts, exactly as it did when this was sequential.
                 var template = page.Kind switch
                 {
                     "landing" => "views/landing.sbn",
@@ -216,10 +203,11 @@ public sealed class EmitControllersViewsStage : IStage
                 };
                 var model = ModelForPage(spec, page);
                 var owner = ControllerForPage(spec, page); // lets templates respect removedActions/sorting
-                await EmitModelsStage.WriteAsync(ctx, page.File,
-                    engine.RenderFile(ctx.Template(template), new { page, model, owner }), ct);
+                Emit(page.File, () => engine.RenderFile(ctx.Template(template), new { page, model, owner }));
             }
         }
+
+        await ParallelEmit.RunAsync(work);
 
         (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, timeout: TimeSpan.FromMinutes(5)))
             .ThrowIfFailed("build after emit-controllers-views");

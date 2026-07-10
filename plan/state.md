@@ -436,3 +436,26 @@ language) - one for 10/26/7, one for 9/11. Tests 79/79. All committed + pushed.
 LESSON recorded (046): render-tested-only batches hide Razor-tag-helper / cross-file-namespace / absent-key
 JSON bugs invisible without a real compile+boot. Run a full generate after ANY batch of template changes.
 ALL v6 tasks in plan/v6-task-breakdown.md are now DONE (3a is moot for FaceNote - no Account/Manage pages).
+
+## Session 24 (Opus: issue #5 - async emission pipeline + Bulgarian worker names) - changelog 051
+GitHub issue #5 (NOT the breakdown's Package-B "task 5" cart badge - same number, unrelated). Baseline
+79 tests green -> 85 green after. Full `run --all` (resumed from emit-models) -> verify PASSED
+(build/db/boot/http/manifest/language).
+- DEPENDENCY-GRAPH FINDING: the 9 stages are a strict linear chain, each ending in a `dotnet build`/
+  external `dotnet new|ef|aspnet-codegenerator` against ONE shared generated project. Whole-stage
+  parallelism is race-UNSAFE (two stages / two builds would corrupt the project). Did NOT fake a
+  parallel DAG. The only race-free parallelism is WITHIN the two pure-emission stages: independent
+  Scriban render->write to DISTINCT paths, no shared mutable state, no external process.
+- NEW ParallelEmit (src/Genesis.Core/Pipeline/ParallelEmit.cs): up to 5 lanes pulling from a shared
+  ConcurrentQueue (dynamic load-balance), named Кольо/Наско/Иван/Мишо/Киро. Each lane sets an
+  AsyncLocal CurrentWorker in its own task body; StageContext.Info/Debug/Error prepend `[name]` when
+  set. Logs now read `[dps-nn] [Кольо] wrote Models/Product.cs`.
+- StageContext logging made THREAD-SAFE: one process-wide LogLock guards the console write AND the
+  previously-unsynchronized File.AppendAllText (concurrent appends could corrupt the action log).
+- emit-models: all model/dto/context/user/aux renders fan out, then serial build. emit-controllers-
+  views: the POST-scaffold template block fans out with the render running INSIDE the lane (Func<string>,
+  so the CPU-heavy part parallelizes); scaffold loop + build stay serial. TemplateEngine.RenderFile
+  confirmed thread-safe (all-local per-call state).
+- DELIBERATE NON-GOAL: did NOT parallelize seed image downloads (external rate-limited Pexels/Pixabay -
+  parallel burst risks throttling; kept parallel region to provably race-free pure-CPU emission).
+- 6 new ParallelEmitTests. All committed + pushed (no Co-Authored-By, per request).

@@ -181,29 +181,40 @@ public sealed class EmitModelsStage : IStage
         var spec = ctx.Spec;
         var engine = new TemplateEngine(spec, ctx.Variation, ctx.GenesisRoot);
 
+        // Every emission below renders from the immutable spec and writes to a DISTINCT file path
+        // with no dependency on any sibling's output — the DbContext references ApplicationUser,
+        // but only at BUILD time, and both are on disk before the build runs — so they fan out
+        // across the named worker lanes safely (issue #5). The build gate stays serial, after
+        // every file is written. A single shared TemplateEngine is reused: RenderFile builds all
+        // of its state locally per call and touches no shared mutable field, so concurrent renders
+        // are safe.
+        var work = new List<(string Label, Func<Task> Work)>();
+
         if (spec.Conventions.Timestamps.CreatedAt || spec.Conventions.Timestamps.UpdatedAt)
-            await WriteAsync(ctx, "Models/AuditableEntity.cs",
-                engine.RenderFile(ctx.Template("models/auditable_entity.sbn")), ct);
+            work.Add(("Models/AuditableEntity.cs", () => WriteAsync(ctx, "Models/AuditableEntity.cs",
+                engine.RenderFile(ctx.Template("models/auditable_entity.sbn")), ct)));
 
         foreach (var model in spec.Models)
-            await WriteAsync(ctx, model.File, engine.RenderFile(ctx.Template("models/model.sbn"), new { model }), ct);
+            work.Add((model.File, () => WriteAsync(ctx, model.File,
+                engine.RenderFile(ctx.Template("models/model.sbn"), new { model }), ct)));
 
         foreach (var dto in spec.Dtos)
-            await WriteAsync(ctx, dto.File, engine.RenderFile(ctx.Template("models/dto.sbn"), new { dto }), ct);
+            work.Add((dto.File, () => WriteAsync(ctx, dto.File,
+                engine.RenderFile(ctx.Template("models/dto.sbn"), new { dto }), ct)));
 
         if (spec.CustomValidationAttributes is { } cva)
-            await WriteAsync(ctx, cva.File,
-                engine.RenderFile(ctx.Template("models/validation_attributes.sbn"), new { cva }), ct);
+            work.Add((cva.File, () => WriteAsync(ctx, cva.File,
+                engine.RenderFile(ctx.Template("models/validation_attributes.sbn"), new { cva }), ct)));
 
-        // ApplicationUser must exist before the DbContext that references it
-        // (identity stage re-renders it later - idempotent overwrite, harmless).
         if (spec.Identity is { } idn)
-            await WriteAsync(ctx, idn.ApplicationUser.File,
-                engine.RenderFile(ctx.Template("identity/application_user.sbn")), ct);
+            work.Add((idn.ApplicationUser.File, () => WriteAsync(ctx, idn.ApplicationUser.File,
+                engine.RenderFile(ctx.Template("identity/application_user.sbn")), ct)));
 
         // TravelMap style: {ProjectName}Context at the project root, not Data/ApplicationDbContext.
-        await WriteAsync(ctx, $"{spec.Meta.ProjectName}Context.cs",
-            engine.RenderFile(ctx.Template("models/dbcontext.sbn")), ct);
+        work.Add(($"{spec.Meta.ProjectName}Context.cs", () => WriteAsync(ctx, $"{spec.Meta.ProjectName}Context.cs",
+            engine.RenderFile(ctx.Template("models/dbcontext.sbn")), ct)));
+
+        await ParallelEmit.RunAsync(work);
 
         (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, timeout: TimeSpan.FromMinutes(5)))
             .ThrowIfFailed("build after emit-models");

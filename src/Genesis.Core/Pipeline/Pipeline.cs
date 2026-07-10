@@ -31,13 +31,26 @@ public sealed record StageContext(
     private string ActionLogPath =>
         Path.Combine(Directory.GetCurrentDirectory(), "logs", Spec.Meta.ProjectName, "actions.log.jsonl");
 
-    public void Info(string msg) { Log.WriteLine($"[dps-nn] {msg}"); AppendActionLog("info", msg); }
+    // One process-wide lock guarding BOTH sinks. The console (a single shared TextWriter) and the
+    // action-log file (unsynchronized File.AppendAllText) are global resources, so a global lock is
+    // the right scope: it serializes every log line across the parallel emission lanes (issue #5)
+    // so console output never interleaves mid-line and concurrent file appends can't corrupt each
+    // other. Uncontended and negligible on the sequential path.
+    private static readonly object LogLock = new();
+
+    public void Info(string msg) { var m = Tag(msg); lock (LogLock) { Log.WriteLine($"[dps-nn] {m}"); } AppendActionLog("info", m); }
 
     /// <summary>File-only (no console spam) - for deeper diagnosis without cluttering stdout.</summary>
-    public void Debug(string msg) => AppendActionLog("debug", msg);
+    public void Debug(string msg) => AppendActionLog("debug", Tag(msg));
 
     /// <summary>Console + action log, distinct level - for actual failures, not routine progress.</summary>
-    public void Error(string msg) { Log.WriteLine($"[dps-nn] [ERROR] {msg}"); AppendActionLog("error", msg); }
+    public void Error(string msg) { var m = Tag(msg); lock (LogLock) { Log.WriteLine($"[dps-nn] [ERROR] {m}"); } AppendActionLog("error", m); }
+
+    // Prefix each line with the parallel worker's Bulgarian name when one is running this code
+    // (issue #5), e.g. "[Кольо] wrote Models/Product.cs". Null outside a parallel region, so
+    // sequential logging is byte-for-byte unchanged.
+    private static string Tag(string msg) =>
+        ParallelEmit.CurrentWorker.Value is { } worker ? $"[{worker}] {msg}" : msg;
 
     private void AppendActionLog(string level, string msg)
     {
@@ -46,7 +59,7 @@ public sealed record StageContext(
             var path = ActionLogPath;
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var entry = JsonSerializer.Serialize(new { ts = DateTimeOffset.UtcNow, level, msg });
-            File.AppendAllText(path, entry + Environment.NewLine);
+            lock (LogLock) { File.AppendAllText(path, entry + Environment.NewLine); }
         }
         catch { /* action log is best-effort */ }
     }

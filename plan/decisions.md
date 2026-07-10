@@ -394,3 +394,24 @@
      child env (else spec-expand's optional LLM review pass becomes "fillable" and blocks waiting for a manual
      paste); with the key unset and no expand-review-response.json present, the review pass is skipped and
      deterministic expansion runs straight through.
+- Session 24 (Opus, issue #5 async pipeline): three decisions worth keeping.
+  1. WHOLE-STAGE PARALLELISM REJECTED as race-unsafe, on purpose. The 9 stages are a strict linear chain;
+     each ends with a `dotnet build` (or external `dotnet new`/`ef`/`aspnet-codegenerator`) against ONE
+     shared generated project, so two stages / two builds can never overlap without corrupting it. Rather
+     than force a fake parallel DAG, parallelized ONLY the race-free work: the pure Scriban render->write
+     fan-out WITHIN emit-models and emit-controllers-views (distinct paths, no shared mutable state, no
+     external process, no read-after-write between items). Every build gate stays serial after the fan-out;
+     the emit-controllers-views scaffold loop (external codegen + regex transforms on shared build state)
+     stays serial and still runs BEFORE the parallel template block, so the rating feature's product Details
+     still overwrites the scaffolded one.
+  2. Thread naming via AsyncLocal, not real named Threads. The work is async on the thread pool and may hop
+     threads across awaits, so a per-lane AsyncLocal<string?> (Кольо/Наско/Иван/Мишо/Киро) set inside each
+     lane's task body is the reliable way to tag log lines - it's captured into the item's ExecutionContext
+     and never leaks up to the orchestrator (which logs untagged). StageContext logging had to become
+     thread-safe first: File.AppendAllText was unsynchronized and would corrupt the action log under
+     concurrent lanes, so one process-wide lock now guards both sinks.
+  3. Seed image downloads deliberately NOT parallelized - independent I/O, but they hit rate-limited
+     external services (Pexels/Pixabay); a parallel burst risks throttling. Kept the parallel region to
+     provably race-free pure-CPU emission (weakest-guarantee-that's-correct / don't over-engineer for scale
+     the work set doesn't have - a few dozen files). Verified with a real full run --all -> verify PASSED,
+     with all five workers observed across both parallelized stages.
