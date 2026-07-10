@@ -21,7 +21,16 @@ end
     }
     @foreach (var item in Model.Items.OrderBy(i => i.Position).ThenBy(i => i.Id))
     {
-        <li class="list-group-item">@item.{{ primary }}?.{{ display }}</li>
+        <li class="list-group-item">
+            @if (item.{{ primary }} is not null)
+            {
+                <a asp-area="Client" asp-controller="Products" asp-action="Details" asp-route-id="@item.{{ primary }}.Id">@item.{{ primary }}.{{ display }}</a>
+            }
+            else
+            {
+                <span class="text-muted">(изтрита обява)</span>
+            }
+        </li>
     }
 </ul>
 

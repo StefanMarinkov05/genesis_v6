@@ -37,8 +37,8 @@ seed_first_names = ["Ана", "Георги", "Мария", "Иван", "Еле�
                 FirstName = "{{ seed_first_names[for.index % seed_first_names.size] }}",
 {{~ end ~}}
 {{~ if has_pfp ~}}
-                // Генериран аватар по инициали - без нужда от локален файл.
-                ProfilePicturePath = "https://ui-avatars.com/api/?name={{ seed_first_names[for.index % seed_first_names.size] }}&background=random",
+                // Произволна снимка от Picsum (Lorem Picsum) - различна за всеки потребител.
+                ProfilePicturePath = $"https://picsum.photos/150/150?random={{ for.index }}",
 {{~ end ~}}
             };
             var result = await userManager.CreateAsync(u, "{{ user.password }}");

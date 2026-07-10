@@ -56,7 +56,21 @@ sorting_on = owner && owner.sorting && owner.sorting.enabled
             <tr>
 {{~ for p in model.properties ~}}
 {{~ if !p.key && !p.foreign_key && !p.computed ~}}
+{{~ is_image = p.name | string.ends_with "Path" | string.upcase ~}}
+{{~ if is_image == "TRUE" ~}}
+                <td>
+                    @if (!string.IsNullOrEmpty(item.{{ p.name }}))
+                    {
+                        <img src="@item.{{ p.name }}" alt="Image" style="max-width: 100px; max-height: 100px; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </td>
+{{~ else ~}}
                 <td>@Html.DisplayFor(m => item.{{ p.name }})</td>
+{{~ end ~}}
 {{~ end ~}}
 {{~ end ~}}
 {{~ for rel in model.relations ~}}

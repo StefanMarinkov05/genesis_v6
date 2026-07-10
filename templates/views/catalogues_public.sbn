@@ -18,6 +18,12 @@
                 <div class="card-body">
                     <h5 class="card-title">@cat.Name</h5>
                     <p class="card-text text-muted">@cat.Items.Count() записа</p>
+                    @if (cat.User is not null)
+                    {
+                        <p class="card-text small">
+                            От: <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@cat.User.Id">@(cat.User.FirstName ?? cat.User.Email)</a>
+                        </p>
+                    }
                 </div>
                 <div class="card-footer">
                     <a class="btn btn-sm btn-outline-primary" asp-action="PublicDetails" asp-route-id="@cat.Id">Разгледай</a>
