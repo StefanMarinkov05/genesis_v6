@@ -166,12 +166,29 @@ public sealed class PipelineRunner(IReadOnlyList<IStage> stages)
         }
         totalSw.Stop();
 
-        // C1: end-of-run summary table with total runtime.
+        // C1: end-of-run summary table with total runtime. The TOTAL is shown in raw ms AND a
+        // human-readable minutes/seconds form - a full generate runs into several minutes, and
+        // "385593 ms" is hard to read at a glance ("6m 25s / 385.6s" is not).
         ctx.Info("");
         ctx.Info("=== stage timings ===");
         foreach (var (st, ms, outcome) in timings)
             ctx.Info($"    {st,-26} {ms,7} ms   {outcome}");
-        ctx.Info($"    {"TOTAL",-26} {totalSw.ElapsedMilliseconds,7} ms");
+        ctx.Info($"    {"TOTAL",-26} {totalSw.ElapsedMilliseconds,7} ms   ({HumanDuration(totalSw.ElapsedMilliseconds)})");
+    }
+
+    /// <summary>
+    /// A duration in milliseconds as a glanceable string: "6m 25s / 385.6s" once it passes a
+    /// minute, else just "42.3s". Always includes total seconds so the two views agree.
+    /// </summary>
+    internal static string HumanDuration(long ms)
+    {
+        // InvariantCulture so the decimal separator is always "." regardless of the machine's
+        // locale (this repo runs under a non-en locale) - the log must read the same everywhere.
+        var totalSeconds = (ms / 1000.0).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+        var t = TimeSpan.FromMilliseconds(ms);
+        return t.TotalMinutes >= 1
+            ? $"{(int)t.TotalMinutes}m {t.Seconds}s / {totalSeconds}s"
+            : $"{totalSeconds}s";
     }
 
     private static void AppendLog(string path, string stage, string phase, long ms, string? error)

@@ -1006,6 +1006,16 @@ public class ParallelEmitTests
         await ParallelEmit.RunAsync([]); // must not throw
     }
 
+    [Theory]
+    [InlineData(500, "0.5s")]              // sub-minute: seconds only
+    [InlineData(42300, "42.3s")]
+    [InlineData(60000, "1m 0s / 60.0s")]   // exactly a minute crosses over
+    [InlineData(385593, "6m 25s / 385.6s")] // the value from the real generate run
+    public void Human_duration_reads_in_minutes_and_seconds(long ms, string expected)
+    {
+        Assert.Equal(expected, PipelineRunner.HumanDuration(ms));
+    }
+
     [Fact]
     public async Task Sequential_context_has_no_worker_tag_after_a_parallel_run()
     {
