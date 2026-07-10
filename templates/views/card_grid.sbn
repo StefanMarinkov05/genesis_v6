@@ -110,19 +110,16 @@ first = true
     var currentPage = (int)(ViewData["Page"] ?? 1);
     var totalPages = (int)(ViewData["TotalPages"] ?? 1);
 }
-@if (totalPages > 1)
-{
-    <nav class="mt-4">
-        <ul class="pagination">
-            @for (var p = 1; p <= totalPages; p++)
-            {
-                <li class="page-item @(p == currentPage ? "active" : "")">
-                    <a class="page-link" asp-action="Index" asp-route-page="@p" asp-route-search="@ViewData["Search"]">@p</a>
-                </li>
-            }
-        </ul>
-    </nav>
-}
+@* Task 11: безкрайно скролиране вместо страниране - следващите страници се дозареждат
+   автоматично при достигане на дъното (виж скрипта по-долу). *@
+<div id="scrollSentinel" class="text-center text-muted py-4"
+     data-current-page="@currentPage" data-total-pages="@totalPages">
+    @if (currentPage < totalPages)
+    {
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span class="ms-2">Зареждане на още...</span>
+    }
+</div>
 
 <div class="modal fade" id="catalogueModal" tabindex="-1">
     <div class="modal-dialog">
@@ -186,14 +183,55 @@ first = true
 <form class="d-none">@Html.AntiForgeryToken()</form>
 <script>
     // Клиентска търсачка: филтрира картите по въведения текст (без заявки към сървъра).
-    document.getElementById('searchBox').addEventListener('input', function () {
-        var term = this.value.toLowerCase();
-        document.querySelectorAll('.card-item').forEach(function (card) {
+    // Изнесена като функция, за да се приложи и върху дозаредените (infinite scroll) карти.
+    function filterCards(scope) {
+        var term = (document.getElementById('searchBox').value || '').toLowerCase();
+        (scope || document).querySelectorAll('.card-item').forEach(function (card) {
             var text = Array.from(card.querySelectorAll('.searchable'))
                 .map(function (el) { return el.textContent.toLowerCase(); })
                 .join(' ');
             card.style.display = text.indexOf(term) !== -1 ? '' : 'none';
         });
-    });
+    }
+    document.getElementById('searchBox').addEventListener('input', function () { filterCards(); });
+
+    // Task 11: безкрайно скролиране. Наблюдаваме сентинел в дъното; при достигане зареждаме
+    // следващата страница от СЪЩИЯ Index маршрут (?page=N, запазвайки search/sortBy/sortDir),
+    // изваждаме .card-item елементите от върнатия HTML и ги добавяме към контейнера.
+    (function () {
+        var sentinel = document.getElementById('scrollSentinel');
+        var container = document.getElementById('cardContainer');
+        if (!sentinel || !container) return;
+        var current = parseInt(sentinel.dataset.currentPage, 10) || 1;
+        var total = parseInt(sentinel.dataset.totalPages, 10) || 1;
+        var loading = false;
+
+        function finish() { sentinel.innerHTML = ''; if (observer) observer.disconnect(); }
+        if (current >= total) finish();
+
+        function loadNext() {
+            if (loading || current >= total) return;
+            loading = true;
+            var params = new URLSearchParams(window.location.search);
+            params.set('page', current + 1);
+            fetch(window.location.pathname + '?' + params.toString(), { headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) { return r.text(); })
+                .then(function (html) {
+                    var doc = new DOMParser().parseFromString(html, 'text/html');
+                    var cards = doc.querySelectorAll('#cardContainer .card-item');
+                    cards.forEach(function (c) { container.appendChild(c); });
+                    current++;
+                    filterCards(container);
+                    loading = false;
+                    if (current >= total || cards.length === 0) finish();
+                })
+                .catch(function () { loading = false; });
+        }
+
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) { if (e.isIntersecting) loadNext(); });
+        }, { rootMargin: '200px' });
+        observer.observe(sentinel);
+    })();
 </script>
 }

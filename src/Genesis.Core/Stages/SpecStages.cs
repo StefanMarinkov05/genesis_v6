@@ -89,6 +89,14 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
             MergeFragment(node, fragment, feature, cfg, ctx);
         }
 
+        // 1b. Task 9 (admin total supervisor): give the Admin area full CRUD over EVERY model, not
+        // just the hand-picked spec subset. Injected into the expanded spec HERE so every downstream
+        // consumer picks it up uniformly with zero extra wiring: the scaffold+transform pipeline
+        // generates each controller+views, the layout's admin nav (which iterates spec.controllers,
+        // area==Admin) lists them, admin_table.sbn renders them, and verify's route discovery covers
+        // them. Models already having an Admin controller (the spec's own picks) are left untouched.
+        InjectAdminSupervisorSurface(node, ctx);
+
         // 2. Resolve $variation placeholders + seed passwords into the lock.
         var resolvedJson = variation.Substitute(node.ToJsonString(ProjectSpec.JsonOpts));
         var lockNode = JsonNode.Parse(resolvedJson)!.AsObject();
@@ -171,5 +179,58 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
             foreach (var p in pages.ToList()) { p!.Parent!.AsArray().Remove(p); target.Add(p); }
         }
         ctx?.Info($"feature '{feature}' expanded");
+    }
+
+    /// <summary>
+    /// Task 9: append an Admin-area scaffold controller + adminTable view for every model that does
+    /// not already have an Admin controller, so the admin is a total supervisor over all data. Operates
+    /// on the expanded spec JSON; idempotent against the spec's own admin picks (skips covered models).
+    /// </summary>
+    internal static void InjectAdminSupervisorSurface(JsonObject node, StageContext? ctx)
+    {
+        if (node["models"] is not JsonArray models) return;
+        var controllers = node["controllers"]?.AsArray()
+            ?? (JsonArray)(node["controllers"] = new JsonArray())!.AsArray();
+        var pages = node["views"]?["pages"]?.AsArray();
+
+        // Models the spec already manages in Admin - don't duplicate those.
+        var adminCovered = controllers
+            .Where(c => c?["area"]?.GetValue<string>() == "Admin" && c["model"] is not null)
+            .Select(c => c!["model"]!.GetValue<string>())
+            .ToHashSet();
+
+        foreach (var m in models.ToList())
+        {
+            var name = m?["name"]?.GetValue<string>();
+            if (name is null || adminCovered.Contains(name)) continue;
+            var plural = Pluralize(name);
+
+            controllers.Add(new JsonObject
+            {
+                ["name"] = plural + "Controller",
+                ["file"] = $"Areas/Admin/Controllers/{plural}Controller.cs",
+                ["area"] = "Admin",
+                ["model"] = name,
+                ["generatedBy"] = "scaffold",
+            });
+            pages?.Add(new JsonObject
+            {
+                ["file"] = $"Areas/Admin/Views/{plural}/Index.cshtml",
+                ["kind"] = "adminTable",
+                ["rowButtons"] = new JsonArray("edit", "details", "delete"),
+            });
+            ctx?.Info($"admin supervisor: added Admin/{plural} CRUD for model '{name}'");
+        }
+    }
+
+    /// <summary>Minimal English pluralizer for controller/route names (Category->Categories, Post->Posts).</summary>
+    internal static string Pluralize(string s)
+    {
+        if (s.Length > 1 && s.EndsWith("y") && !"aeiou".Contains(char.ToLowerInvariant(s[^2])))
+            return s[..^1] + "ies";
+        if (s.EndsWith("s") || s.EndsWith("x") || s.EndsWith("z")
+            || s.EndsWith("ch") || s.EndsWith("sh"))
+            return s + "es";
+        return s + "s";
     }
 }

@@ -480,6 +480,41 @@ public class TemplateEmissionTests
         Assert.DoesNotContain("Id = 1", code);
     }
 
+    // Task 9 (v6 Package D): admin total supervisor - every model gets an Admin CRUD controller + table.
+    [Fact]
+    public void Pluralize_handles_common_english_forms()
+    {
+        Assert.Equal("Posts", SpecExpandStage.Pluralize("Post"));
+        Assert.Equal("Categories", SpecExpandStage.Pluralize("Category"));
+        Assert.Equal("Reviews", SpecExpandStage.Pluralize("Review"));
+        Assert.Equal("Boxes", SpecExpandStage.Pluralize("Box"));
+        Assert.Equal("CatalogueItems", SpecExpandStage.Pluralize("CatalogueItem"));
+        Assert.Equal("Follows", SpecExpandStage.Pluralize("Follow"));
+    }
+
+    [Fact]
+    public void Admin_supervisor_injects_crud_for_uncovered_models()
+    {
+        var node = System.Text.Json.Nodes.JsonNode.Parse(
+            "{ \"models\": [ {\"name\":\"Product\"}, {\"name\":\"Post\"}, {\"name\":\"Review\"} ]," +
+            " \"controllers\": [ {\"name\":\"ProductsController\",\"area\":\"Admin\",\"model\":\"Product\",\"generatedBy\":\"scaffold\"} ]," +
+            " \"views\": { \"pages\": [] } }")!.AsObject();
+
+        SpecExpandStage.InjectAdminSupervisorSurface(node, null);
+
+        var controllers = node["controllers"]!.AsArray();
+        // Product already had an Admin controller -> not duplicated.
+        Assert.Equal(1, controllers.Count(c => c!["model"]?.GetValue<string>() == "Product"));
+        // Post + Review get new Admin scaffold controllers.
+        Assert.Contains(controllers, c => c!["name"]!.GetValue<string>() == "PostsController"
+            && c["area"]!.GetValue<string>() == "Admin" && c["generatedBy"]!.GetValue<string>() == "scaffold");
+        Assert.Contains(controllers, c => c!["name"]!.GetValue<string>() == "ReviewsController");
+        // ...and matching adminTable pages.
+        var pages = node["views"]!["pages"]!.AsArray();
+        Assert.Contains(pages, p => p!["file"]!.GetValue<string>() == "Areas/Admin/Views/Posts/Index.cshtml"
+            && p["kind"]!.GetValue<string>() == "adminTable");
+    }
+
     // Task 5 (v6 Package B): cart badge must read from the database via injected context,
     // not from ViewData["CartCount"] which was never populated.
     [Fact]
@@ -518,6 +553,23 @@ public class TemplateEmissionTests
         Assert.Contains("name=\"sortDir\"", code);                         // direction select rendered
         Assert.Contains("Намаляващо", code);                               // Bulgarian label
         Assert.Contains("ViewData[\"SortDir\"]?.ToString() == \"desc\"", code); // selected state check
+    }
+
+    // Task 11 (v6 Package I): card grids use infinite scroll (append on scroll), not a numbered pager.
+    [Fact]
+    public void Card_grid_uses_infinite_scroll_not_pager()
+    {
+        var (spec, engine) = Arrange();
+        var owner = spec.Controllers.First(c => c.Sorting is { Enabled: true });
+        var model = spec.Models.First(m => m.Name == owner.Model);
+        var page = spec.Views!.Pages.First(p => p.Kind == "cardGrid");
+        var code = engine.RenderFile(Path.Combine("templates", "views", "card_grid.sbn"),
+            new { owner, model, page });
+        Assert.Contains("scrollSentinel", code);          // the intersection sentinel
+        Assert.Contains("IntersectionObserver", code);    // scroll-triggered loading
+        Assert.Contains("data-total-pages", code);
+        Assert.DoesNotContain("class=\"pagination\"", code); // the numbered pager is gone
+        Assert.DoesNotContain("page-link", code);
     }
 
     // Task 6 (v6 Package D): admin cannot delete another admin account.
