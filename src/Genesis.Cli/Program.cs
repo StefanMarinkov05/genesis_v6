@@ -354,6 +354,16 @@ runCmd.SetHandler(async ctx =>
         var lockCtx = BuildContext(spec, outDir, useLock: true);
         RecordProjectRegistry(spec, outDir, lockCtx);
         ResolveSeedInteractively(lockCtx, noInt);
+
+        // Reset actions.log.jsonl at the start of each run for fresh visibility
+        var actionLogPath = Path.Combine(Directory.GetCurrentDirectory(), "logs", lockCtx.Spec.Meta.ProjectName, "actions.log.jsonl");
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(actionLogPath)!);
+            if (File.Exists(actionLogPath)) File.Delete(actionLogPath);
+        }
+        catch { /* best-effort */ }
+
         var stages = new IStage[]
         {
             new ScaffoldStage(), new EmitModelsStage(), new IdentityStage(), new EmitControllersViewsStage(),
