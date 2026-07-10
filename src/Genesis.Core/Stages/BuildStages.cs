@@ -77,20 +77,24 @@ public sealed class ScaffoldStage : IStage
                 JsonSerializer.Serialize(new { sdk = new { version = pin, rollForward = "latestFeature" } },
                     new JsonSerializerOptions { WriteIndented = true }), ct);
 
-        // Connection string the generated Program.cs expects ({Project}ContextConnection).
-        // LocalDB default - overridable via env: ConnectionStrings__{Project}ContextConnection.
-        // Database name includes a timestamp suffix (not just the bare project name) so a
-        // fresh generation never silently reuses/collides with an old database of the same
-        // name left behind by an earlier tool version or an earlier run (Stefan hit exactly
-        // this: a "FaceNote" LocalDB database already existed from a much older v3 run).
-        // This only computes ONCE per genuinely new generation attempt - PipelineRunner's own
-        // state.json skip-check means scaffold never re-runs on a --resume of the same attempt,
-        // so the suffix stays stable for the lifetime of one generation.
-        // (Deliberately NOT a live "does this name already exist" query against LocalDB/SQL
-        // Server: that needs a new package dependency and a live connection assumption neither
-        // of which can be compile- or run-verified here - unconditional uniqueness achieves the
-        // same practical goal, "never collide with an old database", without that risk.)
-        var dbName = $"{spec.Meta.ProjectName}_{DateTime.UtcNow:yyyyMMddHHmmss}";
+        // DB lifecycle: reuse the same LocalDB database when the spec hasn't changed;
+        // only create a new timestamped one (and drop the old one) when the spec differs.
+        // Prevents old databases piling up on every run while keeping the fast path
+        // (same spec = same schema = reuse existing data, no re-seed, no re-migrate).
+        var logsDir = Path.Combine(Directory.GetCurrentDirectory(), "logs", spec.Meta.ProjectName);
+        Directory.CreateDirectory(logsDir);
+        var dbJsonPath = Path.Combine(logsDir, "db.json");
+        var specHash = ComputeSpecHash(spec);
+
+        DbLifecycleRecord? storedDb = null;
+        if (File.Exists(dbJsonPath))
+            try { storedDb = JsonSerializer.Deserialize<DbLifecycleRecord>(File.ReadAllText(dbJsonPath)); } catch { /* corrupt db.json - ignore */ }
+
+        var reuseDb = storedDb?.SpecHash == specHash && storedDb?.DbName is not null;
+        if (!reuseDb && storedDb?.DbName is { } oldDbName)
+            await TryDropLocalDbAsync(oldDbName, ctx, ct);
+
+        var dbName = reuseDb ? storedDb!.DbName! : $"{spec.Meta.ProjectName}_{DateTime.UtcNow:yyyyMMddHHmmss}";
         var appsettingsPath = Path.Combine(ctx.ProjectDir, "appsettings.json");
         var appsettings = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(appsettingsPath, ct))!.AsObject();
         var cs = appsettings["ConnectionStrings"]?.AsObject() ?? new System.Text.Json.Nodes.JsonObject();
@@ -98,7 +102,14 @@ public sealed class ScaffoldStage : IStage
             $"Server=(localdb)\\mssqllocaldb;Database={dbName};Trusted_Connection=True;MultipleActiveResultSets=true";
         appsettings["ConnectionStrings"] = cs;
         await File.WriteAllTextAsync(appsettingsPath, appsettings.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }), ct);
-        ctx.Info($"database name: {dbName} (unique per generation - see appsettings.json to reuse an existing one manually)");
+
+        if (!reuseDb)
+            await File.WriteAllTextAsync(dbJsonPath,
+                JsonSerializer.Serialize(new DbLifecycleRecord { SpecHash = specHash, DbName = dbName }), ct);
+
+        ctx.Info(reuseDb
+            ? $"database name: {dbName} (reusing — spec unchanged)"
+            : $"database name: {dbName} (new — spec changed or first run)");
 
         // launchBrowser:true on every profile - `dotnet run` auto-opens a tab on startup,
         // complementing the console URL print in program.sbn (which works even where a
@@ -118,6 +129,41 @@ public sealed class ScaffoldStage : IStage
         (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, timeout: TimeSpan.FromMinutes(5)))
             .ThrowIfFailed("initial dotnet build");
         ctx.Info("scaffold complete, connection string set, initial build green");
+    }
+
+    // Deterministic hash of the spec parts that drive the DB schema and seed shape.
+    // OrderBy on all collections to avoid serialization-order variance.
+    internal static string ComputeSpecHash(ProjectSpec spec)
+    {
+        var key = string.Join("|",
+            spec.Meta.ProjectName,
+            spec.Meta.TargetFramework,
+            string.Join(",", spec.Models.OrderBy(m => m.Name).Select(m =>
+                m.Name + ":" + string.Join(",", m.Properties.OrderBy(p => p.Name).Select(p => $"{p.Name}.{p.Type}.{p.Nullable}")))),
+            spec.Seeding is { } s
+                ? string.Join(",", s.RowsPerModel.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}"))
+                : "");
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    // Best-effort: drop a named LocalDB database via sqlcmd. If sqlcmd is absent or the
+    // DB is already gone, log and continue — this is cleanup, not a hard requirement.
+    private static async Task TryDropLocalDbAsync(string dbName, StageContext ctx, CancellationToken ct)
+    {
+        try
+        {
+            var safeId = dbName.Replace("]", "]]");
+            var safeLit = dbName.Replace("'", "''");
+            var sql = $"IF EXISTS (SELECT name FROM sys.databases WHERE name = N'{safeLit}') DROP DATABASE [{safeId}]";
+            var result = await Proc.RunAsync("sqlcmd",
+                $"-S \"(localdb)\\mssqllocaldb\" -Q \"{sql}\"",
+                Directory.GetCurrentDirectory(), ct, timeout: TimeSpan.FromSeconds(30));
+            ctx.Info(result.ExitCode == 0
+                ? $"dropped old LocalDB database: {dbName}"
+                : $"(could not drop old database '{dbName}': {result.StdErr.Trim()})");
+        }
+        catch { ctx.Info($"(skipping old database '{dbName}' drop — sqlcmd unavailable)"); }
     }
 }
 

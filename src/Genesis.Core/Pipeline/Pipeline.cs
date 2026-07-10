@@ -175,6 +175,19 @@ public sealed class PipelineRunner(IReadOnlyList<IStage> stages)
     }
 }
 
+/// <summary>
+/// Persisted per-project DB lifecycle state in logs/&lt;Project&gt;/db.json.
+/// Tracks the spec hash used when the DB was created and whether EF migrations
+/// have been applied to it, so subsequent runs can reuse the same database
+/// instead of creating a new timestamped one every time.
+/// </summary>
+public sealed class DbLifecycleRecord
+{
+    [System.Text.Json.Serialization.JsonPropertyName("specHash")] public string? SpecHash { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("dbName")] public string? DbName { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("migrationsApplied")] public bool MigrationsApplied { get; set; }
+}
+
 /// <summary>Thin wrapper over external `dotnet` invocations with fail-loud semantics.</summary>
 public static class Proc
 {

@@ -147,54 +147,95 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
         await EmitModelsStage.WriteAsync(ctx, seeding.OutputFile,
             engine.RenderFile(ctx.Template("models/seed_data.sbn")), ct);
 
-        // ---- 4. migrations + database update (ALWAYS after seeding is wired) ----
-        // REVISED THEORY (the prior "just build first" fix did not help - Stefan hit the exact
-        // same failure again, which rules out a pure file-flush/antivirus race and points at
-        // something a single extra build can't fix: a STALE BACKGROUND PROCESS). `dotnet build`
-        // and `dotnet ef`'s own internal build both use MSBuild's "node reuse" feature, which
-        // keeps a persistent MSBuild/Roslyn build-server process running in the background across
-        // invocations for speed. Rapid back-to-back builds (our pre-build, then dotnet-ef's own
-        // internal one, moments later) can hit that SAME reused, possibly-still-busy node, which
-        // matches the exact symptom Stefan saw: the tool's own attempt fails, but running the
-        // identical command manually moments later - from a fresh shell, not hitting the same
-        // just-used node in the same way - succeeds outright. Disabling node reuse for these
-        // specific calls forces a clean process every time, closing that window directly instead
-        // of hoping a settle delay is long enough.
-        var noNodeReuse = new Dictionary<string, string?> { ["DOTNET_CLI_DISABLE_BUILD_SERVERS"] = "1" };
-        (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, env: noNodeReuse, timeout: TimeSpan.FromMinutes(5)))
-            .ThrowIfFailed("dotnet build (pre-migrations)");
+        // ---- 4. migrations + database update ----------------------------------------
+        // Smart resume: if EF migrations were already successfully applied to the current
+        // database (recorded in logs/<Project>/db.json), skip the entire migration block.
+        // This prevents re-running the slow build+ef cycle when seed stage was interrupted
+        // AFTER migrations completed (e.g. by a crash in the verify stage).
+        var dbJsonPath = Path.Combine(Directory.GetCurrentDirectory(), "logs", spec.Meta.ProjectName, "db.json");
+        DbLifecycleRecord? dbRecord = null;
+        if (File.Exists(dbJsonPath))
+            try { dbRecord = JsonSerializer.Deserialize<DbLifecycleRecord>(File.ReadAllText(dbJsonPath)); } catch { }
 
-        // First migration named Initial; later model changes (feature additions, spec edits)
-        // get timestamped auto-migrations - only when EF reports pending model changes.
-        // --verbose on every ef call: 3 different fixes (dotnet-ef version, pre-build+file-flush
-        // race, MSBuild node reuse) have all failed to resolve this for Stefan, which means the
-        // real cause is still unknown. Capturing dotnet-ef's own verbose diagnostic output (the
-        // same detail his manual --verbose run showed) for the AUTOMATED attempt specifically -
-        // never seen before now - lets it be compared line-for-line against the working manual
-        // run instead of guessing a 4th blind fix.
-        var hasInitial = Directory.Exists(Path.Combine(ctx.ProjectDir, "Migrations")) &&
-                         Directory.EnumerateFiles(Path.Combine(ctx.ProjectDir, "Migrations"), "*_Initial.cs").Any();
-        if (!hasInitial)
+        var currentDbName = GetCurrentDbName(ctx);
+        var migrationsAlreadyApplied = dbRecord?.MigrationsApplied == true
+                                       && dbRecord?.DbName == currentDbName
+                                       && currentDbName is not null;
+
+        if (migrationsAlreadyApplied)
         {
-            var mig = await RunEfWithRetryAsync("ef migrations add Initial --verbose", ctx.ProjectDir, ct);
-            if (mig.ExitCode != 0
-                && !mig.StdOut.Contains("already exists") && !mig.StdErr.Contains("already exists")
-                && !mig.StdOut.Contains("is used by an existing migration") && !mig.StdErr.Contains("is used by an existing migration"))
-                ThrowEfError("ef migrations add Initial", mig);
+            ctx.Info($"migrations: already applied to {currentDbName} — skipping (smart resume)");
         }
         else
         {
-            var pending = await RunEfWithRetryAsync("ef migrations has-pending-model-changes --verbose", ctx.ProjectDir, ct, timeoutMinutes: 3);
-            if (pending.ExitCode != 0) // nonzero = there ARE pending changes (or old EF w/o the command - then attempt is harmless)
+            // REVISED THEORY (the prior "just build first" fix did not help - Stefan hit the exact
+            // same failure again, which rules out a pure file-flush/antivirus race and points at
+            // something a single extra build can't fix: a STALE BACKGROUND PROCESS). `dotnet build`
+            // and `dotnet ef`'s own internal build both use MSBuild's "node reuse" feature, which
+            // keeps a persistent MSBuild/Roslyn build-server process running in the background across
+            // invocations for speed. Rapid back-to-back builds (our pre-build, then dotnet-ef's own
+            // internal one, moments later) can hit that SAME reused, possibly-still-busy node, which
+            // matches the exact symptom Stefan saw: the tool's own attempt fails, but running the
+            // identical command manually moments later - from a fresh shell, not hitting the same
+            // just-used node in the same way - succeeds outright. Disabling node reuse for these
+            // specific calls forces a clean process every time, closing that window directly instead
+            // of hoping a settle delay is long enough.
+            var noNodeReuse = new Dictionary<string, string?> { ["DOTNET_CLI_DISABLE_BUILD_SERVERS"] = "1" };
+            (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, env: noNodeReuse, timeout: TimeSpan.FromMinutes(5)))
+                .ThrowIfFailed("dotnet build (pre-migrations)");
+
+            // First migration named Initial; later model changes (feature additions, spec edits)
+            // get timestamped auto-migrations - only when EF reports pending model changes.
+            var hasInitial = Directory.Exists(Path.Combine(ctx.ProjectDir, "Migrations")) &&
+                             Directory.EnumerateFiles(Path.Combine(ctx.ProjectDir, "Migrations"), "*_Initial.cs").Any();
+            if (!hasInitial)
             {
-                var name = $"Auto{DateTime.UtcNow:yyyyMMddHHmmss}";
-                var addMig = await RunEfWithRetryAsync($"ef migrations add {name} --verbose", ctx.ProjectDir, ct);
-                if (addMig.ExitCode != 0) ThrowEfError($"ef migrations add {name}", addMig);
+                var mig = await RunEfWithRetryAsync("ef migrations add Initial --verbose", ctx.ProjectDir, ct);
+                if (mig.ExitCode != 0
+                    && !mig.StdOut.Contains("already exists") && !mig.StdErr.Contains("already exists")
+                    && !mig.StdOut.Contains("is used by an existing migration") && !mig.StdErr.Contains("is used by an existing migration"))
+                    ThrowEfError("ef migrations add Initial", mig);
+            }
+            else
+            {
+                var pending = await RunEfWithRetryAsync("ef migrations has-pending-model-changes --verbose", ctx.ProjectDir, ct, timeoutMinutes: 3);
+                if (pending.ExitCode != 0) // nonzero = there ARE pending changes (or old EF w/o the command - then attempt is harmless)
+                {
+                    var name = $"Auto{DateTime.UtcNow:yyyyMMddHHmmss}";
+                    var addMig = await RunEfWithRetryAsync($"ef migrations add {name} --verbose", ctx.ProjectDir, ct);
+                    if (addMig.ExitCode != 0) ThrowEfError($"ef migrations add {name}", addMig);
+                }
+            }
+            var update = await RunEfWithRetryAsync("ef database update --verbose", ctx.ProjectDir, ct);
+            if (update.ExitCode != 0) ThrowEfError("ef database update", update);
+
+            // Record that migrations are applied to this specific DB so future runs can skip.
+            if (dbRecord is not null)
+            {
+                dbRecord.MigrationsApplied = true;
+                try { await File.WriteAllTextAsync(dbJsonPath, JsonSerializer.Serialize(dbRecord), ct); } catch { }
             }
         }
-        var update = await RunEfWithRetryAsync("ef database update --verbose", ctx.ProjectDir, ct);
-        if (update.ExitCode != 0) ThrowEfError("ef database update", update);
         ctx.Info("seed complete: data json, images, SeedData.cs, migration applied");
+    }
+
+    private static string? GetCurrentDbName(StageContext ctx)
+    {
+        var path = Path.Combine(ctx.ProjectDir, "appsettings.json");
+        if (!File.Exists(path)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            var csKey = $"{ctx.Spec.Meta.ProjectName}ContextConnection";
+            if (doc.RootElement.TryGetProperty("ConnectionStrings", out var cs) &&
+                cs.TryGetProperty(csKey, out var val))
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(val.GetString() ?? "", @"Database=([^;]+)");
+                if (m.Success) return m.Groups[1].Value;
+            }
+        }
+        catch { }
+        return null;
     }
 
     /// <summary>Response schema: one array property per model, row shape derived from the spec.</summary>
