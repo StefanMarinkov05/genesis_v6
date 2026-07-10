@@ -424,16 +424,22 @@ static void PrintCompletionBanner(StageContext ctx)
 
     var users = ctx.Spec.Identity?.SeedUsers?.Users ?? [];
     Console.WriteLine();
-    Console.WriteLine("========================================================");
-    Console.WriteLine("  ДПС-НН - проектът е генериран успешно");
-    Console.WriteLine("========================================================");
-    if (url is not null) Console.WriteLine($"  URL:    {url}");
-    if (dbName is not null) Console.WriteLine($"  БД:     {dbName}  (уникално име - виж appsettings.json)");
-    Console.WriteLine($"  Старт:  cd {Path.Combine(ctx.WorkDir, ctx.Spec.Meta.ProjectName)} && dotnet run");
-    Console.WriteLine("  --------------------------------------------------------");
+    Console.WriteLine("╔════════════════════════════════════════════════════════╗");
+    Console.WriteLine($"║  {ctx.Spec.Meta.ProjectName,-52} ║");
+    if (url is not null)
+        Console.WriteLine($"║  🔗 {url,-49} ║");
+    else
+        Console.WriteLine($"║  (Configure launchSettings.json for application URL)  ║");
+    Console.WriteLine("╠════════════════════════════════════════════════════════╣");
     foreach (var u in users)
-        Console.WriteLine($"  {u.Role,-16} {u.Email,-28} {u.Password}");
-    Console.WriteLine("========================================================");
+    {
+        var credential = $"{u.Email} / {u.Password}";
+        Console.WriteLine($"║  {u.Role,-16} {credential,-35} ║");
+    }
+    Console.WriteLine("╚════════════════════════════════════════════════════════╝");
+    if (dbName is not null)
+        Console.WriteLine($"Database: {dbName}");
+    Console.WriteLine($"Start: cd {Path.Combine(ctx.WorkDir, ctx.Spec.Meta.ProjectName)} && dotnet run");
     Console.WriteLine();
 }
 
