@@ -1,6 +1,7 @@
 # Test failure: stale assertion in Program_template_honors_di_registration_variation + a dead variation axis found
 
 **Type:** Error fix
+**Model:** Opus — test-failure root-cause analysis - distinguishing a stale assertion from a real generator bug.
 
 ## Where
 `tests/Genesis.Tests/CoreTests.cs`, test `Program_template_honors_di_registration_variation`; underlying template `templates/project/program.sbn`.

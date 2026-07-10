@@ -1,6 +1,7 @@
 # C4: rename genesis -> dps-nn (user-visible surface only)
 
 **Type:** Feature / change
+**Model:** Opus — scoping judgement call (user-visible rename only, explicitly NOT touching C# namespaces) - an architectural boundary decision.
 
 ## Summary
 Renamed the tool's user-visible surface from "genesis" to "dps-nn" (ДПС-НН): installed command name, console log prefix, CLI help text, the pipeline/LLM log filename, and the README/architecture doc titles. Deliberately did NOT rename C# namespaces/assemblies/the .sln file/the internal GenesisRoot identifier - that's a large, purely-internal diff with zero user-facing benefit and no way to compile-verify it at the time. Recorded as ADR-009 so the boundary is a documented decision, not an inconsistency.

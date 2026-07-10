@@ -1,6 +1,7 @@
 # v6 Task 8: Orders — receiver name + delivery address fields
 
 **Type:** Feature
+**Model:** Sonnet — per the v6 task-breakdown's own model routing (task 8 = Sonnet).
 
 ## Summary
 The `Order` model now captures who ordered and where it should go. Previously "1-click checkout"

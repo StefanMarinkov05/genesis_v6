@@ -1,6 +1,7 @@
 ## 048 — Task 11: Infinite scroll replacing the pager — Package I
 
 **Type:** feature
+**Model:** Opus — per the v6 task-breakdown's own model routing (task 11 = Opus, generator-level emission change).
 **Date:** 2026-07-10
 **Task completed:** v6 Task 11 (replace numbered paging with scroll-triggered lazy loading on card grids)
 

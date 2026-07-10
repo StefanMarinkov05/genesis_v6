@@ -1,6 +1,7 @@
 # v6 Task 19: Catalogue rename (edit own catalogue name)
 
 **Type:** Feature
+**Model:** Sonnet — per the v6 task-breakdown's own model routing (task 19 = Sonnet).
 
 ## Summary
 Users can now rename their own catalogues. Delete was already owner-gated in the controller

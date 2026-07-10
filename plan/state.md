@@ -459,3 +459,20 @@ GitHub issue #5 (NOT the breakdown's Package-B "task 5" cart badge - same number
 - DELIBERATE NON-GOAL: did NOT parallelize seed image downloads (external rate-limited Pexels/Pixabay -
   parallel burst risks throttling; kept parallel region to provably race-free pure-CPU emission).
 - 6 new ParallelEmitTests. All committed + pushed (no Co-Authored-By, per request).
+
+## Session 25 (Sonnet: changelog model attribution + funny English worker names) - changelog 053
+Two bundled requests. 97 tests green after (was 85).
+- Changelog discipline extended: every entry now records a `**Model:**` line (model + WHY, per
+  coding-standards' own routing rubric) right after `**Type:**`. Backfilled 001-052 via a one-off
+  script sourced from state.md session headers + the v6 breakdown's own per-task model routing +
+  explicit haiku/sonnet batch labels already in git log. 3 entries (026/027/030, the Claude Code
+  migration) had no model recorded anywhere - marked Opus by chronological placement, flagged
+  explicitly in changelogs/README.md as best-effort reconstruction, not re-verified fact.
+- ParallelEmit gained EnglishWorkerNames (Bubba/Chuck/Duke/Rusty/Slim), toggled via DPS_NN_LOG_LANGUAGE
+  env var (en -> English; unset/anything else -> Bulgarian, preserving issue #5's default). DELIBERATELY
+  NOT gated on spec.meta.language: that's schema-locked to "bg" only (CLAUDE.md hard requirement), and
+  nothing else in the generator would actually produce English output if widened - would silently
+  half-work (the same "two paths, one concept, drift" bug class from sessions 5/8/33). Confirmed this
+  scope call with Stefan via AskUserQuestion before implementing, rather than guessing which he meant.
+  Smoke-tested live against the real project (DPS_NN_LOG_LANGUAGE=en emit-models -> real [Bubba]/
+  [Chuck] log lines) instead of just trusting unit tests.

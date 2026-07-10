@@ -1,6 +1,7 @@
 # logs/ folder, changelogs/ folder, and a one-click run script
 
 **Type:** Feature / change
+**Model:** Opus — infra addition threaded through existing call sites without disturbing any of them.
 
 ## Summary
 Three infrastructure additions requested together: a `logs/` folder that maps every project to the

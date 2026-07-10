@@ -1,6 +1,7 @@
 # Write error messages into logs/, not just the console
 
 **Type:** Feature / change
+**Model:** Opus — traced System.CommandLine's own exception middleware to avoid shipping dead code - needed deep tool-internals reasoning.
 
 ## Summary
 Failures previously only ever went to the console (or, for stage failures, to the per-project

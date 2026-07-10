@@ -1,6 +1,7 @@
 # v6 Package E (task 15 + keystone): shared FileUploadService + admin profile-picture upload
 
 **Type:** Feature / change
+**Model:** Sonnet — standard feature work, self-contained template + controller pair; task 15 per the v6 breakdown's Sonnet routing.
 
 ## Summary
 Started Package E (images & uploads) with the piece the breakdown says to "build once and reuse across

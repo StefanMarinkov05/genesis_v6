@@ -1,6 +1,7 @@
 # Build error: EmitControllersViewsStage.ApplyBgResiduePass (CS1061)
 
 **Type:** Error fix
+**Model:** Opus — same build-fix session; root-cause diagnosis of a non-existent property reference (CS1061).
 
 ## Where
 `src/Genesis.Core/Stages/EmitControllersViewsStage.cs`, method `ApplyBgResiduePass`.

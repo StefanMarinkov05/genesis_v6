@@ -1,6 +1,7 @@
 # Fix real spec-picker bug + .slnx support + prompts/out/schemas & seeds archival
 
 **Type:** Error fix + Feature / change
+**Model:** Opus — real shipped-bug fix requiring reasoning about its interaction with an existing feature's semantics.
 
 ## Error: spec picker crashed with exactly one candidate spec
 

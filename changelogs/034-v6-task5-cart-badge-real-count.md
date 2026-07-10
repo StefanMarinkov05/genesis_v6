@@ -1,6 +1,7 @@
 # v6 Task 5: Cart badge reads real DB count instead of always showing 0
 
 **Type:** Error fix
+**Model:** Sonnet — per the v6 task-breakdown's own model routing (task 5 = Sonnet).
 
 ## Summary
 `ViewData["CartCount"]` was read by layout.sbn's cart icon badge but was never set by

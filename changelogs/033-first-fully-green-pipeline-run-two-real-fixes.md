@@ -1,6 +1,7 @@
 # First fully-green end-to-end pipeline run + the two real bugs it caught
 
 **Type:** Error fix (2) + verification milestone
+**Model:** Sonnet — real-run bug fixes within an established pattern (emission-order mirroring, timeout tuning).
 
 ## Summary
 Ran the real generator end-to-end (`run --all --resume` against the FaceNote fixture into LocalDB) to

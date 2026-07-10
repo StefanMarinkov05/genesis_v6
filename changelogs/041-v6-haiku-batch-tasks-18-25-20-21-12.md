@@ -1,6 +1,7 @@
 # v6 Haiku batch — Tasks 18, 25, 20, 21, 12
 
 **Type:** Feature
+**Model:** Haiku — per the v6 task-breakdown's own model routing - all five tasks (18, 25, 20, 21, 12) rated mechanical/single-file/pattern-copy.
 
 ## Summary
 Five small UI/presentation tasks bundled into one changelog:

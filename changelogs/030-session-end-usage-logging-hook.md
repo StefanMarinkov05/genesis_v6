@@ -1,6 +1,7 @@
 # Claude Code SessionEnd hook: per-session usage stats to logs/
 
 **Type:** Feature / change
+**Model:** Sonnet — mechanical, well-scoped infra hook.
 
 ## Summary
 Stefan asked for automatic per-session usage logging. Added a Claude Code `SessionEnd` hook that

@@ -1,6 +1,7 @@
 # Real root cause: dotnet-ef race condition, not a version mismatch
 
 **Type:** Error fix
+**Model:** Opus — root-cause debugging from diagnostics, connecting the symptom to a prior architectural change (per-run folders).
 
 ## Where
 `src/Genesis.Core/Stages/SeedStage.cs`, the migrations/database-update section.

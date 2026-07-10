@@ -1,6 +1,7 @@
 # v6 Package E (task 16): feedback (reviews) can attach an image
 
 **Type:** Feature / change
+**Model:** Sonnet — reused an existing helper, well-scoped extension; task 16 per the v6 breakdown's Sonnet routing.
 
 ## Summary
 Second slice of Package E, immediately reusing the `FileUploadService` keystone from changelog 031.

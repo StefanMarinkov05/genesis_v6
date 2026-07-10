@@ -1,6 +1,7 @@
 # Data bug: seed-response UserId placeholder wouldn't resolve to a real user
 
 **Type:** Error fix
+**Model:** Opus — cross-referencing a hand-built seed dataset against the generator's own schema-derivation logic - needed to trace SeedStage's exact rules.
 
 ## Where
 The manually-pasted `seed-response.json` (all `Product`/`Post` rows) and, mechanically, `templates/models/seed_data.sbn`'s `ResolveUserRef` function it needed to satisfy.

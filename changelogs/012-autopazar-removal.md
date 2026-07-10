@@ -1,6 +1,7 @@
 # Remove AutoPazar entirely; FaceNote is now the sole fixture
 
 **Type:** Feature / change
+**Model:** Opus — repo-wide removal touching ~16 tests across every test class - cross-cutting.
 
 ## Summary
 Deleted all 3 AutoPazar fixture files. FaceNote is now the only spec the test suite and documentation reference. This rippled into roughly 16 tests, since several hardcoded AutoPazar-specific model/route names, and two tests depended on variation-axis pins and feature toggles that only held for AutoPazar's fixture, not FaceNote's.

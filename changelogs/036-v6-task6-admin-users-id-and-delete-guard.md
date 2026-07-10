@@ -1,6 +1,7 @@
 # v6 Task 6: Admin users table — user ID column + admin-delete-admin guard
 
 **Type:** Feature / Error fix
+**Model:** Sonnet — per the v6 task-breakdown's own model routing (task 6 = Sonnet).
 
 ## Summary
 Two small admin/users improvements: surfacing the user ID in the table (makes it easier to

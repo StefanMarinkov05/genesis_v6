@@ -1,6 +1,7 @@
 # v6 Task 2: "Add to catalogue" button on product details page
 
 **Type:** Feature
+**Model:** Sonnet — per the v6 task-breakdown's own model routing (task 2 = Sonnet).
 
 ## Summary
 The `card_grid.sbn` already had the catalogue modal button for each card. The product details

@@ -1,6 +1,7 @@
 # Bundle changelog-discipline as a project-level Claude Code skill
 
 **Type:** Feature / change
+**Model:** Opus — same migration session.
 
 ## Summary
 Stefan asked whether skills carry over automatically into Claude Code. They don't - Claude Code reads

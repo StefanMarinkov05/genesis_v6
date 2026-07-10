@@ -1,6 +1,7 @@
 ## 047 — Task 9: Admin as total supervisor (every model, full CRUD) — Package D
 
 **Type:** feature
+**Model:** Opus — per the v6 task-breakdown's own model routing (task 9 = Opus, generator-level architectural change, highest risk).
 **Date:** 2026-07-10
 **Task completed:** v6 Task 9 (admin sees/manages every model, not a hand-picked subset)
 

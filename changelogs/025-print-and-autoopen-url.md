@@ -1,6 +1,7 @@
 # Print the actual URL on every startup + auto-open a browser tab
 
 **Type:** Feature / change
+**Model:** Opus — small feature, but still in the compiler-less, pre-Claude-Code Opus-only era.
 
 ## Summary
 Stefan asked to always see the actual localhost port when running the generated app, either printed

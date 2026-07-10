@@ -1,6 +1,7 @@
 ## 050 — Sonnet batch: Tasks #2 (DB lifecycle) + #1 (smart resume) + #4 (rename/move)
 
 **Type:** feature, chore
+**Model:** Sonnet — explicit in the session/commit label - standard feature work plus a repo-wide but mechanical rename.
 **Date:** 2026-07-11
 **Tasks completed:** GitHub issues #2, #1, #4
 

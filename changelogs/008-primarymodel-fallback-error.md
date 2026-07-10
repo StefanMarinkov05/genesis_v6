@@ -1,6 +1,7 @@
 # Pipeline error: '$primaryModel' relation target not a declared model
 
 **Type:** Error fix
+**Model:** Opus — cross-stage bug (two code paths computing the same concept differently) - needed reasoning across multiple files to find the shared root cause.
 
 ## Where
 `src/Genesis.Core/Stages/SpecStages.cs`, `SpecExpandStage`'s feature-fragment token substitution.

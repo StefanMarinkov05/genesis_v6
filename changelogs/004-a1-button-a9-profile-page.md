@@ -1,6 +1,7 @@
 # A1 add-to-cart button + A9 public profile page
 
 **Type:** Feature / change
+**Model:** Opus — cross-file feature spanning template + scaffold-adjacent linking, high ambiguity with no compiler available in-session.
 
 ## Summary
 The product card's "Добави" button was a dead stub (a bare `<button>` posting nowhere) - rewired it to a real form posting to Cart/Add, gated on the orders feature. Built a new public, read-only user profile page (name/avatar + their posts + their public catalogues), linked from a post's author name. Along the way, found A8's author-delete-on-posts was already fully implemented from an earlier session (no work needed).

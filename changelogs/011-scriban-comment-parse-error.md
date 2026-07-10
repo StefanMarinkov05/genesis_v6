@@ -1,6 +1,7 @@
 # Build crash: multi-line comment in design_overlay.sbn / landing.sbn parsed as code
 
 **Type:** Error fix
+**Model:** Opus — root-cause diagnosis of a template-engine parsing bug invisible without a real render.
 
 ## Where
 `templates/views/design_overlay.sbn` (line 2) and, found during a sweep, `templates/views/landing.sbn`.

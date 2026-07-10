@@ -1,6 +1,7 @@
 ## 044 — Task 26: Public user profile (full aggregation) — Package G
 
 **Type:** feature
+**Model:** Opus — per the v6 task-breakdown's own model routing (task 26 = Opus, L-effort aggregation page).
 **Date:** 2026-07-10
 **Task completed:** v6 Task 26 (public profile: photo, pics, followers, following, listed products, feedbacks, posts)
 

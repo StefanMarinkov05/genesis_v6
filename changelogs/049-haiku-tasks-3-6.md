@@ -1,6 +1,7 @@
 ## 049 — Haiku batch: Tasks #3 (log hygiene) + #6 (access banner)
 
 **Type:** enhancement, fix
+**Model:** Haiku — explicit in the session/commit label - mechanical, well-scoped tasks.
 **Date:** 2026-07-11
 **Tasks completed:** GitHub issue #3 (log hygiene), GitHub issue #6 (access banner)
 

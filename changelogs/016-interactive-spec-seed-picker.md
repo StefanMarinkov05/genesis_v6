@@ -1,6 +1,7 @@
 # Interactive spec/seed picker
 
 **Type:** Feature / change
+**Model:** Opus — new CLI subsystem, plus a real bug caught while wiring it into existing command handlers.
 
 ## Summary
 Added two independent interactive menus so multiple project specs or seed-response files can be chosen per run instead of remembering/typing exact paths. Both are fully backward-compatible: an explicit `--spec` always wins with zero prompting, and neither menu appears at all with 0-1 candidates.

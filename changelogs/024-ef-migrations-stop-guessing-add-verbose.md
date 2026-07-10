@@ -1,6 +1,7 @@
 # Stopped guessing at the ef migrations bug - added real diagnostics instead
 
 **Type:** Error fix (diagnostic instrumentation, not a new fix attempt)
+**Model:** Opus — a debugging-discipline decision (stop guessing, add instrumentation) rather than a fix - judgement call.
 
 ## Where
 `src/Genesis.Core/Stages/SeedStage.cs`, the migrations/database-update section.

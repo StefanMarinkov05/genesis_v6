@@ -1,6 +1,7 @@
 # Build error: unescaped @media inside the design overlay's <style> block
 
 **Type:** Error fix
+**Model:** Opus — root-cause diagnosis of a well-known but non-obvious Razor parsing gotcha.
 
 ## Where
 `templates/views/design_overlay.sbn`, the `@media (prefers-reduced-motion: reduce)` rule.

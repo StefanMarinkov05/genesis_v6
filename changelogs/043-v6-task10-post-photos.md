@@ -1,6 +1,7 @@
 ## 043 — Task 10: Blog posts photos (Package C)
 
 **Type:** feature
+**Model:** Opus — per the v6 task-breakdown's own model routing (task 10 = Opus, L-effort whole feature surface).
 **Date:** 2026-07-10
 **Task completed:** v6 Task 10 (restore blog posts — photos, comments, likes)
 

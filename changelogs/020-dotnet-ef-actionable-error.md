@@ -1,6 +1,7 @@
 # Actionable error for a dotnet-ef version mismatch
 
 **Type:** Error fix
+**Model:** Opus — diagnosing the first ef-migrations failure and matching it against an existing actionable-error pattern.
 
 ## Where
 `src/Genesis.Core/Stages/SeedStage.cs`, the three `dotnet ef ...` invocations (`migrations add`,

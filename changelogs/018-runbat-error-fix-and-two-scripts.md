@@ -1,6 +1,7 @@
 # Build error fix (RelativeOrFull) + split run.bat into two scripts + one folder per run
 
 **Type:** Error fix + Feature / change
+**Model:** Opus — real build-error fix (accessibility bug across an assembly boundary) plus script restructuring.
 
 ## Error: CS0117 'InteractiveSelection' does not contain a definition for 'RelativeOrFull'
 

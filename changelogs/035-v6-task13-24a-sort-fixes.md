@@ -1,6 +1,7 @@
 # v6 Tasks 13 + 24a: Sort dropdown fixes — selected state + descending direction
 
 **Type:** Error fix + Feature
+**Model:** Sonnet — per the v6 task-breakdown's own model routing (tasks 13, 24a = Sonnet).
 
 ## Summary
 Two coupled sort bugs fixed together because the same `ViewData["SortDir"]` semantic change

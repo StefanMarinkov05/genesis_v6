@@ -1,6 +1,7 @@
 ## 046 — Four pre-existing generation bugs caught by the first full run since changelog 033
 
 **Type:** error
+**Model:** Opus — same session's real-generate verification pass, root-causing four distinct bug classes.
 **Date:** 2026-07-10
 
 ### Context

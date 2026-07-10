@@ -1,6 +1,7 @@
 # Fix: archival copy-not-move (green run no longer deletes canonical fixture)
 
 **Type:** Error fix
+**Model:** Sonnet — straightforward fix to a flagged hazard, within the same Sonnet session that found it.
 
 ## Summary
 A successful `run --all` was silently deleting `fixtures/project-spec.facenote.json` and

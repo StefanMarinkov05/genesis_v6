@@ -1,6 +1,7 @@
 # Real fix attempt #2 for ef migrations (node reuse) + DB name uniqueness + NU1901 properly fixed
 
 **Type:** Error fix + Feature / change
+**Model:** Opus — revised root-cause theory after a prior fix failed - required not repeating a theory already ruled out.
 
 ## Error: ef migrations add still failing after the previous "fix"
 

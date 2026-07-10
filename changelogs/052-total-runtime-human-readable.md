@@ -1,6 +1,7 @@
 # Total generation time shown in minutes/seconds + thread-count analysis
 
 **Type:** Feature / change
+**Model:** Sonnet — user switched the session to Sonnet before this request - a small, well-scoped display change plus an analysis question, not architectural.
 
 ## Summary
 The end-of-run stage-timings summary now prints the TOTAL in a human-readable minutes/seconds form

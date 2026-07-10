@@ -989,6 +989,31 @@ public class ParallelEmitTests
     }
 
     [Fact]
+    public void English_worker_names_are_the_expected_funny_crew_in_order()
+    {
+        Assert.Equal(new[] { "Bubba", "Chuck", "Duke", "Rusty", "Slim" }, ParallelEmit.EnglishWorkerNames);
+    }
+
+    [Theory]
+    [InlineData(null)]      // unset: default to Bulgarian (issue #5's original ask)
+    [InlineData("")]
+    [InlineData("bg")]
+    [InlineData("something-else")]
+    public void Resolve_worker_names_defaults_to_bulgarian(string? envValue)
+    {
+        Assert.Equal(ParallelEmit.WorkerNames, ParallelEmit.ResolveWorkerNames(envValue));
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("EN")]
+    [InlineData("En")]
+    public void Resolve_worker_names_switches_to_english_case_insensitively(string envValue)
+    {
+        Assert.Equal(ParallelEmit.EnglishWorkerNames, ParallelEmit.ResolveWorkerNames(envValue));
+    }
+
+    [Fact]
     public async Task An_item_throwing_surfaces_as_a_thrown_exception()
     {
         var items = new List<(string, Func<Task>)>

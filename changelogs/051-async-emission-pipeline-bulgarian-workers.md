@@ -1,6 +1,7 @@
 # Async emission pipeline with Bulgarian worker names
 
 **Type:** Feature / change
+**Model:** Opus — explicitly requested at XL effort with thinking on - cross-cutting change to the generator's core pipeline concurrency model, needed dependency-graph reasoning to avoid a race-unsafe design.
 
 GitHub issue: https://github.com/StefanMarinkov05/genesis_v6/issues/5 (v6 task #5 — async pipeline
 with Bulgarian thread names). NOTE: this is a *different* "task #5" from the v6-task-breakdown's

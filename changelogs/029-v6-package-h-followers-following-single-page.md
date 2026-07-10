@@ -1,6 +1,7 @@
 # v6 Package H (task 17): followers + following on one page with a view model
 
 **Type:** Feature / change
+**Model:** Sonnet — standard multi-file feature work following the existing controller/view pattern; task 17 per the v6 breakdown's Sonnet routing.
 
 ## Summary
 Second v6 package, built next per the dependency-first order (H unblocks the big admin/public

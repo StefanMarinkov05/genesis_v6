@@ -1,6 +1,7 @@
 ## 042 — Task 14: Products multi-image gallery + Admin UI
 
 **Type:** feature
+**Model:** Sonnet — per the v6 task-breakdown's own model routing (task 14 = Sonnet).
 **Date:** 2026-07-10
 **Tasks completed:** v6 Task 14 (Products multi-image carousel + gallery UI)
 

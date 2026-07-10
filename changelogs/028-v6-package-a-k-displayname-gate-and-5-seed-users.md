@@ -1,6 +1,7 @@
 # v6 Package A + K: displayName hard gate, localized sort labels, 5 seed users
 
 **Type:** Feature / change
+**Model:** Sonnet — standard feature work following an existing warning-to-gate pattern; the first Claude-Code session, per the v6 breakdown's own Sonnet routing for tasks 1/4.
 
 ## Summary
 First v6 work packages per `plan/v6-task-breakdown.md`, built in the recommended dependency-first order

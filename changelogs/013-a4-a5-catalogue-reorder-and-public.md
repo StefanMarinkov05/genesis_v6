@@ -1,6 +1,7 @@
 # A4 catalogue reorder + A5 public catalogues
 
 **Type:** Feature / change
+**Model:** Opus — scaffold-adjacent controller features from the same pre-Claude-Code build era.
 
 ## Summary
 Added drag-free up/down reordering of catalogue items (a `Position` column, normalized then swapped on each move) and a public/anonymous catalogue browsing mode (an `IsPublic` toggle per catalogue, with a public listing + public details page). Both are plain model properties, so no schema change was needed.

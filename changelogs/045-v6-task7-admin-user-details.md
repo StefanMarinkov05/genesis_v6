@@ -1,6 +1,7 @@
 ## 045 — Task 7: admin/users/details/{id} full aggregation — Package D
 
 **Type:** feature
+**Model:** Opus — per the v6 task-breakdown's own model routing (task 7 = Opus, generator-level emission pattern).
 **Date:** 2026-07-10
 **Task completed:** v6 Task 7 (admin user detail: followers, following, listings, posts, feedbacks, pfp, data; FK links)
 

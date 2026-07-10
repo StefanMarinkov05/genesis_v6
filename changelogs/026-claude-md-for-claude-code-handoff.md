@@ -1,6 +1,7 @@
 # Added CLAUDE.md for the move to Claude Code / VS Code
 
 **Type:** Feature / change
+**Model:** Opus — final session before the migration to Claude Code.
 
 ## Summary
 Stefan is moving from the claude.ai-chat zip/download/paste-error workflow to Claude Code in VS Code,

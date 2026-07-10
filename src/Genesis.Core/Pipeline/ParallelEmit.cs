@@ -19,6 +19,10 @@ namespace GenesisV6.Core.Pipeline;
 /// is a few dozen files, so five lanes is already more than enough — more lanes would only add
 /// scheduling contention for files that render in milliseconds. We pick the smallest degree of
 /// parallelism that actually helps and stop there.
+///
+/// Worker names: Bulgarian by default (Кольо, Наско, Иван, Мишо, Киро); set
+/// DPS_NN_LOG_LANGUAGE=en for a funny English crew instead (Bubba, Chuck, Duke, Rusty, Slim).
+/// This is a tool-console preference only, independent of the generated project's own language.
 /// </summary>
 public static class ParallelEmit
 {
@@ -28,6 +32,29 @@ public static class ParallelEmit
     /// always Кольо, lane 1 Наско, and so on — so the output is stable and readable across runs.
     /// </summary>
     public static readonly string[] WorkerNames = ["Кольо", "Наско", "Иван", "Мишо", "Киро"];
+
+    /// <summary>
+    /// Funny English equivalent of the crew above, for a fully-English console. This is
+    /// DELIBERATELY NOT tied to the generated project's own spec.meta.language: that field is
+    /// hard-locked to "bg" only (CLAUDE.md - Bulgarian-only generated UI is a hard requirement),
+    /// and nothing else in the generator (BG validation messages, the identity replacement map,
+    /// the LLM seed prompt) would actually change if it weren't - allowing "en" there would just
+    /// silently half-work. The tool's OWN console flavor is a separate, harmless concern, so it
+    /// gets its own switch: the DPS_NN_LOG_LANGUAGE environment variable (see ResolveWorkerNames).
+    /// </summary>
+    public static readonly string[] EnglishWorkerNames = ["Bubba", "Chuck", "Duke", "Rusty", "Slim"];
+
+    /// <summary>
+    /// Picks the Bulgarian crew by default, or the funny English one when
+    /// DPS_NN_LOG_LANGUAGE=en is set. A pure function of the raw env-var value (rather than
+    /// reading Environment.GetEnvironmentVariable inline in RunAsync) so it's testable without
+    /// mutating real process state - environment-variable mutation is process-global and would be
+    /// a flaky race if xunit ever runs tests in this class in parallel.
+    /// </summary>
+    internal static string[] ResolveWorkerNames(string? logLanguageEnvValue) =>
+        string.Equals(logLanguageEnvValue, "en", StringComparison.OrdinalIgnoreCase)
+            ? EnglishWorkerNames
+            : WorkerNames;
 
     /// <summary>
     /// The name of the worker currently running the calling code, or <c>null</c> on the
@@ -54,13 +81,14 @@ public static class ParallelEmit
     {
         if (items.Count == 0) return;
 
+        var names = ResolveWorkerNames(Environment.GetEnvironmentVariable("DPS_NN_LOG_LANGUAGE"));
         var queue = new ConcurrentQueue<(string Label, Func<Task> Work)>(items);
-        var laneCount = Math.Min(WorkerNames.Length, items.Count);
+        var laneCount = Math.Min(names.Length, items.Count);
 
         var lanes = new Task[laneCount];
         for (var i = 0; i < laneCount; i++)
         {
-            var workerName = WorkerNames[i];
+            var workerName = names[i];
             lanes[i] = Task.Run(async () =>
             {
                 // Set INSIDE this lane's own task body: an AsyncLocal write mutates only the

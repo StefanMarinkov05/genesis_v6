@@ -1,6 +1,7 @@
 # Warnings: 9 (then 2 more found) properties rendering English field names
 
 **Type:** Error fix
+**Model:** Opus — sweep across every feature fragment + fixture - needed judgement about which properties are legitimately exempt (keys/FKs/computed).
 
 ## Where
 `feature-templates/orders.json`, `posts.json`, `rating.json`, `follows.json`, and (found during a sweep, not from the original warning list) `cart.json`.

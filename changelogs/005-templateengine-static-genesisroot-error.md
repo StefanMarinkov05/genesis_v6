@@ -1,6 +1,7 @@
 # Build error: TemplateEngine.ResolveDesignPreset (CS9105)
 
 **Type:** Error fix
+**Model:** Opus — first-ever real-compiler-caught bug - root-cause build-error diagnosis (CS9105).
 
 ## Where
 `src/Genesis.Core/Util/TemplateEngine.cs`, method `ResolveDesignPreset`.
