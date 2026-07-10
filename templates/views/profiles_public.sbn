@@ -1,0 +1,56 @@
+@model {{ meta.root_namespace }}.Models.ApplicationUser
+@{
+    ViewData["Title"] = "Профил";
+{{~ if features.posts ~}}
+    var posts = ViewData["Posts"] as List<{{ meta.root_namespace }}.Models.Post> ?? new();
+{{~ end ~}}
+{{~ if features.catalogues ~}}
+    var catalogues = ViewData["PublicCatalogues"] as List<{{ meta.root_namespace }}.Models.Catalogue> ?? new();
+{{~ end ~}}
+}
+{{~
+# Определяме дали ApplicationUser има FirstName / ProfilePicturePath, за да не реферираме
+# несъществуващи свойства (спецификацията може да ги няма).
+has_fn = false
+has_pfp = false
+for p in spec.identity.application_user.extra_properties
+  if p.name == "FirstName"; has_fn = true; end
+  if p.name == "ProfilePicturePath"; has_pfp = true; end
+end
+~}}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+{{~ if has_pfp ~}}
+    <img src="@(string.IsNullOrEmpty(Model.ProfilePicturePath) ? "/images/avatar-default.png" : Model.ProfilePicturePath)"
+         class="rounded-circle" style="width:64px;height:64px;object-fit:cover;" alt="Профилна снимка" />
+{{~ end ~}}
+    <h1 class="mb-0">{{ if has_fn }}@(string.IsNullOrEmpty(Model.FirstName) ? "Потребител" : Model.FirstName){{ else }}Потребител{{ end }}</h1>
+</div>
+
+{{~ if features.posts ~}}
+<h4>Публикации</h4>
+@if (!posts.Any())
+{
+    <p class="text-muted">Няма публикации.</p>
+}
+<ul class="list-group mb-4">
+    @foreach (var p in posts)
+    {
+        <li class="list-group-item"><a asp-controller="Posts" asp-action="Details" asp-route-id="@p.Id">@p.Title</a></li>
+    }
+</ul>
+{{~ end ~}}
+
+{{~ if features.catalogues ~}}
+<h4>Публични каталози</h4>
+@if (!catalogues.Any())
+{
+    <p class="text-muted">Няма публични каталози.</p>
+}
+<ul class="list-group">
+    @foreach (var c in catalogues)
+    {
+        <li class="list-group-item"><a asp-controller="Catalogues" asp-action="PublicDetails" asp-route-id="@c.Id">@c.Name</a></li>
+    }
+</ul>
+{{~ end ~}}

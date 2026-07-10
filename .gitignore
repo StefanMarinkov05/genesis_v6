@@ -1,0 +1,16 @@
+bin/
+obj/
+*.user
+.vs/
+.vscode/
+.metals/
+.bloop/
+prompts/in/*.json
+*.log.jsonl
+plan/state.json
+plan/state.json.bak
+out/
+logs/*.jsonl
+logs/registry.json
+logs/registry.jsonl
+.claude/settings.local.json

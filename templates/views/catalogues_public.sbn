@@ -1,0 +1,28 @@
+@model IEnumerable<{{ meta.root_namespace }}.Models.Catalogue>
+@{
+    ViewData["Title"] = "Публични каталози";
+}
+
+<h1>Публични каталози</h1>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">Все още няма публични каталози.</p>
+}
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    @foreach (var cat in Model)
+    {
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">@cat.Name</h5>
+                    <p class="card-text text-muted">@cat.Items.Count() записа</p>
+                </div>
+                <div class="card-footer">
+                    <a class="btn btn-sm btn-outline-primary" asp-action="PublicDetails" asp-route-id="@cat.Id">Разгледай</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

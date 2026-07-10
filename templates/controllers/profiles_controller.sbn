@@ -1,0 +1,47 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using {{ meta.root_namespace }}.Models;
+
+{{ ns_open (meta.root_namespace + ".Areas.Client.Controllers") }}
+
+/// <summary>
+/// A9: публична страница на потребител - само за четене, достъпна без вход.
+/// Показва името/аватара на потребителя и публичното му съдържание
+/// (публикации и/или публични каталози, според включените функционалности).
+/// </summary>
+[Area("Client")]
+[AllowAnonymous]
+public class ProfilesController : Controller
+{
+    private readonly {{ meta.project_name }}Context _context;
+    private readonly UserManager<ApplicationUser> _userManager;
+
+    public ProfilesController({{ meta.project_name }}Context context, UserManager<ApplicationUser> userManager)
+    {
+        _context = context;
+        _userManager = userManager;
+    }
+
+    public async Task<IActionResult> Public(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return NotFound();
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null) return NotFound();
+{{~ if features.posts ~}}
+        // Глобалният soft-delete филтър върху Post автоматично скрива изтритите.
+        ViewData["Posts"] = await _context.Posts.AsNoTracking()
+            .Where(p => p.UserId == id)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
+{{~ end ~}}
+{{~ if features.catalogues ~}}
+        ViewData["PublicCatalogues"] = await _context.Catalogues.AsNoTracking()
+            .Where(c => c.UserId == id && c.IsPublic)
+            .ToListAsync();
+{{~ end ~}}
+        return View(user);
+    }
+}
+{{ ns_close }}
