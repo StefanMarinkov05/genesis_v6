@@ -359,3 +359,33 @@
      blow the token budget and build on absent prerequisites. H was the highest token-value, fully
      build/test-verifiable, dependency-unblocking move. Recorded so a future session doesn't re-attempt 3a
      blind or start the big aggregation pages before E exists.
+- Session 23 (Opus, last five tasks 10/26/7/9/11): four design/verification decisions worth keeping.
+  1. Tasks 26 (public profile) + 7 (admin user detail) built as ONE shared component (UserProfileViewModel +
+     UserProfileService + Views/Shared/_UserProfileContent) rather than two parallel pages, per the breakdown's
+     "share components". The service is the single query source of truth (publicOnly flag limits catalogues on
+     the anon page); the partial branches on ViewData["AdminLinks"] to pick admin-detail vs public-profile link
+     targets. Placed the partial in root Views/Shared so both areas (Client Profiles, Admin Users) resolve it.
+     Emission/DI gated on posts||catalogues in all 3 sync points (program.sbn, EmitControllersViewsStage,
+     BuildStages pre-emit) - the same FileUploadService drift discipline from changelog 033.
+  2. Task 9 (admin total supervisor) implemented as a SPEC-level injection (SpecExpandStage.
+     InjectAdminSupervisorSurface) not an emission-loop special case. Injecting Admin scaffold controllers +
+     adminTable pages into the expanded spec BEFORE the lock is written means every existing consumer (scaffold
+     pipeline, the layout's spec.controllers-driven admin nav, admin_table, ModelForPage, verify DiscoverRoutes)
+     picks them up with ZERO new wiring - the cleanest possible "generator-level change to how the admin area is
+     emitted". Chose scaffold (reusing the full transform chain) over a hand-written CRUD template so FK
+     dropdowns / soft-delete / BG residue all come free. Excluded {Model}Image side-tables (not spec.models
+     entries). The "highest risk, do last" item passed verify on the first generate.
+  3. Task 11 (infinite scroll) reuses the card grid's EXISTING ?page=N server pagination via a client-side
+     IntersectionObserver + DOMParser append - deliberately NO new JSON/partial endpoint, so the change is
+     confined to card_grid.sbn (zero controller/scaffold-transform risk). Client search extracted to
+     filterCards() and re-applied to appended cards so scroll-loaded cards respect the active filter.
+  4. VERIFICATION POLICY correction: Session 22's render-tested-only batch (tasks 5..14) hid FOUR generate-time
+     bugs (changelog 046) invisible without a real compile+boot - a Razor tag-helper rule (C# in <option> attr),
+     a cross-file namespace assumption (context in .Data vs root), a non-existent nav property (Catalogue.User),
+     and an absent-key JSON read (GetProperty on a nullable seed field). Ran the full pipeline to green TWICE
+     this session (10/26/7, then 9/11). Standing rule going forward: a full `run --all` must follow ANY batch of
+     template changes, not accumulate render-tested deltas. The machine has the tools (dotnet-ef/codegen/LocalDB),
+     so there is no excuse to defer the DB run. Note: unattended runs need ANTHROPIC_API_KEY removed from the
+     child env (else spec-expand's optional LLM review pass becomes "fillable" and blocks waiting for a manual
+     paste); with the key unset and no expand-review-response.json present, the review pass is skipped and
+     deterministic expansion runs straight through.

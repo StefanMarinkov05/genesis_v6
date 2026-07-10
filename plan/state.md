@@ -404,3 +404,35 @@ fixture) so a green run doesn't nuke the canonical dev fixture every time.
 NEXT: fix the archival-MOVE hazard; then task 14 (product multi-image, now has a live scaffold to
 calibrate against in out/), or an Opus aggregation page (7/26) - the foundation (H + uploads) + a proven
 green pipeline are all in place now.
+
+## Session 22 (Sonnet/Haiku batch: tasks 5/13/24a/6/8/19/2/18/25/20/21/12/14) - changelogs 034-042
+Worked the remaining Sonnet + Haiku v6 tasks (cart badge, admin sort fix, desc sort, admin user id/delete
+guard, order receiver+address, catalogue rename, add-to-catalogue on details, catalogue->product link,
+catalogue owner link, admin img columns, sticky header, real-people seed avatars, product multi-image).
+All test-verified at Scriban-render level (tests -> 63). NO full generate run was done after 033, so this
+whole batch shipped render-tested-only - which hid four generate-time bugs later caught in Session 23.
+
+## Session 23 (Opus: v6 tasks 10/26/7/9/11 - the last five, ALL verified end-to-end) - changelogs 043-048
+Did the five remaining Opus tasks AND cleared the render-only debt from Session 22 with real generates.
+- Task 10 (blog post photos): comments+likes already existed; added nullable Post.ImagePath via the shared
+  FileUploadService (3-gate sync widened to include posts). changelog 043.
+- Tasks 26 + 7 (public profile + admin user detail): built ONE shared aggregation component -
+  UserProfileViewModel + UserProfileService + Views/Shared/_UserProfileContent partial (followers/following/
+  listings/posts/feedbacks/catalogues, feature-gated). ProfilesController.Public + new UsersController.Details
+  both build the VM; partial branches on ViewData["AdminLinks"]. changelogs 044-045.
+- Task 9 (admin total supervisor): SpecExpandStage.InjectAdminSupervisorSurface injects an Admin scaffold
+  controller + adminTable page for EVERY model lacking one, into the expanded spec - so scaffold pipeline +
+  admin nav + admin_table + verify all pick them up free. 10 extra CRUD controllers auto-generated for
+  FaceNote. New Pluralize helper. The "highest risk, do last" item - worked first generate. changelog 047.
+- Task 11 (infinite scroll): card_grid.sbn pager -> IntersectionObserver sentinel that lazy-loads ?page=N
+  of the same Index route and appends .card-item nodes (reuses existing pagination, no new endpoint).
+  changelog 048.
+FOUR pre-existing generate-time bugs from Session 22 (never generate-tested) caught + fixed via real runs
+(changelog 046): card_grid RZ1031 C#-in-option-attr (task 24a) -> selected="@(bool)"; layout CS0234 wrong
+context namespace (.Data, task 5) -> root ns; catalogues_public CS1061 Catalogue.User nav doesn't exist
+(task 25) -> owner dictionary; seed_data KeyNotFoundException on absent nullable props (task 16/10) ->
+TryGetProperty. RESULT: TWO fully-green run --all pipelines (verify PASSED build/db/boot/http/manifest/
+language) - one for 10/26/7, one for 9/11. Tests 79/79. All committed + pushed.
+LESSON recorded (046): render-tested-only batches hide Razor-tag-helper / cross-file-namespace / absent-key
+JSON bugs invisible without a real compile+boot. Run a full generate after ANY batch of template changes.
+ALL v6 tasks in plan/v6-task-breakdown.md are now DONE (3a is moot for FaceNote - no Account/Manage pages).
