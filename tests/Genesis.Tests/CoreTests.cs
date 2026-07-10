@@ -304,6 +304,154 @@ public class TemplateEmissionTests
         Assert.Contains("review.ImagePath", code);                // uploaded image is displayed
     }
 
+    // Task 10 (v6 Package C): blog posts can attach a photo, reusing the FileUploadService helper.
+    [Fact]
+    public void Posts_controller_accepts_optional_image_upload()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "controllers", "posts_controller.sbn"));
+        Assert.Contains("FileUploadService", code);              // reuses the shared helper
+        Assert.Contains("IFormFile? image", code);
+        Assert.Contains("SaveImageAsync(image", code);
+        Assert.Contains("uploads/posts", code);
+        Assert.Contains("post.ImagePath", code);
+    }
+
+    [Fact]
+    public void Posts_create_form_supports_image_attachment()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "views", "posts_create.sbn"));
+        Assert.Contains("enctype=\"multipart/form-data\"", code);
+        Assert.Contains("name=\"image\"", code);
+    }
+
+    [Fact]
+    public void Posts_views_render_attached_photo()
+    {
+        var (_, engine) = Arrange();
+        var index = engine.RenderFile(Path.Combine("templates", "views", "posts_index.sbn"));
+        var details = engine.RenderFile(Path.Combine("templates", "views", "posts_details.sbn"));
+        Assert.Contains("post.ImagePath", index);      // feed thumbnail
+        Assert.Contains("Model.ImagePath", details);   // full image on the post page
+    }
+
+    [Fact]
+    public void Program_registers_file_upload_service_when_posts_enabled()
+    {
+        var (_, engine) = Arrange();
+        // FaceNote enables posts, so FileUploadService must be DI-registered for post photo uploads.
+        var code = engine.RenderFile(Path.Combine("templates", "project", "program.sbn"));
+        Assert.Contains("AddScoped<FileUploadService>", code);
+    }
+
+    // Task 26/7 (v6 Packages G/D): shared user-aggregation component (view model + service + partial)
+    // powering both the public profile and the admin user detail page.
+    [Fact]
+    public void User_profile_view_model_has_feature_gated_collections()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "models", "user_profile_view_model.sbn"));
+        Assert.Contains("class UserProfileViewModel", code);
+        Assert.Contains("ApplicationUser User", code);
+        Assert.Contains("List<Product> Products", code);   // listing model detected (Product has images+UserId)
+        Assert.Contains("List<Post> Posts", code);         // posts enabled in FaceNote
+        Assert.Contains("List<Review> Feedbacks", code);   // rating enabled
+        Assert.Contains("List<ApplicationUser> Followers", code);
+        Assert.Contains("List<ApplicationUser> Following", code);
+    }
+
+    [Fact]
+    public void User_profile_service_aggregates_all_content()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "controllers", "user_profile_service.sbn"));
+        Assert.Contains("class UserProfileService", code);
+        Assert.Contains("BuildAsync(string userId, bool publicOnly)", code);
+        Assert.Contains("_context.Products", code);        // listed products by seller
+        Assert.Contains("_context.Posts", code);
+        Assert.Contains("_context.Reviews", code);
+        Assert.Contains("f.FollowedUserId == userId", code); // followers query
+        Assert.Contains("f.FollowerUserId == userId", code); // following query
+        Assert.Contains("!publicOnly || c.IsPublic", code);  // public-only catalogue filter
+    }
+
+    [Fact]
+    public void User_profile_content_partial_renders_all_sections()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "views", "user_profile_content_partial.sbn"));
+        Assert.Contains("UserProfileViewModel", code);
+        Assert.Contains("Последователи", code);
+        Assert.Contains("Следвани", code);
+        Assert.Contains("Обяви", code);
+        Assert.Contains("Публикации", code);
+        Assert.Contains("Отзиви", code);
+        // the partial branches on adminLinks to pick admin-detail vs public-profile user links
+        Assert.Contains("adminLinks", code);
+        Assert.Contains("Users\" asp-action=\"Details", code); // admin-mode user link target
+    }
+
+    [Fact]
+    public void Profiles_controller_uses_shared_profile_service()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "controllers", "profiles_controller.sbn"));
+        Assert.Contains("UserProfileService", code);
+        Assert.Contains("BuildAsync(id, publicOnly: true)", code);
+        Assert.DoesNotContain("$variation:", code);
+    }
+
+    [Fact]
+    public void Profiles_public_view_uses_shared_partial()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "views", "profiles_public.sbn"));
+        Assert.Contains("UserProfileViewModel", code);
+        Assert.Contains("_UserProfileContent", code);
+        Assert.Contains("Model.User", code);
+    }
+
+    [Fact]
+    public void Program_registers_profile_service_when_posts_or_catalogues_enabled()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "project", "program.sbn"));
+        Assert.Contains("AddScoped<UserProfileService>", code);
+    }
+
+    // Task 7 (v6 Package D): admin user Details page aggregating the same content, sharing the component.
+    [Fact]
+    public void Users_controller_has_details_action_using_profile_service()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "controllers", "users_controller.sbn"));
+        Assert.Contains("UserProfileService", code);
+        Assert.Contains("Details(string id)", code);
+        Assert.Contains("BuildAsync(id, publicOnly: false)", code); // admin sees all (not public-only)
+        Assert.DoesNotContain("$variation:", code);
+    }
+
+    [Fact]
+    public void Users_details_view_shows_data_and_shared_partial()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "views", "users_details.sbn"));
+        Assert.Contains("UserProfileViewModel", code);
+        Assert.Contains("ViewData[\"AdminLinks\"] = true", code); // links go to admin detail pages
+        Assert.Contains("_UserProfileContent", code);            // reuses the shared aggregation partial
+        Assert.Contains("Model.User.Id", code);                  // user data shown
+        Assert.Contains("Model.User.Email", code);
+    }
+
+    [Fact]
+    public void Users_index_links_to_details()
+    {
+        var (_, engine) = Arrange();
+        var code = engine.RenderFile(Path.Combine("templates", "views", "users_index.sbn"));
+        Assert.Contains("asp-action=\"Details\"", code);
+    }
+
     [Fact]
     public void Program_template_honors_di_registration_variation()
     {

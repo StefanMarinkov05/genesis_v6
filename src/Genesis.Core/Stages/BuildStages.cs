@@ -207,12 +207,24 @@ public sealed class IdentityStage : IStage
         if (spec.Models.Any(m => m.Images is not null))
             await EmitModelsStage.WriteAsync(ctx, "Services/ImageService.cs",
                 engine.RenderFile(ctx.Template("controllers/image_service.sbn")), ct);
-        // Same reason: Program.cs registers FileUploadService when pfp/rating uploads exist, so the
+        // Same reason: Program.cs registers FileUploadService when pfp/rating/posts uploads exist, so the
         // class must exist by this build gate too (mirrors EmitControllersViewsStage's emit condition).
         if ((spec.Identity?.ApplicationUser.ExtraProperties.Any(p => p.Name == "ProfilePicturePath") ?? false)
-            || EmitControllersViewsStage.FeatureEnabled(spec, "rating"))
+            || EmitControllersViewsStage.FeatureEnabled(spec, "rating")
+            || EmitControllersViewsStage.FeatureEnabled(spec, "posts"))
             await EmitModelsStage.WriteAsync(ctx, "Services/FileUploadService.cs",
                 engine.RenderFile(ctx.Template("controllers/file_upload_service.sbn")), ct);
+        // Task 26/7: Program.cs registers UserProfileService (+ references UserProfileViewModel) when
+        // posts/catalogues exist, so both must exist by this build gate too (mirrors the emit condition
+        // in EmitControllersViewsStage + program.sbn's needs_profile_service).
+        if (EmitControllersViewsStage.FeatureEnabled(spec, "posts")
+            || EmitControllersViewsStage.FeatureEnabled(spec, "catalogues"))
+        {
+            await EmitModelsStage.WriteAsync(ctx, "Models/UserProfileViewModel.cs",
+                engine.RenderFile(ctx.Template("models/user_profile_view_model.sbn")), ct);
+            await EmitModelsStage.WriteAsync(ctx, "Services/UserProfileService.cs",
+                engine.RenderFile(ctx.Template("controllers/user_profile_service.sbn")), ct);
+        }
         if (spec.Seeding is not null && !File.Exists(Path.Combine(ctx.ProjectDir, spec.Seeding.OutputFile)))
             await EmitModelsStage.WriteAsync(ctx, spec.Seeding.OutputFile,
                 engine.RenderFile(ctx.Template("models/seed_data.sbn")), ct);

@@ -11,6 +11,8 @@ has_pfp = false
 for ep in spec.identity.application_user.extra_properties
   if ep.name == "ProfilePicturePath"; has_pfp = true; end
 end
+# Задача 7: admin детайл на потребител ползва споделения UserProfileService (наличен при posts||catalogues).
+needs_profile = features.posts || features.catalogues
 ~}}
 {{ ns_open (meta.root_namespace + ".Areas.Admin.Controllers") }}
 
@@ -26,18 +28,21 @@ public class UsersController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
 {{~ if has_pfp ~}}
     private readonly FileUploadService _fileUpload;
-
-    public UsersController(UserManager<ApplicationUser> userManager, FileUploadService fileUpload)
-    {
-        _userManager = userManager;
-        _fileUpload = fileUpload;
-    }
-{{~ else ~}}
-    public UsersController(UserManager<ApplicationUser> userManager)
-    {
-        _userManager = userManager;
-    }
 {{~ end ~}}
+{{~ if needs_profile ~}}
+    private readonly UserProfileService _profiles;
+{{~ end ~}}
+
+    public UsersController(UserManager<ApplicationUser> userManager{{ if has_pfp }}, FileUploadService fileUpload{{ end }}{{ if needs_profile }}, UserProfileService profiles{{ end }})
+    {
+        _userManager = userManager;
+{{~ if has_pfp ~}}
+        _fileUpload = fileUpload;
+{{~ end ~}}
+{{~ if needs_profile ~}}
+        _profiles = profiles;
+{{~ end ~}}
+    }
 
     public async Task<IActionResult> Index()
     {
@@ -48,6 +53,22 @@ public class UsersController : Controller
         ViewData["UserRoles"] = roles;
         return View(users);
     }
+{{~ if needs_profile ~}}
+
+    /// <summary>
+    /// Задача 7: пълна страница на потребител - профилна снимка, данни, обяви, публикации,
+    /// отзиви, последователи/следвани. Всяка връзка води към детайлите на съответния запис.
+    /// Ползва същия UserProfileService като публичния профил (без филтъра за публични каталози).
+    /// </summary>
+    public async Task<IActionResult> Details(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return NotFound();
+        var vm = await _profiles.BuildAsync(id, publicOnly: false);
+        if (vm is null) return NotFound();
+        ViewData["UserRoles"] = string.Join(", ", await _userManager.GetRolesAsync(vm.User));
+        return View(vm);
+    }
+{{~ end ~}}
 
     public async Task<IActionResult> Edit(string? id)
     {
@@ -100,7 +121,7 @@ for r in spec.identity.roles; if r.is_admin; admin_role = r.name; break; end; en
         if (user is null) return RedirectToAction(nameof(Index));
         // Правило: администратор не може да изтрие друг администратор.
         var targetRoles = await _userManager.GetRolesAsync(user);
-        if (targetRoles.Contains("{{ admin_role }}"))
+        if (targetRoles.Contains("{{ subst admin_role }}"))
         {
             TempData["Error"] = "Не можете да изтриете администраторски акаунт.";
             return RedirectToAction(nameof(Index));

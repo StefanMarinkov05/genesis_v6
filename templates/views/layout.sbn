@@ -21,7 +21,7 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
 ~}}
 @inject Microsoft.AspNetCore.Identity.UserManager<{{ meta.root_namespace }}.Models.ApplicationUser> UserManagerNav
 {{~ if features.orders ~}}
-@inject {{ meta.root_namespace }}.Data.{{ meta.project_name }}Context NavCartContext
+@inject {{ meta.root_namespace }}.{{ meta.project_name }}Context NavCartContext
 {{~ end ~}}
 @{
     var navUser = User.Identity?.IsAuthenticated == true ? await UserManagerNav.GetUserAsync(User) : null;

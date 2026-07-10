@@ -8,9 +8,10 @@ using {{ meta.root_namespace }}.Models;
 {{~ for m in spec.models; if m.images; has_images = true; end; end ~}}
 {{~ has_pfp = false ~}}
 {{~ for ep in spec.identity.application_user.extra_properties; if ep.name == "ProfilePicturePath"; has_pfp = true; end; end ~}}
-{{~ # FileUploadService се нуждае от регистрация, ако някой го ползва: профилни снимки или снимки към отзиви. ~}}
-{{~ needs_upload = has_pfp || features.rating ~}}
-{{~ if has_images || needs_upload ~}}
+{{~ # FileUploadService се нуждае от регистрация, ако някой го ползва: профилни снимки, снимки към отзиви или снимки към публикации. ~}}
+{{~ needs_upload = has_pfp || features.rating || features.posts ~}}
+{{~ needs_profile_service_using = features.posts || features.catalogues ~}}
+{{~ if has_images || needs_upload || needs_profile_service_using ~}}
 using {{ meta.root_namespace }}.Services;
 {{~ end ~}}
 
@@ -44,6 +45,11 @@ builder.Services.AddScoped<ImageService>();
 {{~ end ~}}
 {{~ if needs_upload ~}}
 builder.Services.AddScoped<FileUploadService>();
+{{~ end ~}}
+{{~ # UserProfileService: споделено обобщение за публичния профил и админ детайла (Задачи 26/7). ~}}
+{{~ needs_profile_service = features.posts || features.catalogues ~}}
+{{~ if needs_profile_service ~}}
+builder.Services.AddScoped<UserProfileService>();
 {{~ end ~}}
 
 var app = builder.Build();

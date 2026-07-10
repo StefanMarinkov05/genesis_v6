@@ -28,15 +28,15 @@
 {{~ else ~}}
 {{~ for p in model.properties; if p.name == f && p.display_name; f_label = p.display_name; end; end ~}}
 {{~ end ~}}
-            <option value="{{ f }}" @(ViewData["SortBy"]?.ToString() == "{{ f }}" ? "selected" : "")>{{ f_label }}</option>
+            <option value="{{ f }}" selected="@(ViewData["SortBy"]?.ToString() == "{{ f }}")">{{ f_label }}</option>
 {{~ end ~}}
         </select>
     </div>
     {{~ # Task 24a: посока на сортиране - показва се винаги когато е активно сортиране ~}}
     <div class="col-md-2">
         <select class="form-select" name="sortDir" onchange="this.form.submit()">
-            <option value="asc" @(ViewData["SortDir"]?.ToString() != "desc" ? "selected" : "")>↑ Нарастващо</option>
-            <option value="desc" @(ViewData["SortDir"]?.ToString() == "desc" ? "selected" : "")>↓ Намаляващо</option>
+            <option value="asc" selected="@(ViewData["SortDir"]?.ToString() != "desc")">↑ Нарастващо</option>
+            <option value="desc" selected="@(ViewData["SortDir"]?.ToString() == "desc")">↓ Намаляващо</option>
         </select>
     </div>
 {{~ end ~}}

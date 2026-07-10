@@ -16,6 +16,12 @@
 {
     var score = post.Votes.Sum(v => v.Value);
     <div class="card mb-3">
+        @if (!string.IsNullOrEmpty(post.ImagePath))
+        {
+            <a asp-action="Details" asp-route-id="@post.Id">
+                <img src="/@post.ImagePath" alt="@post.Title" class="card-img-top" style="max-height: 320px; object-fit: cover;" />
+            </a>
+        }
         <div class="card-body">
             <h5 class="card-title"><a asp-action="Details" asp-route-id="@post.Id">@post.Title</a></h5>
             <p class="card-text">@post.Content</p>

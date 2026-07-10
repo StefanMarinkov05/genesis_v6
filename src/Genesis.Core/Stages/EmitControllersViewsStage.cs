@@ -53,12 +53,13 @@ public sealed class EmitControllersViewsStage : IStage
             }
         }
 
-        // Task 15/16 (Package E): shared single-file upload helper (FileUploadService) - distinct from
+        // Task 15/16/10 (Package E): shared single-file upload helper (FileUploadService) - distinct from
         // the per-model ImageService. Emitted whenever a consumer exists: admin pfp upload
-        // (ApplicationUser.ProfilePicturePath) or review image upload (rating feature). Must stay in
-        // sync with program.sbn's DI registration condition (has_pfp || features.rating).
+        // (ApplicationUser.ProfilePicturePath), review image upload (rating feature), or post image
+        // upload (posts feature). Must stay in sync with program.sbn's DI registration condition
+        // (has_pfp || features.rating || features.posts).
         var hasPfp = spec.Identity?.ApplicationUser.ExtraProperties.Any(p => p.Name == "ProfilePicturePath") ?? false;
-        if (hasPfp || FeatureEnabled(spec, "rating"))
+        if (hasPfp || FeatureEnabled(spec, "rating") || FeatureEnabled(spec, "posts"))
             await EmitModelsStage.WriteAsync(ctx, "Services/FileUploadService.cs",
                 engine.RenderFile(ctx.Template("controllers/file_upload_service.sbn")), ct);
 
@@ -104,6 +105,12 @@ public sealed class EmitControllersViewsStage : IStage
             // 500). Emit the admin user Edit form (FirstName + profile-picture upload when present).
             await EmitModelsStage.WriteAsync(ctx, "Areas/Admin/Views/Users/Edit.cshtml",
                 engine.RenderFile(ctx.Template("views/users_edit.sbn")), ct);
+            // Task 7: admin user Details page (aggregation via the shared UserProfileService). The
+            // controller only exposes Details when posts||catalogues (the service exists), so gate the
+            // view the same way to avoid emitting a view for a non-existent action.
+            if (FeatureEnabled(spec, "posts") || FeatureEnabled(spec, "catalogues"))
+                await EmitModelsStage.WriteAsync(ctx, "Areas/Admin/Views/Users/Details.cshtml",
+                    engine.RenderFile(ctx.Template("views/users_details.sbn")), ct);
         }
 
         // Feature controller/view pairs - each enabled feature emits its full stack.
@@ -173,9 +180,18 @@ public sealed class EmitControllersViewsStage : IStage
                 engine.RenderFile(ctx.Template("views/catalogues_edit_name.sbn"), new { primary }), ct);
         }
 
-        // A9: public read-only user profile - emitted when a user can have public content.
+        // A9 / Task 26 / Task 7: shared user-aggregation stack (view model + service + partial) reused by
+        // the public profile (Client/Profiles/Public) AND the admin user detail (Admin/Users/Details).
+        // Gated on posts||catalogues (same as the profile surface) - Program.cs registers the service
+        // under the identical condition (kept in sync; drift = startup DI crash, see changelog 033).
         if (FeatureEnabled(spec, "posts") || FeatureEnabled(spec, "catalogues"))
         {
+            await EmitModelsStage.WriteAsync(ctx, "Models/UserProfileViewModel.cs",
+                engine.RenderFile(ctx.Template("models/user_profile_view_model.sbn")), ct);
+            await EmitModelsStage.WriteAsync(ctx, "Services/UserProfileService.cs",
+                engine.RenderFile(ctx.Template("controllers/user_profile_service.sbn")), ct);
+            await EmitModelsStage.WriteAsync(ctx, "Views/Shared/_UserProfileContent.cshtml",
+                engine.RenderFile(ctx.Template("views/user_profile_content_partial.sbn")), ct);
             await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Controllers/ProfilesController.cs",
                 engine.RenderFile(ctx.Template("controllers/profiles_controller.sbn")), ct);
             await EmitModelsStage.WriteAsync(ctx, "Areas/Client/Views/Profiles/Public.cshtml",

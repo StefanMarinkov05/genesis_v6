@@ -1,47 +1,30 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using {{ meta.root_namespace }}.Models;
+using {{ meta.root_namespace }}.Services;
 
 {{ ns_open (meta.root_namespace + ".Areas.Client.Controllers") }}
 
 /// <summary>
-/// A9: публична страница на потребител - само за четене, достъпна без вход.
-/// Показва името/аватара на потребителя и публичното му съдържание
-/// (публикации и/или публични каталози, според включените функционалности).
+/// A9 / Задача 26: публична страница на потребител - само за четене, достъпна без вход.
+/// Показва снимка/име + обобщеното публично съдържание (обяви, публикации, отзиви,
+/// последователи/следвани, публични каталози) чрез споделения UserProfileService.
 /// </summary>
 [Area("Client")]
 [AllowAnonymous]
 public class ProfilesController : Controller
 {
-    private readonly {{ meta.project_name }}Context _context;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserProfileService _profiles;
 
-    public ProfilesController({{ meta.project_name }}Context context, UserManager<ApplicationUser> userManager)
-    {
-        _context = context;
-        _userManager = userManager;
-    }
+    public ProfilesController(UserProfileService profiles) => _profiles = profiles;
 
     public async Task<IActionResult> Public(string id)
     {
         if (string.IsNullOrEmpty(id)) return NotFound();
-        var user = await _userManager.FindByIdAsync(id);
-        if (user is null) return NotFound();
-{{~ if features.posts ~}}
-        // Глобалният soft-delete филтър върху Post автоматично скрива изтритите.
-        ViewData["Posts"] = await _context.Posts.AsNoTracking()
-            .Where(p => p.UserId == id)
-            .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync();
-{{~ end ~}}
-{{~ if features.catalogues ~}}
-        ViewData["PublicCatalogues"] = await _context.Catalogues.AsNoTracking()
-            .Where(c => c.UserId == id && c.IsPublic)
-            .ToListAsync();
-{{~ end ~}}
-        return View(user);
+        // publicOnly: true - външните посетители виждат само публичните каталози.
+        var vm = await _profiles.BuildAsync(id, publicOnly: true);
+        if (vm is null) return NotFound();
+        return View(vm);
     }
 }
 {{ ns_close }}

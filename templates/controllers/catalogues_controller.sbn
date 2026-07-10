@@ -146,6 +146,12 @@ public class CataloguesController : Controller
             .Include(c => c.Items)
                 .ThenInclude(i => i.{{ primary }})
             .ToListAsync();
+        // Задача 25: собствениците на каталозите - за име + връзка към публичния им профил.
+        // Catalogue няма навигация към ApplicationUser (само string UserId), затова ги зареждаме тук.
+        var ownerIds = catalogues.Select(c => c.UserId).Distinct().ToList();
+        ViewData["Owners"] = await _userManager.Users.AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id);
         return View(catalogues);
     }
 

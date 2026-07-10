@@ -29,6 +29,9 @@
 {{~ end ~}}
                 <td>@(roles.TryGetValue(user.Id, out var r) ? r : "-")</td>
                 <td>
+{{~ if features.posts || features.catalogues ~}}
+                    <a class="btn btn-sm btn-outline-info" asp-action="Details" asp-route-id="@user.Id">Детайли</a>
+{{~ end ~}}
                     <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@user.Id">Редакция</a>
                     <form class="d-inline" asp-action="Delete" asp-route-id="@user.Id" method="post"
                           onsubmit="return confirm('Сигурни ли сте, че искате да изтриете този потребител?');">

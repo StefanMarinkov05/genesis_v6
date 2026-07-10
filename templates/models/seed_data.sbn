@@ -45,8 +45,23 @@ public static class SeedData
 {{~ for prop in model.properties ~}}
 {{~ if !prop.key && !prop.foreign_key ~}}
 {{~ is_user_ref = string.ends_with prop.name "UserId" ~}}
+{{~ # Nullable-полетата може да липсват в seed JSON-а (по избор) - четем ги със ~}}
+{{~ # TryGetProperty, за да не хвърля GetProperty при липсващ ключ. ~}}
+{{~ el = prop.name | string.downcase ~}}
 {{~ if is_user_ref ~}}
                     {{ prop.name }} = ResolveUserRef(row.GetProperty("{{ prop.name }}").GetString(), seedUserIds),
+{{~ else if prop.nullable ~}}
+{{~ if prop.type == "string" ~}}
+                    {{ prop.name }} = row.TryGetProperty("{{ prop.name }}", out var {{ el }}El) ? {{ el }}El.GetString() : null,
+{{~ else if prop.type == "int" ~}}
+                    {{ prop.name }} = row.TryGetProperty("{{ prop.name }}", out var {{ el }}El) ? {{ el }}El.GetInt32() : (int?)null,
+{{~ else if prop.type == "decimal" ~}}
+                    {{ prop.name }} = row.TryGetProperty("{{ prop.name }}", out var {{ el }}El) ? {{ el }}El.GetDecimal() : (decimal?)null,
+{{~ else if prop.type == "DateTime" ~}}
+                    {{ prop.name }} = row.TryGetProperty("{{ prop.name }}", out var {{ el }}El) ? DateTime.Parse({{ el }}El.GetString()!) : (DateTime?)null,
+{{~ else if prop.type == "bool" ~}}
+                    {{ prop.name }} = row.TryGetProperty("{{ prop.name }}", out var {{ el }}El) ? {{ el }}El.GetBoolean() : (bool?)null,
+{{~ end ~}}
 {{~ else if prop.type == "string" ~}}
                     {{ prop.name }} = row.GetProperty("{{ prop.name }}").GetString() ?? string.Empty,
 {{~ else if prop.type == "int" ~}}

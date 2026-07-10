@@ -1,7 +1,11 @@
 @model IEnumerable<{{ meta.root_namespace }}.Models.Catalogue>
 @{
     ViewData["Title"] = "Публични каталози";
+    var owners = ViewData["Owners"] as IDictionary<string, {{ meta.root_namespace }}.Models.ApplicationUser>
+        ?? new Dictionary<string, {{ meta.root_namespace }}.Models.ApplicationUser>();
 }
+{{~ has_fn = false ~}}
+{{~ for p in spec.identity.application_user.extra_properties; if p.name == "FirstName"; has_fn = true; end; end ~}}
 
 <h1>Публични каталози</h1>
 
@@ -18,10 +22,10 @@
                 <div class="card-body">
                     <h5 class="card-title">@cat.Name</h5>
                     <p class="card-text text-muted">@cat.Items.Count() записа</p>
-                    @if (cat.User is not null)
+                    @if (owners.TryGetValue(cat.UserId, out var owner))
                     {
                         <p class="card-text small">
-                            От: <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@cat.User.Id">@(cat.User.FirstName ?? cat.User.Email)</a>
+                            От: <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@owner.Id">@(owner.{{ if has_fn }}FirstName ?? owner.Email{{ else }}Email{{ end }})</a>
                         </p>
                     }
                 </div>

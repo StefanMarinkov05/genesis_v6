@@ -14,3 +14,7 @@ logs/*.jsonl
 logs/registry.json
 logs/registry.jsonl
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+out_facenote_run*.log
+boot_test*.log
+fixtures/*.lock.json

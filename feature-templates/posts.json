@@ -14,6 +14,7 @@
         { "name": "Content", "type": "string", "displayName": "Съдържание",
           "validations": [ { "attribute": "Required", "errorMessage": "Съдържанието е задължително." } ],
           "seedHint": "2-3 изречения на български, тон на потребителска публикация" },
+        { "name": "ImagePath", "type": "string", "nullable": true, "displayName": "Снимка" },
         { "name": "UserId", "type": "string", "displayName": "Автор",
           "validations": [ { "attribute": "Required", "errorMessage": "Авторът е задължителен." } ] }
       ],
