@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using {{ meta.root_namespace }}.Infrastructure;
 using {{ meta.root_namespace }}.Models;
 using {{ meta.root_namespace }}.Services;
 
@@ -9,20 +12,31 @@ using {{ meta.root_namespace }}.Services;
 /// A9 / Задача 26: публична страница на потребител - само за четене, достъпна без вход.
 /// Показва снимка/име + обобщеното публично съдържание (обяви, публикации, отзиви,
 /// последователи/следвани, публични каталози) чрез споделения UserProfileService.
+/// Задача 17: маршрутът приема хеш (ProfileHash.Of), не суровия Identity Guid -
+/// обхождаме потребителите и сравняваме хешовете, за да намерим съответния.
 /// </summary>
 [Area("Client")]
 [AllowAnonymous]
 public class ProfilesController : Controller
 {
     private readonly UserProfileService _profiles;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public ProfilesController(UserProfileService profiles) => _profiles = profiles;
+    public ProfilesController(UserProfileService profiles, UserManager<ApplicationUser> userManager)
+    {
+        _profiles = profiles;
+        _userManager = userManager;
+    }
 
     public async Task<IActionResult> Public(string id)
     {
         if (string.IsNullOrEmpty(id)) return NotFound();
+        // ProfileHash.Of is plain C#, not SQL-translatable - materialize IDs first, then compare in-memory.
+        var allIds = await _userManager.Users.Select(u => u.Id).ToListAsync();
+        var userId = allIds.FirstOrDefault(uid => ProfileHash.Of(uid) == id);
+        if (userId is null) return NotFound();
         // publicOnly: true - външните посетители виждат само публичните каталози.
-        var vm = await _profiles.BuildAsync(id, publicOnly: true);
+        var vm = await _profiles.BuildAsync(userId, publicOnly: true);
         if (vm is null) return NotFound();
         return View(vm);
     }

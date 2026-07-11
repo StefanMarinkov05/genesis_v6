@@ -54,7 +54,7 @@ end
         {
             <p class="text-muted mb-2">
                 Обявено от
-                <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@Model.UserId">@sellerName</a>
+                <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@ProfileHash.Of(Model.UserId)">@sellerName</a>
             </p>
         }
         @if (avg is not null)

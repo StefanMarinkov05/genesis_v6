@@ -448,7 +448,8 @@ public class TemplateEmissionTests
         var (_, engine) = Arrange();
         var code = engine.RenderFile(Path.Combine("templates", "controllers", "profiles_controller.sbn"));
         Assert.Contains("UserProfileService", code);
-        Assert.Contains("BuildAsync(id, publicOnly: true)", code);
+        Assert.Contains("BuildAsync(userId, publicOnly: true)", code);
+        Assert.Contains("ProfileHash.Of(uid) == id", code); // item 17: route id is a hash, resolved back to the real user id
         Assert.DoesNotContain("$variation:", code);
     }
 

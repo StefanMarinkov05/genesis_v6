@@ -155,6 +155,22 @@
           "seedHint": "реалистични цени в лева: 5 - 5000"
         },
         {
+          "name": "Quantity",
+          "type": "int",
+          "displayName": "Наличност",
+          "validations": [
+            {
+              "attribute": "Range",
+              "args": [
+                0,
+                1000000
+              ],
+              "errorMessage": "Наличността трябва да е неотрицателно число."
+            }
+          ],
+          "seedHint": "реалистично количество на склад: 0 - 200 (0 означава изчерпан продукт)"
+        },
+        {
           "name": "Status",
           "type": "enum",
           "displayName": "Статус",
@@ -233,7 +249,13 @@
     "modules": [
       "Account.Register",
       "Account.Login",
-      "Account.Logout"
+      "Account.Logout",
+      "Account.Manage._Layout",
+      "Account.Manage._ManageNav",
+      "Account.Manage._StatusMessage",
+      "Account.Manage.Index",
+      "Account.Manage.Email",
+      "Account.Manage.ChangePassword"
     ],
     "localization": {
       "strategy": "staticReplacementMap",

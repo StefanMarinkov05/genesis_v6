@@ -25,7 +25,7 @@
                     @if (owners.TryGetValue(cat.UserId, out var owner))
                     {
                         <p class="card-text small">
-                            От: <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@owner.Id">@(owner.{{ if has_fn }}FirstName ?? owner.Email{{ else }}Email{{ end }})</a>
+                            От: <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@ProfileHash.Of(owner.Id)">@(owner.{{ if has_fn }}FirstName ?? owner.Email{{ else }}Email{{ end }})</a>
                         </p>
                     }
                 </div>

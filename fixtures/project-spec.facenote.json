@@ -249,7 +249,13 @@
     "modules": [
       "Account.Register",
       "Account.Login",
-      "Account.Logout"
+      "Account.Logout",
+      "Account.Manage._Layout",
+      "Account.Manage._ManageNav",
+      "Account.Manage._StatusMessage",
+      "Account.Manage.Index",
+      "Account.Manage.Email",
+      "Account.Manage.ChangePassword"
     ],
     "localization": {
       "strategy": "staticReplacementMap",

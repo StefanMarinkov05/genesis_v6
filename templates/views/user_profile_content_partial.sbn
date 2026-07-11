@@ -48,7 +48,7 @@ end
                     @if (adminLinks)
                     { <a asp-area="Admin" asp-controller="Users" asp-action="Details" asp-route-id="@u.Id">{{ if has_fn }}@(string.IsNullOrEmpty(u.FirstName) ? u.Email : u.FirstName){{ else }}@u.Email{{ end }}</a> }
                     else
-                    { <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@u.Id">{{ if has_fn }}@(string.IsNullOrEmpty(u.FirstName) ? u.Email : u.FirstName){{ else }}@u.Email{{ end }}</a> }
+                    { <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@ProfileHash.Of(u.Id)">{{ if has_fn }}@(string.IsNullOrEmpty(u.FirstName) ? u.Email : u.FirstName){{ else }}@u.Email{{ end }}</a> }
                 </li>
             }
         </ul>
@@ -67,7 +67,7 @@ end
                     @if (adminLinks)
                     { <a asp-area="Admin" asp-controller="Users" asp-action="Details" asp-route-id="@u.Id">{{ if has_fn }}@(string.IsNullOrEmpty(u.FirstName) ? u.Email : u.FirstName){{ else }}@u.Email{{ end }}</a> }
                     else
-                    { <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@u.Id">{{ if has_fn }}@(string.IsNullOrEmpty(u.FirstName) ? u.Email : u.FirstName){{ else }}@u.Email{{ end }}</a> }
+                    { <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@ProfileHash.Of(u.Id)">{{ if has_fn }}@(string.IsNullOrEmpty(u.FirstName) ? u.Email : u.FirstName){{ else }}@u.Email{{ end }}</a> }
                 </li>
             }
         </ul>

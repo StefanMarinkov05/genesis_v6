@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using GenesisV6.Core.Pipeline;
 using GenesisV6.Core.Spec;
 using GenesisV6.Core.Util;
@@ -254,6 +255,12 @@ public sealed class IdentityStage : IStage
         await EmitModelsStage.WriteAsync(ctx, id.ApplicationUser.File,
             engine.RenderFile(ctx.Template("identity/application_user.sbn")), ct);
 
+        // Item 17: ProfileHash must exist before the scaffold+build below - _ManageNav.cshtml
+        // (scaffolded further down in this method) references it, and this stage's own build
+        // check runs before EmitControllersViewsStage would otherwise emit it.
+        await EmitModelsStage.WriteAsync(ctx, "Infrastructure/ProfileHash.cs",
+            engine.RenderFile(ctx.Template("models/profile_hash.sbn")), ct);
+
         // BgIdentityErrorDescriber hardcodes Bulgarian error text - only emit it (and only wire
         // it into DI, see program.sbn's matching meta.is_bulgarian gate) for a Bulgarian project.
         // The two gates MUST stay in sync: emitting the class without the DI line is harmless
@@ -311,6 +318,25 @@ public sealed class IdentityStage : IStage
                 "aspnet-codegenerator failed. Install once: dotnet tool install -g dotnet-aspnet-codegenerator\n" + gen.StdErr);
         }
 
+        // Item 17: ProfileHash lives in {RootNamespace}.Infrastructure - Identity Pages have their
+        // OWN scaffolder-generated _ViewImports.cshtml (Razor Pages, separate from the MVC areas'
+        // _ViewImports.cshtml patched elsewhere), which doesn't include it by default. Patching the
+        // top-level one is enough - Razor _ViewImports.cshtml cascades down the folder tree, so
+        // Account/Manage/_ManageNav.cshtml inherits it without needing its own copy touched.
+        var identityViewImports = Path.Combine(ctx.ProjectDir, "Areas", "Identity", "Pages", "_ViewImports.cshtml");
+        if (File.Exists(identityViewImports))
+        {
+            var iviText = await File.ReadAllTextAsync(identityViewImports, ct);
+            if (!iviText.Contains(".Infrastructure"))
+                await File.WriteAllTextAsync(identityViewImports,
+                    iviText.TrimEnd('\n') + $"\n@using {spec.Meta.RootNamespace}.Infrastructure\n", ct);
+        }
+
+        // Item 17: remove the 2FA/Personal-data nav links (their pages were never scaffolded -
+        // id.Modules above doesn't include them - so the stock nav's links to them would 404),
+        // and add a link to the current user's own public profile.
+        RestructureManageNav(ctx);
+
         // Bulgarian page markup, two layers (ADR-002b) - BOTH are retrofit overrides of the
         // scaffolder's own (English) output, so both are skipped for a non-Bulgarian project:
         // the scaffolded pages are left exactly as aspnet-codegenerator produced them, which is
@@ -336,6 +362,15 @@ public sealed class IdentityStage : IStage
             }
         }
 
+        // Root Views/_ViewImports.cshtml (from the initial `dotnet new mvc` scaffold, not
+        // dps-nn's own output) needs the same Infrastructure using as the per-area ones below -
+        // Views/Shared/*.cshtml partials (e.g. _UserProfileContent) live outside any area and use
+        // this file instead. Item 17's ProfileHash helper lives in Infrastructure.
+        var rootViewImports = Path.Combine(ctx.ProjectDir, "Views", "_ViewImports.cshtml");
+        if (File.Exists(rootViewImports))
+            await File.WriteAllTextAsync(rootViewImports,
+                $"@using {spec.Meta.RootNamespace}\n@using {spec.Meta.RootNamespace}.Models\n@using {spec.Meta.RootNamespace}.Infrastructure\n@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers\n", ct);
+
         // Areas: physical folders + a placeholder _ViewStart per area.
         foreach (var area in spec.Areas)
         {
@@ -345,7 +380,7 @@ public sealed class IdentityStage : IStage
             await File.WriteAllTextAsync(Path.Combine(areaViews, "_ViewStart.cshtml"),
                 "@{\n    Layout = \"/Views/Shared/_Layout.cshtml\";\n}\n", ct);
             await File.WriteAllTextAsync(Path.Combine(areaViews, "_ViewImports.cshtml"),
-                $"@using {spec.Meta.RootNamespace}\n@using {spec.Meta.RootNamespace}.Models\n@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers\n", ct);
+                $"@using {spec.Meta.RootNamespace}\n@using {spec.Meta.RootNamespace}.Models\n@using {spec.Meta.RootNamespace}.Infrastructure\n@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers\n", ct);
         }
 
         // Bulgarian DataAnnotations messages on the scaffolded code-behind InputModels
@@ -457,10 +492,52 @@ public sealed class IdentityStage : IStage
         if (!Directory.Exists(identityPagesDir)) return;
         foreach (var file in Directory.EnumerateFiles(identityPagesDir, "*.cshtml", SearchOption.AllDirectories))
         {
+            // Manage/ pages reference ManageNavPages.Email, ManageNavPages.ChangePassword, etc. -
+            // real C# static-property access with no quotes/tags around it to distinguish from
+            // prose, plus @model ...EmailModel / ...ChangePasswordModel class-name lines. A blind
+            // whole-word map (e.g. "Email" -> "Имейл") corrupts BOTH into a compile error, and
+            // there's no reliable text-only way to tell "translatable prose" from "bare identifier
+            // reference" apart on the same C# code line. Skip the whole Manage/ subtree here -
+            // it's new-to-this-session scaffolding, not previously working translated pages.
+            if (file.Replace('\\', '/').Contains("/Pages/Account/Manage/", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             var text = await File.ReadAllTextAsync(file, ct);
             foreach (var (from, to) in pairs) text = text.Replace(from, to);
             await File.WriteAllTextAsync(file, text, ct);
         }
         ctx.Info($"identity BG map applied ({pairs.Count} replacements)");
+    }
+
+    /// <summary>
+    /// Item 17: removes the scaffolded _ManageNav's dead 2FA/Personal-data links (their pages
+    /// were deliberately never scaffolded) and adds a link to the current user's own public
+    /// profile, hashed via ProfileHash (item 17's other half) so it matches every other public-
+    /// profile link in the app. No-op if the Manage nav wasn't scaffolded (module not requested).
+    /// </summary>
+    internal static void RestructureManageNav(StageContext ctx)
+    {
+        var path = Path.Combine(ctx.ProjectDir, "Areas", "Identity", "Pages", "Account", "Manage", "_ManageNav.cshtml");
+        if (!File.Exists(path)) return;
+        var src = File.ReadAllText(path);
+        if (src.Contains("ProfileHash.Of")) return; // idempotent rerun
+
+        // Inject UserManager (only SignInManager is scaffolded by default) to resolve the
+        // current user's id for the public-profile link.
+        if (!src.Contains("UserManager<"))
+            src = src.Replace(
+                "@inject SignInManager<ApplicationUser> SignInManager",
+                "@inject SignInManager<ApplicationUser> SignInManager\n@inject UserManager<ApplicationUser> UserManager");
+
+        src = new Regex(@"\s*<li[^>]*>\s*<a[^>]*TwoFactorAuthenticationNavClass[\s\S]*?</a></li>").Replace(src, "");
+        src = new Regex(@"\s*<li[^>]*>\s*<a[^>]*PersonalDataNavClass[\s\S]*?</a></li>").Replace(src, "");
+
+        var publicProfileLink =
+            "\n    <li class=\"nav-item\"><a class=\"nav-link\" id=\"public-profile\" asp-area=\"Client\" asp-controller=\"Profiles\" " +
+            "asp-action=\"Public\" asp-route-id=\"@ProfileHash.Of(UserManager.GetUserId(User)!)\">Публичен акаунт</a></li>";
+        src = src.Replace("</ul>", $"{publicProfileLink}\n</ul>");
+
+        File.WriteAllText(path, src);
+        ctx.Info("Manage nav restructured: 2FA/Personal data removed, Публичен акаунт link added");
     }
 }

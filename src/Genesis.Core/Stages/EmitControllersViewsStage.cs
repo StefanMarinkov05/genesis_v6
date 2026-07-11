@@ -194,6 +194,8 @@ public sealed class EmitControllersViewsStage : IStage
             Emit("Views/Shared/_UserProfileContent.cshtml", () => engine.RenderFile(ctx.Template("views/user_profile_content_partial.sbn")));
             Emit("Areas/Client/Controllers/ProfilesController.cs", () => engine.RenderFile(ctx.Template("controllers/profiles_controller.sbn")));
             Emit("Areas/Client/Views/Profiles/Public.cshtml", () => engine.RenderFile(ctx.Template("views/profiles_public.sbn")));
+            // ProfileHash.cs (item 17) is emitted earlier, from IdentityStage - _ManageNav.cshtml
+            // references it and IdentityStage runs (and build-checks) before this stage does.
         }
 
         // Views: layout replaced wholesale, then each declared page by kind.
