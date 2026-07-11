@@ -340,12 +340,7 @@
       "area": "Client",
       "model": "Product",
       "generatedBy": "scaffold",
-      "removedActions": [
-        "Create",
-        "Edit",
-        "Delete"
-      ],
-      "removalReason": "публичният каталог е само за четене; управлението е в Admin",
+      "removedActions": [],
       "sorting": {
         "enabled": true,
         "implementedIn": "controller",

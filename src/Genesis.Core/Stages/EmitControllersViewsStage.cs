@@ -84,6 +84,7 @@ public sealed class EmitControllersViewsStage : IStage
                     ApplySoftDelete(ctx, controller);
                     ApplyBgResiduePass(ctx, controller);
                     StripSystemFieldsFromViews(ctx, controller);
+                    InjectOwnerAutoAssign(ctx, controller);
                     InjectReviewLoadingIntoDetails(ctx, controller);
                     ApplyDeviations(ctx, controller, engine);
                     break;
@@ -344,9 +345,17 @@ public sealed class EmitControllersViewsStage : IStage
     /// the controller, and their display rows from CLIENT-area Details/Delete (admin keeps
     /// read-only display). SaveChanges override owns them entirely.
     /// </summary>
+    /// <summary>Model has a raw ownership "UserId" scalar (not a relation nav) - auto-stamped
+    /// from the logged-in user rather than left as a hand-typed form field (item 18).</summary>
+    internal static PropertySpec? OwnerProperty(ModelSpec model) =>
+        model.Properties.FirstOrDefault(p => p.Name == "UserId" && p.Type == "string" && !p.ForeignKey);
+
     internal static void StripSystemFieldsFromViews(StageContext ctx, ControllerSpec c)
     {
-        string[] fields = ["CreatedAt", "UpdatedAt", "DeletedAt", "IsDeleted"];
+        List<string> fieldList = ["CreatedAt", "UpdatedAt", "DeletedAt", "IsDeleted"];
+        var model = c.Model is { } mn ? ctx.Spec.Models.FirstOrDefault(m => m.Name == mn) : null;
+        if (model is not null && OwnerProperty(model) is not null) fieldList.Add("UserId");
+        var fields = fieldList.ToArray();
 
         // controller [Bind("A,B,CreatedAt,...")] lists: rewrite each list without the
         // system entries (parse -> filter -> rejoin; never blind string surgery).
@@ -454,10 +463,110 @@ public sealed class EmitControllersViewsStage : IStage
                 $"            ViewData[\"ReviewAuthors\"] = await _userManager.Users\n" +
                 $"                .Where(u => authorIds.Contains(u.Id))\n" +
                 $"                .ToDictionaryAsync(u => u.Id, u => u.FirstName ?? u.Email ?? \"Потребител\");\n" +
+                $"            var seller = await _userManager.FindByIdAsync({varName}.UserId);\n" +
+                $"            ViewData[\"SellerName\"] = seller?.FirstName is {{ Length: > 0 }} sellerFirstName ? sellerFirstName : seller?.UserName;\n" +
                 $"        }}";
             src = loadRx.Replace(src, replacement, 1);
             File.WriteAllText(path, src);
             ctx.Info($"injected review loading into {c.Name}.Details");
+        }
+    }
+
+    /// <summary>
+    /// Item 18: models with a raw ownership "UserId" scalar (see OwnerProperty) get it
+    /// auto-stamped from the logged-in user on Create - StripSystemFieldsFromViews already
+    /// removed it from [Bind] and the form, so nothing sets it otherwise. Edit needs the
+    /// opposite care: since UserId isn't bound from the form anymore, the incoming object's
+    /// UserId is default/null - _context.Update(...) would blank the real value in the DB
+    /// unless re-stamped from the existing row first (same "don't blank an omitted field"
+    /// concern already solved by hand in users_controller.sbn's Edit action).
+    /// </summary>
+    internal static void InjectOwnerAutoAssign(StageContext ctx, ControllerSpec c)
+    {
+        if (c.Model is null) return;
+        var model = ctx.Spec.Models.FirstOrDefault(m => m.Name == c.Model);
+        if (model is null || OwnerProperty(model) is null) return;
+
+        var path = Path.Combine(ctx.ProjectDir, c.File);
+        if (!File.Exists(path)) return;
+        var src = File.ReadAllText(path);
+        if (src.Contains("// owner auto-assign")) return; // idempotent rerun
+
+        if (!src.Contains("UserManager<ApplicationUser>"))
+        {
+            if (!src.Contains("using Microsoft.AspNetCore.Identity;"))
+                src = src.Replace($"using {ctx.Spec.Meta.RootNamespace}.Models;",
+                    $"using {ctx.Spec.Meta.RootNamespace}.Models;\nusing Microsoft.AspNetCore.Identity;");
+            var ctorRx = new Regex($@"public {c.Name}\(([^)]*){ctx.Spec.Meta.ProjectName}Context (\w+)\)");
+            var cm = ctorRx.Match(src);
+            if (cm.Success)
+            {
+                var ctxParam = cm.Groups[2].Value;
+                src = src.Replace(cm.Value,
+                    $"private readonly UserManager<ApplicationUser> _userManager;\n" +
+                    $"    public {c.Name}({cm.Groups[1].Value}{ctx.Spec.Meta.ProjectName}Context {ctxParam}, UserManager<ApplicationUser> userManager)");
+                var bodyRx = new Regex($@"(public {c.Name}\([^)]*\)\s*\{{)");
+                src = bodyRx.Replace(src, "$1\n        _userManager = userManager;", 1);
+            }
+        }
+
+        // Create POST: stamp UserId right after entering the ModelState.IsValid branch.
+        // The [Bind("...")] attribute in the parameter list has its own closing paren before the
+        // method's - a naive [^)]* stops there, so this needs a lazy dot-all match that can
+        // backtrack past it to find the actual method-signature close.
+        var createRx = new Regex(
+            @"(public async Task<IActionResult> Create\([\s\S]*?\)\s*\{\s*if \(ModelState\.IsValid\)\s*\{\s*)(_context\.Add\((\w+)\);)");
+        var crm = createRx.Match(src);
+        if (crm.Success)
+        {
+            var varName = crm.Groups[3].Value;
+            src = createRx.Replace(src,
+                $"{crm.Groups[1].Value}// owner auto-assign\n                {varName}.UserId = _userManager.GetUserId(User)!;\n                {crm.Groups[2].Value}",
+                1);
+        }
+
+        // Edit POST: re-stamp the original UserId before Update - it was stripped from [Bind],
+        // so the freshly-bound object's UserId is null/default and must not overwrite the real one.
+        // On a Client-area controller, also Forbid non-owners (admin bypass) - same idiom already
+        // hand-written in posts_controller.sbn's Delete action.
+        var isClient = string.Equals(c.Area, "Client", StringComparison.OrdinalIgnoreCase);
+        var adminRole = ctx.Spec.Identity?.Roles.FirstOrDefault(r => r.IsAdmin)?.Name;
+        var editRx = new Regex(
+            @"(public async Task<IActionResult> Edit\(int id, \[Bind\(""[^""]*""\)\] " + c.Model + @" (\w+)\)[\s\S]*?try\s*\{\s*)(_context\.Update\(\2\);)");
+        var edm = editRx.Match(src);
+        if (edm.Success)
+        {
+            var varName = edm.Groups[2].Value;
+            var guard = isClient && adminRole is not null
+                ? $"var {varName}Owner = (await _context.{c.Model}s.AsNoTracking().FirstAsync(x => x.Id == {varName}.Id)).UserId;\n" +
+                  $"                    if ({varName}Owner != _userManager.GetUserId(User) && !User.IsInRole(\"{adminRole}\")) return Forbid();\n" +
+                  $"                    {varName}.UserId = {varName}Owner;\n"
+                : $"{varName}.UserId = (await _context.{c.Model}s.AsNoTracking().FirstAsync(x => x.Id == {varName}.Id)).UserId;\n";
+            src = editRx.Replace(src,
+                $"{edm.Groups[1].Value}// owner auto-assign\n                    {guard}                    {edm.Groups[3].Value}",
+                1);
+        }
+
+        // DeleteConfirmed (Client area only): same Forbid guard before the delete/soft-delete.
+        if (isClient && adminRole is not null)
+        {
+            var delRx = new Regex(
+                @"(public async Task<IActionResult> DeleteConfirmed\(int id\)\s*\{\s*)(var (\w+) = await _context\." + c.Model + @"s\.FindAsync\(id\);[\s\S]*?)(\r?\n\s*)(if \(\3 != null\)\s*\{)",
+                RegexOptions.Singleline);
+            var dm = delRx.Match(src);
+            if (dm.Success)
+            {
+                var varName = dm.Groups[3].Value;
+                src = delRx.Replace(src,
+                    $"{dm.Groups[1].Value}{dm.Groups[2].Value}{dm.Groups[4].Value}if ({varName} is not null && {varName}.UserId != _userManager.GetUserId(User) && !User.IsInRole(\"{adminRole}\")) return Forbid();\n            {dm.Groups[5].Value}",
+                    1);
+            }
+        }
+
+        if (crm.Success || edm.Success)
+        {
+            File.WriteAllText(path, src);
+            ctx.Info($"owner auto-assign wired into {c.Name}");
         }
     }
 

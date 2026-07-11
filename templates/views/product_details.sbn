@@ -13,6 +13,7 @@ end
     var avg = (double?)ViewData["AverageRating"];
     var authorNames = (IDictionary<string, string>)(ViewData["ReviewAuthors"] ?? new Dictionary<string, string>());
     var currentUserId = (string?)ViewData["CurrentUserId"];
+    var sellerName = (string?)ViewData["SellerName"];
 }
 
 <div class="row g-4">
@@ -49,6 +50,13 @@ end
     </div>
     <div class="col-md-6">
         <h1 class="mb-1">@Model.{{ display }}</h1>
+        @if (!string.IsNullOrEmpty(sellerName))
+        {
+            <p class="text-muted mb-2">
+                Обявено от
+                <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@Model.UserId">@sellerName</a>
+            </p>
+        }
         @if (avg is not null)
         {
             <div class="text-warning fs-5 mb-3">
