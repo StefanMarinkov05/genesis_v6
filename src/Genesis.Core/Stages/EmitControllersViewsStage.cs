@@ -85,6 +85,7 @@ public sealed class EmitControllersViewsStage : IStage
                     ApplyBgResiduePass(ctx, controller);
                     StripSystemFieldsFromViews(ctx, controller);
                     InjectOwnerAutoAssign(ctx, controller);
+                    InjectQuantityDerivedStatus(ctx, controller);
                     InjectReviewLoadingIntoDetails(ctx, controller);
                     ApplyDeviations(ctx, controller, engine);
                     break;
@@ -350,12 +351,25 @@ public sealed class EmitControllersViewsStage : IStage
     internal static PropertySpec? OwnerProperty(ModelSpec model) =>
         model.Properties.FirstOrDefault(p => p.Name == "UserId" && p.Type == "string" && !p.ForeignKey);
 
+    /// <summary>Model has a "Quantity" int alongside a "Status" enum - Status is derived from
+    /// Quantity server-side rather than hand-set (item 19). Returns the Status property, or null.</summary>
+    internal static PropertySpec? DerivedStatusProperty(ModelSpec model) =>
+        model.Properties.Any(p => p.Name == "Quantity" && p.Type == "int")
+            ? model.Properties.FirstOrDefault(p => p.Name == "Status" && p.Type == "enum")
+            : null;
+
     internal static void StripSystemFieldsFromViews(StageContext ctx, ControllerSpec c)
     {
         List<string> fieldList = ["CreatedAt", "UpdatedAt", "DeletedAt", "IsDeleted"];
         var model = c.Model is { } mn ? ctx.Spec.Models.FirstOrDefault(m => m.Name == mn) : null;
         if (model is not null && OwnerProperty(model) is not null) fieldList.Add("UserId");
+        // Status (item 19): never editable via a form, but - unlike UserId/audit fields - it
+        // should STAY visible on Details/Index (both areas), just not hand-settable. Stripped
+        // from [Bind] + Create/Edit forms only, never from the display-stripping loop below.
+        var derivedStatus = model is not null ? DerivedStatusProperty(model) : null;
+        if (derivedStatus is not null) fieldList.Add("Status");
         var fields = fieldList.ToArray();
+        var formOnlyFields = derivedStatus is not null ? new[] { "Status" } : [];
 
         // controller [Bind("A,B,CreatedAt,...")] lists: rewrite each list without the
         // system entries (parse -> filter -> rejoin; never blind string surgery).
@@ -386,7 +400,8 @@ public sealed class EmitControllersViewsStage : IStage
 
             var src = File.ReadAllText(file);
             var before = src;
-            foreach (var f in fields)
+            var fieldsHere = isForm ? fields : fields.Except(formOnlyFields).ToArray();
+            foreach (var f in fieldsHere)
             {
                 // form group: <div class="form-group"> ... asp-for="F" ... </div>
                 src = System.Text.RegularExpressions.Regex.Replace(src,
@@ -567,6 +582,54 @@ public sealed class EmitControllersViewsStage : IStage
         {
             File.WriteAllText(path, src);
             ctx.Info($"owner auto-assign wired into {c.Name}");
+        }
+    }
+
+    /// <summary>
+    /// Item 19: Status is derived from Quantity (0 -> the enum's LAST value, e.g. "sold out";
+    /// &gt;0 -> the FIRST value, e.g. "in stock") instead of hand-set - same first/last convention
+    /// cart_controller.sbn already uses for the purchase-flow status flip. Computed on Create+Edit,
+    /// right after StripSystemFieldsFromViews has already removed Status from [Bind]/the form.
+    /// </summary>
+    internal static void InjectQuantityDerivedStatus(StageContext ctx, ControllerSpec c)
+    {
+        if (c.Model is null) return;
+        var model = ctx.Spec.Models.FirstOrDefault(m => m.Name == c.Model);
+        if (model is null || DerivedStatusProperty(model) is not { } statusProp || statusProp.EnumValues.Count == 0) return;
+
+        var path = Path.Combine(ctx.ProjectDir, c.File);
+        if (!File.Exists(path)) return;
+        var src = File.ReadAllText(path);
+        if (src.Contains("// derived status")) return; // idempotent rerun
+
+        var inStock = statusProp.EnumValues[0].Value;
+        var outOfStock = statusProp.EnumValues[^1].Value;
+        string DeriveLine(string varName) =>
+            $"// derived status\n                {varName}.Status = {varName}.Quantity > 0 ? {c.Model}Status.{inStock} : {c.Model}Status.{outOfStock};\n                ";
+
+        var createRx = new Regex(
+            @"(public async Task<IActionResult> Create\([\s\S]*?\)\s*\{\s*if \(ModelState\.IsValid\)\s*\{\s*)(?:// owner auto-assign\s*\n\s*(\w+)\.UserId = [^\n]+\n\s*)?(_context\.Add\((\w+)\);)");
+        var crm = createRx.Match(src);
+        if (crm.Success)
+        {
+            var varName = crm.Groups[4].Value;
+            var ownerLine = crm.Groups[2].Success ? $"// owner auto-assign\n                {crm.Groups[2].Value}.UserId = _userManager.GetUserId(User)!;\n                " : "";
+            src = createRx.Replace(src, $"{crm.Groups[1].Value}{ownerLine}{DeriveLine(varName)}{crm.Groups[3].Value}", 1);
+        }
+
+        var editRx = new Regex(
+            @"(public async Task<IActionResult> Edit\(int id, \[Bind\(""[^""]*""\)\] " + c.Model + @" (\w+)\)[\s\S]*?try\s*\{\s*)([\s\S]*?)(_context\.Update\(\2\);)");
+        var edm = editRx.Match(src);
+        if (edm.Success)
+        {
+            var varName = edm.Groups[2].Value;
+            src = editRx.Replace(src, $"{edm.Groups[1].Value}{edm.Groups[3].Value}{DeriveLine(varName)}{edm.Groups[4].Value}", 1);
+        }
+
+        if (crm.Success || edm.Success)
+        {
+            File.WriteAllText(path, src);
+            ctx.Info($"derived status wired into {c.Name}");
         }
     }
 

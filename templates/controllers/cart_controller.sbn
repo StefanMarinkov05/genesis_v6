@@ -97,15 +97,29 @@ public class CartController : Controller
         }
 {{~
 # Флаг за статус: ако основният модел има enum свойство Status, поръчаният запис
-# се маркира с последната стойност (напр. Sold) и изчезва от търсачката.
+# се маркира с последната стойност (напр. Sold) и изчезва от търсачката. Ако моделът
+# ИМА и Quantity - статусът вместо това се извежда от наличността (задача 19): купеното
+# количество се приспада, статусът се преизчислява от новата наличност.
 status_enum = null
+has_quantity = false
 for tm in spec.models
   if tm.name == primary
-    for tp in tm.properties; if tp.type == "enum" && tp.name == "Status"; status_enum = tp; end; end
+    for tp in tm.properties
+      if tp.type == "enum" && tp.name == "Status"; status_enum = tp; end
+      if tp.type == "int" && tp.name == "Quantity"; has_quantity = true; end
+    end
   end
 end
 ~}}
-{{~ if status_enum ~}}
+{{~ if status_enum && has_quantity ~}}
+        // Купеното количество се приспада от наличността; статусът се извежда от нея (задача 19).
+        foreach (var item in items)
+            if (item.{{ primary }} is { } bought)
+            {
+                bought.Quantity = Math.Max(0, bought.Quantity - item.Quantity);
+                bought.Status = bought.Quantity > 0 ? {{ primary }}Status.{{ (status_enum.enum_values | array.first).value }} : {{ primary }}Status.{{ (status_enum.enum_values | array.last).value }};
+            }
+{{~ else if status_enum ~}}
         // Поръчаният артикул сменя статуса си и се скрива от каталога (без двойни поръчки).
         foreach (var item in items)
             if (item.{{ primary }} is { } bought)
