@@ -290,6 +290,10 @@
         {
           "email": "ivan@facenote.bg",
           "role": "$variation:userRoleName"
+        },
+        {
+          "email": "petar@facenote.bg",
+          "role": "$variation:adminRoleName"
         }
       ]
     }

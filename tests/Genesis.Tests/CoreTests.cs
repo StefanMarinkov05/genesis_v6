@@ -1098,3 +1098,71 @@ public class ParallelEmitTests
         Assert.Null(ParallelEmit.CurrentWorker.Value);
     }
 }
+
+// dps-nn's OWN pipeline narration (StageContext.Info/Debug/Error), not the generated app's UI,
+// gets translated to Bulgarian for a Bulgarian project via templates/log-bg-map.json - the
+// "Bulgarian everything" idea already applied to the parallel worker names (issue #5).
+public class LogTranslationTests : IDisposable
+{
+    // ActionLogPath is CWD-rooted and not injectable, so real StageContext.Info calls really do
+    // write logs/<ProjectName>/actions.log.jsonl next to the test binaries - use a distinctive
+    // project name and clean up afterward so tests don't leave litter behind (best-effort,
+    // matching AppendActionLog's own "never let a logging failure break anything" philosophy).
+    private const string ProjectName = "LogTranslationTestProject";
+    public void Dispose() { try { Directory.Delete(Path.Combine("logs", ProjectName), recursive: true); } catch { } }
+
+    private static (StageContext ctx, StringWriter console) Arrange(string language)
+    {
+        var spec = new ProjectSpec { Meta = new MetaSection { ProjectName = ProjectName, Language = language } };
+        var variation = VariationResolver.Resolve(spec);
+        var state = new StateStore(Path.Combine(Path.GetTempPath(), "dps-nn-tests-" + Guid.NewGuid(), "state.json"));
+        var console = new StringWriter();
+        var ctx = new StageContext(spec, variation, Directory.GetCurrentDirectory(), Directory.GetCurrentDirectory(), state, console);
+        return (ctx, console);
+    }
+
+    [Fact]
+    public void Bulgarian_project_gets_translated_log_lines()
+    {
+        var (ctx, console) = Arrange("bg");
+        ctx.Info("wrote Models/Product.cs");
+        Assert.Contains("записан файл: Models/Product.cs", console.ToString());
+        Assert.DoesNotContain("wrote Models/Product.cs", console.ToString());
+    }
+
+    [Fact]
+    public void English_project_keeps_log_lines_in_english()
+    {
+        var (ctx, console) = Arrange("en");
+        ctx.Info("wrote Models/Product.cs");
+        Assert.Contains("wrote Models/Product.cs", console.ToString());
+    }
+
+    [Fact]
+    public void Longer_fragment_wins_over_a_shorter_one_it_contains()
+    {
+        // " missing" (generic, used by the codePointer warning) must NOT eat into the longer,
+        // more specific "identity map ... missing - Identity pages remain English..." phrase.
+        var (ctx, console) = Arrange("bg");
+        ctx.Info("WARNING: identity map foo.json missing - Identity pages remain English. Verify WILL fail on them.");
+        var output = console.ToString();
+        Assert.Contains("липсва - страниците за автентикация остават на английски", output);
+        Assert.DoesNotContain(" missing", output);
+    }
+
+    [Fact]
+    public void Stage_timing_summary_line_translates()
+    {
+        var (ctx, console) = Arrange("bg");
+        ctx.Info("=== stage timings ===");
+        Assert.Contains("=== времена на етапите ===", console.ToString());
+    }
+
+    [Fact]
+    public void Error_messages_are_also_translated()
+    {
+        var (ctx, console) = Arrange("bg");
+        ctx.Error("emit-models FAILED: boom");
+        Assert.Contains("emit-models НЕУСПЕШЕН: boom", console.ToString());
+    }
+}

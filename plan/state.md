@@ -511,3 +511,34 @@ after (was 97).
   untranslated "Back to List"/"Edit" residue, bare [Required] with no injected ErrorMessage - each
   contrasted against the BG output showing the opposite. Smoke-test clone + its out/ + archive entries
   deleted after verification (was a throwaway proof, not a new permanent fixture).
+
+## Session 26 (Sonnet: Windows notification hook + BG log translation + 2nd admin user) - changelogs 055-056
+Four bundled requests. 111 tests green after (was 106).
+- Windows toast notification (Claude Code config, NOT dps-nn code): new ~/.claude/hooks/windows-
+  toast.ps1 (NotifyIcon balloon tip, reads stdin JSON defensively) wired into ~/.claude/settings.json's
+  new Notification hook (global - applies to all of Stefan's Claude Code projects, not project-scoped).
+  Verified live twice (direct API call, then piped exactly as the hook invokes it) before wiring in.
+- Bulgarian log translation: new templates/log-bg-map.json (same longest-fragment-first static-phrase-
+  map technique as bg-term-map.json/identity-bg-map.json, aimed at dps-nn's OWN console/action-log
+  output instead of the generated app's UI). StageContext.Info/Debug/Error now call TranslateLog(msg)
+  before Tag(), gated on the same Spec.Meta.IsBulgarian flag from changelog 054. Cached per-GenesisRoot
+  to avoid re-parsing the map on every one of the ~50+ log calls per run. Smoke-tested live against the
+  real FaceNote project (genuine "[Кольо] записан файл: Models/Product.cs" output) - caught and
+  immediately fixed a self-inflicted mistake where testing the EN path with a lock-less spec file
+  fell back to the raw unexpanded fixture and briefly broke out/FaceNote's build; restored + confirmed
+  green before moving on.
+- Second admin user for FaceNote: identity.seedUsers grows 5->6 (petar@facenote.bg, admin role),
+  appended at the END (index 5) specifically to avoid renumbering existing $seedUser:0..4 refs. Per
+  explicit "don't run them" instruction, self-validated by replicating BuildSeedSchema's exact rules
+  in a script instead of running the pipeline - confirmed the scaled Catalogue minimum (12, up from 10)
+  is satisfied by 2 new Catalogue rows + 1 CatalogueItem, all refs resolve, all 4 touched files
+  (fixture + its schema archive + seed-response + its seed archive) stay in sync and valid JSON.
+  FLAGGED, NOT FIXED: fixtures/project-spec.facenote.lock.json + prompts/out/schemas/facenote-
+  schema.lock.json are now STALE (still show 5 users) - run --all's spec-expand pre-check only
+  re-runs when state.json doesn't already mark it done, so the next --resume would silently keep
+  using the stale lock. Deliberately did NOT hand-derive the lock file's resolved role name + seed
+  password myself (unverifiable without running it) - NEXT REAL RUN needs an explicit `dps-nn spec
+  expand --spec fixtures/project-spec.facenote.json` first to pick up the new admin.
+- Recorded (memory, not code): Stefan will supply English seed data himself for a fully-English
+  project - no generator change needed for that, only documentation later (he'll ask separately).
+- Did NOT file GitHub issues for any of this (explicitly told it's not necessary this time).

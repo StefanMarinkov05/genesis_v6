@@ -38,19 +38,59 @@ public sealed record StageContext(
     // other. Uncontended and negligible on the sequential path.
     private static readonly object LogLock = new();
 
-    public void Info(string msg) { var m = Tag(msg); lock (LogLock) { Log.WriteLine($"[dps-nn] {m}"); } AppendActionLog("info", m); }
+    public void Info(string msg) { var m = Tag(TranslateLog(msg)); lock (LogLock) { Log.WriteLine($"[dps-nn] {m}"); } AppendActionLog("info", m); }
 
     /// <summary>File-only (no console spam) - for deeper diagnosis without cluttering stdout.</summary>
-    public void Debug(string msg) => AppendActionLog("debug", Tag(msg));
+    public void Debug(string msg) => AppendActionLog("debug", Tag(TranslateLog(msg)));
 
     /// <summary>Console + action log, distinct level - for actual failures, not routine progress.</summary>
-    public void Error(string msg) { var m = Tag(msg); lock (LogLock) { Log.WriteLine($"[dps-nn] [ERROR] {m}"); } AppendActionLog("error", m); }
+    public void Error(string msg) { var m = Tag(TranslateLog(msg)); lock (LogLock) { Log.WriteLine($"[dps-nn] [ERROR] {m}"); } AppendActionLog("error", m); }
 
     // Prefix each line with the parallel worker's Bulgarian name when one is running this code
     // (issue #5), e.g. "[Кольо] wrote Models/Product.cs". Null outside a parallel region, so
     // sequential logging is byte-for-byte unchanged.
     private static string Tag(string msg) =>
         ParallelEmit.CurrentWorker.Value is { } worker ? $"[{worker}] {msg}" : msg;
+
+    // Translates dps-nn's OWN pipeline narration (this tool's log lines, not the generated
+    // project's UI) into Bulgarian for a Bulgarian project - the same "Bulgarian everything"
+    // idea already applied to the parallel worker names (issue #5). English is left completely
+    // untouched for a non-Bulgarian project (the common case being tested/used elsewhere).
+    //
+    // Uses the SAME technique already established for the generated app's own scaffolder-residue
+    // translation (bg-term-map.json / identity-bg-map.json): a flat map of STATIC phrase
+    // fragments, applied longest-first so a longer specific phrase is replaced whole before a
+    // shorter generic fragment it contains (e.g. " missing" alone) gets a separate chance to
+    // mis-fire inside it. Deliberately NOT a resource-key/format-string system - these log lines
+    // are call-site string interpolations (file paths, names, counts mixed with English prose),
+    // and translating the STATIC fragments around the dynamic parts needs zero changes to any
+    // of the ~50 call sites, matching how the existing residue maps already work.
+    private static readonly Dictionary<string, IReadOnlyList<(string From, string To)>> LogMapCache = new();
+
+    private string TranslateLog(string msg)
+    {
+        if (!Spec.Meta.IsBulgarian) return msg;
+        var mapPath = Path.Combine(GenesisRoot, "templates", "log-bg-map.json");
+        IReadOnlyList<(string From, string To)> pairs;
+        lock (LogMapCache)
+        {
+            if (!LogMapCache.TryGetValue(mapPath, out pairs!))
+            {
+                if (File.Exists(mapPath))
+                {
+                    using var doc = JsonDocument.Parse(File.ReadAllText(mapPath));
+                    pairs = doc.RootElement.EnumerateObject()
+                        .Select(p => (From: p.Name, To: p.Value.GetString() ?? ""))
+                        .OrderByDescending(p => p.From.Length)
+                        .ToList();
+                }
+                else pairs = [];
+                LogMapCache[mapPath] = pairs;
+            }
+        }
+        foreach (var (from, to) in pairs) msg = msg.Replace(from, to);
+        return msg;
+    }
 
     private void AppendActionLog(string level, string msg)
     {
