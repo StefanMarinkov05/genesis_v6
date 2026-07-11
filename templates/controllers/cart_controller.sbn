@@ -109,7 +109,7 @@ end
         // Поръчаният артикул сменя статуса си и се скрива от каталога (без двойни поръчки).
         foreach (var item in items)
             if (item.{{ primary }} is { } bought)
-                bought.Status = {{ primary }}Status.{{ status_enum.enum_values | array.last }};
+                bought.Status = {{ primary }}Status.{{ (status_enum.enum_values | array.last).value }};
 {{~ end ~}}
         _context.CartItems.RemoveRange(items);
         await _context.SaveChangesAsync();

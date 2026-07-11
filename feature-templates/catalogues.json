@@ -4,31 +4,92 @@
       "name": "Catalogue",
       "file": "Models/Catalogue.cs",
       "properties": [
-        { "name": "Id", "type": "int", "key": true },
-        { "name": "Name", "type": "string", "displayName": "Име на каталога",
+        {
+          "name": "Id",
+          "type": "int",
+          "key": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "displayName": "Име на каталога",
           "validations": [
-            { "attribute": "Required", "errorMessage": "Името на каталога е задължително." },
-            { "attribute": "StringLength", "args": [60], "errorMessage": "Името не може да е по-дълго от 60 символа." }
-          ] },
-        { "name": "UserId", "type": "string", "displayName": "Потребител",
-          "validations": [ { "attribute": "Required", "errorMessage": "Потребителят е задължителен." } ] },
-        { "name": "IsPublic", "type": "bool", "displayName": "Публичен" }
+            {
+              "attribute": "Required",
+              "errorMessage": "Името на каталога е задължително."
+            },
+            {
+              "attribute": "StringLength",
+              "args": [
+                60
+              ],
+              "errorMessage": "Името не може да е по-дълго от 60 символа."
+            }
+          ]
+        },
+        {
+          "name": "UserId",
+          "type": "string",
+          "displayName": "Потребител",
+          "validations": [
+            {
+              "attribute": "Required",
+              "errorMessage": "Потребителят е задължителен."
+            }
+          ]
+        },
+        {
+          "name": "IsPublic",
+          "type": "bool",
+          "displayName": "Публичен"
+        }
       ],
-      "relations": []
+      "relations": [],
+      "displayName": "Каталози"
     },
     {
       "name": "CatalogueItem",
       "file": "Models/CatalogueItem.cs",
       "properties": [
-        { "name": "Id", "type": "int", "key": true },
-        { "name": "CatalogueId", "type": "int", "foreignKey": true },
-        { "name": "$primaryModelId", "type": "int", "foreignKey": true },
-        { "name": "Position", "type": "int", "displayName": "Позиция" }
+        {
+          "name": "Id",
+          "type": "int",
+          "key": true
+        },
+        {
+          "name": "CatalogueId",
+          "type": "int",
+          "foreignKey": true,
+          "displayName": "Каталог"
+        },
+        {
+          "name": "$primaryModelId",
+          "type": "int",
+          "foreignKey": true
+        },
+        {
+          "name": "Position",
+          "type": "int",
+          "displayName": "Позиция"
+        }
       ],
       "relations": [
-        { "kind": "manyToOne", "target": "Catalogue", "navigation": "Catalogue", "inverseNavigation": "Items", "onDelete": "Cascade" },
-        { "kind": "manyToOne", "target": "$primaryModel", "navigation": "$primaryModel", "inverseNavigation": "CatalogueItems", "onDelete": "Cascade" }
-      ]
+        {
+          "kind": "manyToOne",
+          "target": "Catalogue",
+          "navigation": "Catalogue",
+          "inverseNavigation": "Items",
+          "onDelete": "Cascade"
+        },
+        {
+          "kind": "manyToOne",
+          "target": "$primaryModel",
+          "navigation": "$primaryModel",
+          "inverseNavigation": "CatalogueItems",
+          "onDelete": "Cascade"
+        }
+      ],
+      "displayName": "Артикули в каталог"
     }
   ],
   "dtos": [],

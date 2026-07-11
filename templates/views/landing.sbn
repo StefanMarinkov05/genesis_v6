@@ -5,7 +5,7 @@
 <div class="hero p-5 mb-4 text-center">
     <div class="container-fluid py-5">
         <h1 class="display-5 fw-bold">Добре дошли в {{ meta.project_name }}</h1>
-        <p class="fs-4">{{ meta.domain_hint }}</p>
+        <p class="fs-4">{{ if meta.is_bulgarian && meta.domain_hint_bg }}{{ meta.domain_hint_bg }}{{ else }}{{ meta.domain_hint }}{{ end }}</p>
 {{~ # A9 fix: derive AREA and CONTROLLER from the cardGrid page path
     # (.../Areas/{Area}/Views/{Controller}/Index.cshtml) - the old code used parts[1]
     # which is the Area, producing a dead client/client link. ~}}

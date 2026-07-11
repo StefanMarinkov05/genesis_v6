@@ -204,6 +204,7 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
             var name = m?["name"]?.GetValue<string>();
             if (name is null || adminCovered.Contains(name)) continue;
             var plural = Pluralize(name);
+            var modelDisplayName = m?["displayName"]?.GetValue<string>();
 
             controllers.Add(new JsonObject
             {
@@ -211,6 +212,7 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
                 ["file"] = $"Areas/Admin/Controllers/{plural}Controller.cs",
                 ["area"] = "Admin",
                 ["model"] = name,
+                ["displayName"] = modelDisplayName,
                 ["generatedBy"] = "scaffold",
             });
             pages?.Add(new JsonObject

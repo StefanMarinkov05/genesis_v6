@@ -42,9 +42,10 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
 {{~ if public_controllers.size <= 3 ~}}
 {{~ for c in public_controllers ~}}
 {{~ short = c.name | string.replace "Controller" "" ~}}
+{{~ if c.display_name; label = c.display_name; else; label = short; end ~}}
 {{~ if short != "Home" ~}}
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="{{ if c.area }}{{ c.area }}{{ end }}" asp-controller="{{ short }}" asp-action="Index">{{ short }}</a>
+                        <a class="nav-link" asp-area="{{ if c.area }}{{ c.area }}{{ end }}" asp-controller="{{ short }}" asp-action="Index">{{ label }}</a>
                     </li>
 {{~ end ~}}
 {{~ end ~}}
@@ -54,8 +55,9 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
                         <ul class="dropdown-menu">
 {{~ for c in public_controllers ~}}
 {{~ short = c.name | string.replace "Controller" "" ~}}
+{{~ if c.display_name; label = c.display_name; else; label = short; end ~}}
 {{~ if short != "Home" ~}}
-                            <li><a class="dropdown-item" asp-area="{{ if c.area }}{{ c.area }}{{ end }}" asp-controller="{{ short }}" asp-action="Index">{{ short }}</a></li>
+                            <li><a class="dropdown-item" asp-area="{{ if c.area }}{{ c.area }}{{ end }}" asp-controller="{{ short }}" asp-action="Index">{{ label }}</a></li>
 {{~ end ~}}
 {{~ end ~}}
                         </ul>
@@ -99,10 +101,16 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Администрация</a>
                             <ul class="dropdown-menu">
-{{~ for c in spec.controllers; if c.area == "Admin" ~}}
+{{~ any_lookup = false ~}}
+{{~ for c in spec.controllers; if c.area == "Admin" && !c.is_lookup ~}}
 {{~ short = c.name | string.replace "Controller" "" ~}}
-                                <li><a class="dropdown-item" asp-area="Admin" asp-controller="{{ short }}" asp-action="Index">{{ short }}</a></li>
+{{~ if c.display_name; label = c.display_name; else; label = short; end ~}}
+                                <li><a class="dropdown-item" asp-area="Admin" asp-controller="{{ short }}" asp-action="Index">{{ label }}</a></li>
 {{~ end; end ~}}
+{{~ for c in spec.controllers; if c.area == "Admin" && c.is_lookup; any_lookup = true; end; end ~}}
+{{~ if any_lookup ~}}
+                                <li><a class="dropdown-item" asp-area="Admin" asp-controller="Characteristics" asp-action="Index">Характеристики</a></li>
+{{~ end ~}}
 {{~ if spec.identity.application_user.controller ~}}
                                 <li><a class="dropdown-item" asp-area="Admin" asp-controller="Users" asp-action="Index">Потребители</a></li>
 {{~ end ~}}

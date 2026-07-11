@@ -42,6 +42,7 @@ public sealed class MetaSection
     [JsonPropertyName("solutionName")] public string SolutionName { get; set; } = "";
     [JsonPropertyName("rootNamespace")] public string RootNamespace { get; set; } = "";
     [JsonPropertyName("domainHint")] public string DomainHint { get; set; } = "";
+    [JsonPropertyName("domainHintBg")] public string? DomainHintBg { get; set; }
     [JsonPropertyName("language")] public string Language { get; set; } = "bg";
     [JsonPropertyName("targetFramework")] public string TargetFramework { get; set; } = "net10.0";
     [JsonPropertyName("sdkPin")] public string? SdkPin { get; set; }
@@ -115,6 +116,7 @@ public sealed class ModelSpec
 {
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("file")] public string File { get; set; } = "";
+    [JsonPropertyName("displayName")] public string? DisplayName { get; set; } // Bulgarian plural noun, used for nav/admin-dropdown labels
     [JsonPropertyName("softDelete")] public bool SoftDelete { get; set; }
     [JsonPropertyName("properties")] public List<PropertySpec> Properties { get; set; } = [];
     [JsonPropertyName("relations")] public List<RelationSpec> Relations { get; set; } = [];
@@ -131,8 +133,14 @@ public sealed class PropertySpec
     [JsonPropertyName("displayName")] public string? DisplayName { get; set; } // Bulgarian [Display(Name=...)]
     [JsonPropertyName("computed")] public string? Computed { get; set; }       // read-only expression-bodied prop
     [JsonPropertyName("seedHint")] public string? SeedHint { get; set; }        // guidance for the seed LLM per property
-    [JsonPropertyName("enumValues")] public List<string> EnumValues { get; set; } = []; // type:"enum" -> emitted C# enum {Model}{Prop}
+    [JsonPropertyName("enumValues")] public List<EnumValueSpec> EnumValues { get; set; } = []; // type:"enum" -> emitted C# enum {Model}{Prop}
     [JsonPropertyName("validations")] public List<ValidationSpec> Validations { get; set; } = [];
+}
+
+public sealed class EnumValueSpec
+{
+    [JsonPropertyName("value")] public string Value { get; set; } = ""; // C# identifier (e.g. "Nalichen")
+    [JsonPropertyName("displayName")] public string? DisplayName { get; set; } // Bulgarian [Display(Name=...)] on the enum member
 }
 
 public sealed class ValidationSpec
@@ -254,6 +262,8 @@ public sealed class ControllerSpec
     [JsonPropertyName("area")] public string? Area { get; set; }
     [JsonPropertyName("model")] public string? Model { get; set; }
     [JsonPropertyName("dto")] public string? Dto { get; set; }
+    [JsonPropertyName("displayName")] public string? DisplayName { get; set; } // Bulgarian nav label; falls back to the raw model/controller name
+    [JsonPropertyName("isLookup")] public bool IsLookup { get; set; } // small join/lookup model: no own admin nav entry, shown on the combined Характеристики page instead
     [JsonPropertyName("generatedBy")] public string GeneratedBy { get; set; } = "template"; // scaffold | template | writtenFromScratch
     [JsonPropertyName("actions")] public List<string> Actions { get; set; } = [];
     [JsonPropertyName("removedActions")] public List<string> RemovedActions { get; set; } = [];

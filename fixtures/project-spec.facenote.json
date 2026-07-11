@@ -5,6 +5,7 @@
     "solutionName": "FaceNoteSolution",
     "rootNamespace": "FaceNote",
     "domainHint": "social marketplace: user posts, product listings, personal catalogues, Bulgarian market",
+    "domainHintBg": "социална пазарна платформа: потребителски публикации, продуктови обяви, лични каталози, българският пазар",
     "language": "bg",
     "targetFramework": "net10.0",
     "sdkPin": "10.0.100",
@@ -66,7 +67,8 @@
           ],
           "seedHint": "реални марки, разпознаваеми в България"
         }
-      ]
+      ],
+      "displayName": "Марки"
     },
     {
       "name": "Category",
@@ -89,7 +91,8 @@
           ],
           "seedHint": "типични категории продукти на български"
         }
-      ]
+      ],
+      "displayName": "Категории"
     },
     {
       "name": "Product",
@@ -156,9 +159,18 @@
           "type": "enum",
           "displayName": "Статус",
           "enumValues": [
-            "Nalichen",
-            "Zapazen",
-            "Prodaden"
+            {
+              "value": "Nalichen",
+              "displayName": "Наличен"
+            },
+            {
+              "value": "Zapazen",
+              "displayName": "Запазен"
+            },
+            {
+              "value": "Prodaden",
+              "displayName": "Продаден"
+            }
           ]
         },
         {
@@ -175,12 +187,14 @@
         {
           "name": "BrandId",
           "type": "int",
-          "foreignKey": true
+          "foreignKey": true,
+          "displayName": "Марка"
         },
         {
           "name": "CategoryId",
           "type": "int",
-          "foreignKey": true
+          "foreignKey": true,
+          "displayName": "Категория"
         }
       ],
       "relations": [
@@ -203,7 +217,8 @@
         "mode": "multiple",
         "editSelectable": true,
         "storedIn": "wwwroot/images/products"
-      }
+      },
+      "displayName": "Продукти"
     }
   ],
   "dtos": [],
@@ -342,28 +357,32 @@
       },
       "pagination": {
         "pageSize": 12
-      }
+      },
+      "displayName": "Продукти"
     },
     {
       "name": "ProductsController",
       "file": "Areas/Admin/Controllers/ProductsController.cs",
       "area": "Admin",
       "model": "Product",
-      "generatedBy": "scaffold"
+      "generatedBy": "scaffold",
+      "displayName": "Продукти"
     },
     {
       "name": "BrandsController",
       "file": "Areas/Admin/Controllers/BrandsController.cs",
       "area": "Admin",
       "model": "Brand",
-      "generatedBy": "scaffold"
+      "generatedBy": "scaffold",
+      "displayName": "Марки"
     },
     {
       "name": "CategoriesController",
       "file": "Areas/Admin/Controllers/CategoriesController.cs",
       "area": "Admin",
       "model": "Category",
-      "generatedBy": "scaffold"
+      "generatedBy": "scaffold",
+      "displayName": "Категории"
     }
   ],
   "views": {

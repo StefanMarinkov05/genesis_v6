@@ -39,6 +39,9 @@
         "domainHint": {
           "type": "string"
         },
+        "domainHintBg": {
+          "type": "string"
+        },
         "language": {
           "type": "string",
           "enum": [
@@ -168,6 +171,9 @@
             "type": "string"
           },
           "file": {
+            "type": "string"
+          },
+          "displayName": {
             "type": "string"
           },
           "softDelete": {
@@ -491,6 +497,12 @@
           "dto": {
             "type": "string"
           },
+          "displayName": {
+            "type": "string"
+          },
+          "isLookup": {
+            "type": "boolean"
+          },
           "generatedBy": {
             "type": "string",
             "enum": [
@@ -783,7 +795,19 @@
         "enumValues": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            }
           }
         }
       }

@@ -12,7 +12,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 public enum {{ model.name }}{{ pp.name }}
 {
 {{~ for ev in pp.enum_values ~}}
-    {{ ev }},
+{{~ if ev.display_name ~}}
+    [Display(Name = "{{ ev.display_name }}")]
+{{~ end ~}}
+    {{ ev.value }},
 {{~ end ~}}
 }
 
@@ -59,7 +62,9 @@ public class {{ model.name }}{{ if audit }} : AuditableEntity{{ end }}
 {{~ end ~}}
 {{~ for rel in model.relations ~}}
 {{~ if rel.kind == "manyToOne" ~}}
-    [Display(Name = "{{ rel.navigation }}")]
+{{~ fk_label = rel.navigation ~}}
+{{~ for fp in model.properties; if fp.name == (rel.navigation + "Id") && fp.display_name; fk_label = fp.display_name; end; end ~}}
+    [Display(Name = "{{ fk_label }}")]
     public {{ rel.target }}? {{ rel.navigation }} { get; set; }
 {{~ end ~}}
 {{~ end ~}}
@@ -72,7 +77,9 @@ public class {{ model.name }}{{ if audit }} : AuditableEntity{{ end }}
 {{~ end ~}}
 {{~ if model.soft_delete || conventions.delete_behavior == "soft" ~}}
     // Меко изтриване: записът се скрива чрез глобален филтър, не се трие физически.
+    [Display(Name = "Изтрит")]
     public bool IsDeleted { get; set; }
+    [Display(Name = "Изтрит на")]
     public DateTime? DeletedAt { get; set; }
 {{~ end ~}}
 {{~ if model.images ~}}
