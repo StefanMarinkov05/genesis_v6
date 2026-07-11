@@ -2,6 +2,13 @@
 @{
     ViewData["Title"] = "Потребители";
     var roles = (IDictionary<string, string>)ViewData["UserRoles"]!;
+    // Ролевите имена в базата остават латиница (User.IsInRole нужди) - тук само показваме БГ етикет.
+    var roleDisplayNames = new Dictionary<string, string>
+    {
+{{~ for r in spec.identity.roles ~}}
+        ["{{ r.name }}"] = "{{ if r.is_admin }}Администратор{{ else }}Потребител{{ end }}",
+{{~ end ~}}
+    };
 }
 
 <h1>Потребители</h1>
@@ -27,7 +34,7 @@
 {{~ for prop in spec.identity.application_user.extra_properties ~}}
                 <td>@user.{{ prop.name }}</td>
 {{~ end ~}}
-                <td>@(roles.TryGetValue(user.Id, out var r) ? r : "-")</td>
+                <td>@(roles.TryGetValue(user.Id, out var r) ? (roleDisplayNames.TryGetValue(r, out var rd) ? rd : r) : "-")</td>
                 <td>
 {{~ if features.posts || features.catalogues ~}}
                     <a class="btn btn-sm btn-outline-info" asp-action="Details" asp-route-id="@user.Id">Детайли</a>
