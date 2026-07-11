@@ -34,7 +34,7 @@ public async Task<IActionResult> Index(string? search, string? sortBy, string? s
             _ => query.OrderBy(x => x.{{ m.properties[0].name }}),
         };
         ViewData["SortBy"] = sortBy;
-        ViewData["SortDir"] = descending ? "asc" : "desc";
+        ViewData["SortDir"] = sortDir;
         ViewData["Search"] = search;
 
         var total = await query.CountAsync();
