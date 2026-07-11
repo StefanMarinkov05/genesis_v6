@@ -206,7 +206,7 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
             var plural = Pluralize(name);
             var modelDisplayName = m?["displayName"]?.GetValue<string>();
 
-            controllers.Add(new JsonObject
+            var controllerEntry = new JsonObject
             {
                 ["name"] = plural + "Controller",
                 ["file"] = $"Areas/Admin/Controllers/{plural}Controller.cs",
@@ -214,7 +214,11 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
                 ["model"] = name,
                 ["displayName"] = modelDisplayName,
                 ["generatedBy"] = "scaffold",
-            });
+            };
+            // Orders originate only from client checkout - admin should not hand-create them.
+            if (name == "Order")
+                controllerEntry["removedActions"] = new JsonArray("Create");
+            controllers.Add(controllerEntry);
             pages?.Add(new JsonObject
             {
                 ["file"] = $"Areas/Admin/Views/{plural}/Index.cshtml",

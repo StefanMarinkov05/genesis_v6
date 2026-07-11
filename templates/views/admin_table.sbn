@@ -3,11 +3,19 @@
     ViewData["Title"] = "{{ model.name }} - администрация";
 }
 
+{{~
+create_removed = false
+if owner
+  for ra in owner.removed_actions; if ra == "Create"; create_removed = true; end; end
+end
+~}}
 <h1>Управление</h1>
 
+{{~ if !create_removed ~}}
 <p>
     <a class="btn btn-primary" asp-action="Create">Създай нов запис</a>
 </p>
+{{~ end ~}}
 
 {{~
 # Details бутон: само когато има >1 не-ключов атрибут И действието не е премахнато от спецификацията.
@@ -83,8 +91,22 @@ for tm in spec.models
     for tp in tm.properties; if !tp.key && tp.type == "string" && target_display == "Id"; target_display = tp.name; end; end
   end
 end
+# Реалният контролер за целевия модел в Admin (не гадаем множествено число).
+target_controller = null
+for tc in spec.controllers
+  if tc.area == "Admin" && tc.model == rel.target; target_controller = tc.name | string.replace "Controller" ""; end
+end
 ~}}
-                <td>@item.{{ rel.navigation }}?.{{ target_display }}</td>
+                <td>
+{{~ if target_controller ~}}
+                    @if (item.{{ rel.navigation }} != null)
+                    {
+                        <a asp-area="Admin" asp-controller="{{ target_controller }}" asp-action="Details" asp-route-id="@item.{{ rel.navigation }}.Id">@item.{{ rel.navigation }}.{{ target_display }}</a>
+                    }
+{{~ else ~}}
+                    @item.{{ rel.navigation }}?.{{ target_display }}
+{{~ end ~}}
+                </td>
 {{~ end ~}}
 {{~ end ~}}
                 <td>
