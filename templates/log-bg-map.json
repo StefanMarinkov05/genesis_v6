@@ -15,7 +15,7 @@
   "(skipping old database '": "(пропускане на старата база данни '",
   "' drop — sqlcmd unavailable)": "' — sqlcmd не е наличен)",
   "models emitted": "моделите са записани",
-  "wrote ": "записан файл: ",
+  "wrote ": "записа ",
   "no identity section - skipping": "няма секция за автентикация - пропускане",
   "identity complete": "автентикацията е завършена",
   ", build green": ", компилацията е успешна",

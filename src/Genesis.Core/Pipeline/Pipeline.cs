@@ -47,10 +47,10 @@ public sealed record StageContext(
     public void Error(string msg) { var m = Tag(TranslateLog(msg)); lock (LogLock) { Log.WriteLine($"[dps-nn] [ERROR] {m}"); } AppendActionLog("error", m); }
 
     // Prefix each line with the parallel worker's Bulgarian name when one is running this code
-    // (issue #5), e.g. "[Кольо] wrote Models/Product.cs". Null outside a parallel region, so
+    // (issue #5), e.g. "Кольо wrote Models/Product.cs". Null outside a parallel region, so
     // sequential logging is byte-for-byte unchanged.
     private static string Tag(string msg) =>
-        ParallelEmit.CurrentWorker.Value is { } worker ? $"[{worker}] {msg}" : msg;
+        ParallelEmit.CurrentWorker.Value is { } worker ? $"{worker} {msg}" : msg;
 
     // Translates dps-nn's OWN pipeline narration (this tool's log lines, not the generated
     // project's UI) into Bulgarian for a Bulgarian project - the same "Bulgarian everything"

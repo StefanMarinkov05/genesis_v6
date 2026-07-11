@@ -1126,7 +1126,7 @@ public class LogTranslationTests : IDisposable
     {
         var (ctx, console) = Arrange("bg");
         ctx.Info("wrote Models/Product.cs");
-        Assert.Contains("записан файл: Models/Product.cs", console.ToString());
+        Assert.Contains("записа Models/Product.cs", console.ToString());
         Assert.DoesNotContain("wrote Models/Product.cs", console.ToString());
     }
 
