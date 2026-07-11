@@ -123,7 +123,7 @@ end
             <span class="text-warning">@(new string('★', r.Stars))@(new string('☆', 5 - r.Stars))</span>
             @if (!string.IsNullOrEmpty(r.Text)) { <span>@r.Text</span> }
 {{~ if listing != "" ~}}
-            <a class="ms-2 small" asp-area="Client" asp-controller="{{ listing }}s" asp-action="Details" asp-route-id="@r.{{ listing }}Id">към обявата</a>
+            <a class="ms-2 small" asp-area="Client" asp-controller="{{ listing }}s" asp-action="Details" asp-route-id="@r.{{ listing }}Id">@(r.{{ listing }}?.{{ listing_title }} ?? "към обявата")</a>
 {{~ end ~}}
         </li>
     }

@@ -55,7 +55,18 @@ public class UserProfileService
             .ToListAsync();
 {{~ end ~}}
 {{~ if features.rating ~}}
+{{~
+review_nav = null
+for rm in spec.models
+  if rm.name == "Review"
+    for rr in rm.relations; if rr.kind == "manyToOne" && review_nav == null; review_nav = rr.navigation; end; end
+  end
+end
+~}}
         vm.Feedbacks = await _context.Reviews.AsNoTracking()
+{{~ if review_nav ~}}
+            .Include(r => r.{{ review_nav }})
+{{~ end ~}}
             .Where(r => r.AuthorUserId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();

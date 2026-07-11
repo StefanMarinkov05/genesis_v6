@@ -48,6 +48,8 @@ public class PostsController : Controller
             .FirstOrDefaultAsync(p => p.Id == id);
         if (post is null) return NotFound();
         ViewData["CurrentUserId"] = _userManager.GetUserId(User);
+        var author = await _userManager.FindByIdAsync(post.UserId);
+        ViewData["AuthorName"] = author?.FirstName is { Length: > 0 } authorFirstName ? authorFirstName : author?.UserName;
         return View(post);
     }
 
