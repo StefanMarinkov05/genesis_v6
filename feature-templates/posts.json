@@ -106,6 +106,12 @@
               "errorMessage": "Авторът е задължителен."
             }
           ]
+        },
+        {
+          "name": "ImagePath",
+          "type": "string",
+          "displayName": "Снимка",
+          "nullable": true
         }
       ],
       "relations": [

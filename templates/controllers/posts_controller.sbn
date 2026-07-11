@@ -93,14 +93,17 @@ public class PostsController : Controller
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Comment(int id, string content)
+    public async Task<IActionResult> Comment(int id, string content, IFormFile? image)
     {
         if (string.IsNullOrWhiteSpace(content)) return RedirectToAction(nameof(Details), new { id });
+        // По избор прикачена снимка към коментара - същият модел като публикацията (задача 14).
+        var commentImagePath = await _fileUpload.SaveImageAsync(image, "uploads/comments");
         _context.PostComments.Add(new PostComment
         {
             PostId = id,
             Content = content.Trim(),
-            UserId = _userManager.GetUserId(User)!
+            UserId = _userManager.GetUserId(User)!,
+            ImagePath = commentImagePath
         });
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Details), new { id });
