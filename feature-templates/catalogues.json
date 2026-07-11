@@ -89,7 +89,8 @@
           "onDelete": "Cascade"
         }
       ],
-      "displayName": "Артикули в каталог"
+      "displayName": "Артикули в каталог",
+      "isLookup": true
     }
   ],
   "dtos": [],

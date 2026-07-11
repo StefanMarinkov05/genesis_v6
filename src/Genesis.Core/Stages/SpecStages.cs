@@ -205,6 +205,7 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
             if (name is null || adminCovered.Contains(name)) continue;
             var plural = Pluralize(name);
             var modelDisplayName = m?["displayName"]?.GetValue<string>();
+            var modelIsLookup = m?["isLookup"]?.GetValue<bool>() ?? false;
 
             var controllerEntry = new JsonObject
             {
@@ -213,6 +214,7 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
                 ["area"] = "Admin",
                 ["model"] = name,
                 ["displayName"] = modelDisplayName,
+                ["isLookup"] = modelIsLookup,
                 ["generatedBy"] = "scaffold",
             };
             // Orders originate only from client checkout - admin should not hand-create them.

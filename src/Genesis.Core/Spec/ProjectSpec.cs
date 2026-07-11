@@ -117,6 +117,7 @@ public sealed class ModelSpec
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("file")] public string File { get; set; } = "";
     [JsonPropertyName("displayName")] public string? DisplayName { get; set; } // Bulgarian plural noun, used for nav/admin-dropdown labels
+    [JsonPropertyName("isLookup")] public bool IsLookup { get; set; } // small join/lookup model: no own admin nav entry, shown on the combined Характеристики page instead
     [JsonPropertyName("softDelete")] public bool SoftDelete { get; set; }
     [JsonPropertyName("properties")] public List<PropertySpec> Properties { get; set; } = [];
     [JsonPropertyName("relations")] public List<RelationSpec> Relations { get; set; } = [];

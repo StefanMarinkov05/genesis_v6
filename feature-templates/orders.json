@@ -50,7 +50,8 @@
           "onDelete": "Cascade"
         }
       ],
-      "displayName": "Артикули в кошница"
+      "displayName": "Артикули в кошница",
+      "isLookup": true
     },
     {
       "name": "Order",
@@ -164,7 +165,8 @@
           "onDelete": "Restrict"
         }
       ],
-      "displayName": "Артикули в поръчка"
+      "displayName": "Артикули в поръчка",
+      "isLookup": true
     }
   ],
   "dtos": [],

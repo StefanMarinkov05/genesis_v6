@@ -37,7 +37,8 @@
         }
       ],
       "relations": [],
-      "displayName": "Артикули в кошница"
+      "displayName": "Артикули в кошница",
+      "isLookup": true
     }
   ],
   "dtos": [],

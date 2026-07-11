@@ -123,7 +123,8 @@
           "onDelete": "Cascade"
         }
       ],
-      "displayName": "Коментари"
+      "displayName": "Коментари",
+      "isLookup": true
     },
     {
       "name": "PostVote",
@@ -176,7 +177,8 @@
           "onDelete": "Cascade"
         }
       ],
-      "displayName": "Гласове"
+      "displayName": "Гласове",
+      "isLookup": true
     }
   ],
   "dtos": [],

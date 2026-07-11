@@ -126,6 +126,14 @@ public sealed class EmitControllersViewsStage : IStage
                 Emit("Areas/Admin/Views/Users/Details.cshtml", () => engine.RenderFile(ctx.Template("views/users_details.sbn")));
         }
 
+        // Item 6/7: consolidated read-only page for small lookup/join models (isLookup: true) -
+        // one nav entry instead of cluttering the admin dropdown with every join table.
+        if (spec.Models.Any(m => m.IsLookup))
+        {
+            Emit("Areas/Admin/Controllers/CharacteristicsController.cs", () => engine.RenderFile(ctx.Template("controllers/characteristics_controller.sbn")));
+            Emit("Areas/Admin/Views/Characteristics/Index.cshtml", () => engine.RenderFile(ctx.Template("views/characteristics_index.sbn")));
+        }
+
         // Feature controller/view pairs - each enabled feature emits its full stack.
         if (FeatureEnabled(spec, "posts"))
         {

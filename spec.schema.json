@@ -176,6 +176,9 @@
           "displayName": {
             "type": "string"
           },
+          "isLookup": {
+            "type": "boolean"
+          },
           "softDelete": {
             "type": "boolean"
           },
