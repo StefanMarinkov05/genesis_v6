@@ -476,3 +476,38 @@ Two bundled requests. 97 tests green after (was 85).
   scope call with Stefan via AskUserQuestion before implementing, rather than guessing which he meant.
   Smoke-tested live against the real project (DPS_NN_LOG_LANGUAGE=en emit-models -> real [Bubba]/
   [Chuck] log lines) instead of just trusting unit tests.
+
+## Session 25 continued (Sonnet: meta.language="en" support - skip BG retrofit passes) - changelog 054
+Widened meta.language schema enum to ["bg","en"] (FaceNote's fixture already had "bg" explicit at
+both meta + identity.errorDescriber level - confirmed, no fixture change needed). 106 tests green
+after (was 97).
+- BEFORE implementing: counted actual Bulgarian content in the codebase - 54 template files have
+  hardcoded Cyrillic text baked directly into hand-written .sbn templates (card_grid.sbn alone: 935
+  Cyrillic chars), completely separate from the ~4 retrofit passes that translate SCAFFOLDED code.
+  Surfaced this gap to Stefan via AskUserQuestion before writing anything (his framing suggested a
+  much smaller job than reality) - confirmed scope: gate only the retrofit passes, do NOT attempt the
+  54-template rewrite (deferred, same discipline as A1/A8/A9's "don't half-ship, defer with a written
+  boundary").
+- Single source of truth: new MetaSection.IsBulgarian (case-insensitive Language=="bg"), read by
+  EVERY gate (both C# stages and program.sbn via meta.is_bulgarian) - avoids 5 independently-drifting
+  checks, same principle as ParallelEmit's ResolveWorkerNames.
+- Gated: ApplyBgResiduePass (bg-term-map residue translation), both Identity-page localization layers
+  (identity-bg-map + wholesale Login/Register/Logout template emission), InjectBgValidationMessages,
+  BgIdentityErrorDescriber emission + its AddErrorDescriber DI wiring in program.sbn (kept in sync via
+  the same flag), VerifyStage's English-leak gate (skipped entirely + explanatory report line, not
+  just non-fatal), SeedStage's seed-LLM Bulgarian/Cyrillic instruction (only rule 1 branches).
+- NOT touched: the 54 hardcoded-Cyrillic templates (explicit boundary); SpecBuildStage's prompt (no
+  spec exists yet at that stage, nothing to read Meta.Language from); feature-template/model
+  errorMessage content (spec-authored data, not generator code).
+- REAL BUG CAUGHT by the mandatory full pipeline run: VerifyStage.ManifestCheck still unconditionally
+  expected BgIdentityErrorDescriber.cs on disk regardless of language - a real English run --all
+  failed verify's manifest check over a file correctly never emitted. Never would have been caught by
+  the 9 new unit tests alone (none exercise ManifestCheck) - only the real run surfaced it. Fixed by
+  adding the same IsBulgarian gate to the manifest's expected-file list.
+- Verified with TWO full real run --all pipelines: FaceNote (bg, unchanged) -> verify PASSED with the
+  full language gate; a cloned FaceNoteEn fixture (language:"en", same models/features) -> verify
+  PASSED with the language gate correctly skipped. Spot-checked EN output directly: no
+  Infrastructure/Identity/ dir at all, zero AddErrorDescriber in Program.cs, English Login page,
+  untranslated "Back to List"/"Edit" residue, bare [Required] with no injected ErrorMessage - each
+  contrasted against the BG output showing the opposite. Smoke-test clone + its out/ + archive entries
+  deleted after verification (was a throwaway proof, not a new permanent fixture).

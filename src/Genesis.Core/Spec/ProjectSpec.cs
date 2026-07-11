@@ -48,6 +48,23 @@ public sealed class MetaSection
     [JsonPropertyName("database")] public DatabaseMeta Database { get; set; } = new();
     [JsonPropertyName("style")] public StyleMeta Style { get; set; } = new();
     [JsonPropertyName("routing")] public RoutingMeta Routing { get; set; } = new();
+
+    /// <summary>
+    /// True when this project's generated UI language is Bulgarian - the ONLY language the
+    /// retrofit BG-translation passes are written for (bg-term-map residue rewriting,
+    /// identity-bg-map replacement, BG validation-message injection, BgIdentityErrorDescriber,
+    /// verify's English-leak gate, and the seed/spec-build LLM instructions). False (currently
+    /// only "en") skips those passes.
+    ///
+    /// SCOPE BOUNDARY (see changelog 054): this does NOT make the generated app actually
+    /// English. Most hand-written .sbn templates (card_grid, layout, every feature controller's
+    /// views...) contain literal Bulgarian strings baked in directly, not sourced from the spec -
+    /// only the passes that retrofit-translate SCAFFOLDED (aspnet-codegenerator-produced) code,
+    /// plus a few generator-side LLM instructions, are gated by this flag. A genuinely bilingual
+    /// UI would need those ~54 templates rewritten, which is deliberately out of scope here.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsBulgarian => string.Equals(Language, "bg", StringComparison.OrdinalIgnoreCase);
 }
 
 public sealed class RoutingMeta

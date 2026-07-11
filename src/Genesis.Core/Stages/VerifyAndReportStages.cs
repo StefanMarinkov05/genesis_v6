@@ -76,23 +76,36 @@ public sealed class VerifyStage : IStage
                     if (await TryGetAsync(http, r, ct, ctx) is { } html) pagesToCheck.Add((r, html));
             }
 
-            // 6 - English leak scan over everything just fetched.
-            var leaks = pagesToCheck
-                .SelectMany(p => EnglishLeaks(p.html).Select(l => $"{p.label}: \"{l}\""))
-                .ToList();
+            // 6 - English leak scan over everything just fetched. This gate exists specifically
+            // to enforce the Bulgarian-only-UI requirement - it would be nonsensical (and would
+            // hard-fail every single page) to run it against a project whose whole point is to
+            // BE in English. Skipped entirely, not just non-fatal, for a non-Bulgarian project.
             var reportPath = Path.Combine(ctx.ProjectDir, "wwwroot", "output", "verify-language-report.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
-            await File.WriteAllTextAsync(reportPath,
-                leaks.Count == 0 ? "OK - no English visible-text leaks detected.\n" : string.Join("\n", leaks), ct);
-            if (leaks.Count > 0)
-                throw new InvalidOperationException($"verify: {leaks.Count} English string leak(s) - see {reportPath}\n" +
-                    string.Join("\n", leaks.Take(10)));
+            if (spec.Meta.IsBulgarian)
+            {
+                var leaks = pagesToCheck
+                    .SelectMany(p => EnglishLeaks(p.html).Select(l => $"{p.label}: \"{l}\""))
+                    .ToList();
+                await File.WriteAllTextAsync(reportPath,
+                    leaks.Count == 0 ? "OK - no English visible-text leaks detected.\n" : string.Join("\n", leaks), ct);
+                if (leaks.Count > 0)
+                    throw new InvalidOperationException($"verify: {leaks.Count} English string leak(s) - see {reportPath}\n" +
+                        string.Join("\n", leaks.Take(10)));
+            }
+            else
+            {
+                await File.WriteAllTextAsync(reportPath,
+                    $"SKIPPED - project language is \"{spec.Meta.Language}\", not \"bg\"; the Bulgarian-only-UI language gate does not apply.\n", ct);
+            }
         }
         finally
         {
             try { app.Kill(entireProcessTree: true); } catch { /* already exited */ }
         }
-        ctx.Info("verify PASSED: build, db, boot, http, manifest, language");
+        ctx.Info(spec.Meta.IsBulgarian
+            ? "verify PASSED: build, db, boot, http, manifest, language"
+            : "verify PASSED: build, db, boot, http, manifest (language gate skipped - non-Bulgarian project)");
     }
 
     internal static List<string> ManifestCheck(StageContext ctx)
@@ -106,7 +119,10 @@ public sealed class VerifyStage : IStage
         if (spec.Identity is { } id)
         {
             expected.Add(id.ApplicationUser.File);
-            if (id.ErrorDescriber is { } ed) expected.Add(ed.File);
+            // BgIdentityErrorDescriber is only emitted for a Bulgarian project (IdentityStage's
+            // matching gate) - the manifest expectation MUST agree, or a green English run fails
+            // verify over a file that was correctly never written.
+            if (id.ErrorDescriber is { } ed && spec.Meta.IsBulgarian) expected.Add(ed.File);
             if (id.ApplicationUser.Controller is { } uc) expected.Add(uc.File);
         }
         if (spec.Views is { } v) { expected.Add(v.Layout.File); expected.AddRange(v.Pages.Select(p => p.File)); }

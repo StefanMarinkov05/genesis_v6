@@ -254,7 +254,12 @@ public sealed class IdentityStage : IStage
         await EmitModelsStage.WriteAsync(ctx, id.ApplicationUser.File,
             engine.RenderFile(ctx.Template("identity/application_user.sbn")), ct);
 
-        if (id.ErrorDescriber is { } ed)
+        // BgIdentityErrorDescriber hardcodes Bulgarian error text - only emit it (and only wire
+        // it into DI, see program.sbn's matching meta.is_bulgarian gate) for a Bulgarian project.
+        // The two gates MUST stay in sync: emitting the class without the DI line is harmless
+        // dead code, but wiring the DI line without emitting the class is a CS0246 build break -
+        // the same "two paths, one concept, drift" bug class as FileUploadService (changelog 033).
+        if (id.ErrorDescriber is { } ed && spec.Meta.IsBulgarian)
             await EmitModelsStage.WriteAsync(ctx, ed.File,
                 engine.RenderFile(ctx.Template("identity/bg_identity_error_describer.sbn")), ct);
 
@@ -306,23 +311,29 @@ public sealed class IdentityStage : IStage
                 "aspnet-codegenerator failed. Install once: dotnet tool install -g dotnet-aspnet-codegenerator\n" + gen.StdErr);
         }
 
-        // Bulgarian page markup, two layers (ADR-002b):
-        //  a) replacement map over ALL scaffolded pages (fallback for untemplated pages)
-        if (id.Localization is { Strategy: "staticReplacementMap" } loc)
-            await ApplyReplacementMapAsync(ctx, Path.Combine(ctx.GenesisRoot, "templates/identity", loc.MapFile), ct);
-        //  b) wholesale template emission of the three core page MARKUPS - the scaffolded
-        //     .cshtml.cs code-behind (the logic) is kept untouched. Matches the reference style.
-        foreach (var (page, tpl) in new (string, string)[]
+        // Bulgarian page markup, two layers (ADR-002b) - BOTH are retrofit overrides of the
+        // scaffolder's own (English) output, so both are skipped for a non-Bulgarian project:
+        // the scaffolded pages are left exactly as aspnet-codegenerator produced them, which is
+        // already correct English - there is nothing to translate away from.
+        if (spec.Meta.IsBulgarian)
         {
-            ("Login", "identity/login_page.sbn"),
-            ("Register", "identity/register_page.sbn"),
-            ("Logout", "identity/logout_page.sbn"),
-        })
-        {
-            var target = Path.Combine("Areas", "Identity", "Pages", "Account", page + ".cshtml");
-            if (File.Exists(Path.Combine(ctx.ProjectDir, target)))
-                await EmitModelsStage.WriteAsync(ctx, target,
-                    engine.RenderFile(ctx.Template(tpl)), ct);
+            //  a) replacement map over ALL scaffolded pages (fallback for untemplated pages)
+            if (id.Localization is { Strategy: "staticReplacementMap" } loc)
+                await ApplyReplacementMapAsync(ctx, Path.Combine(ctx.GenesisRoot, "templates/identity", loc.MapFile), ct);
+            //  b) wholesale template emission of the three core page MARKUPS - the scaffolded
+            //     .cshtml.cs code-behind (the logic) is kept untouched. Matches the reference style.
+            foreach (var (page, tpl) in new (string, string)[]
+            {
+                ("Login", "identity/login_page.sbn"),
+                ("Register", "identity/register_page.sbn"),
+                ("Logout", "identity/logout_page.sbn"),
+            })
+            {
+                var target = Path.Combine("Areas", "Identity", "Pages", "Account", page + ".cshtml");
+                if (File.Exists(Path.Combine(ctx.ProjectDir, target)))
+                    await EmitModelsStage.WriteAsync(ctx, target,
+                        engine.RenderFile(ctx.Template(tpl)), ct);
+            }
         }
 
         // Areas: physical folders + a placeholder _ViewStart per area.
@@ -340,7 +351,9 @@ public sealed class IdentityStage : IStage
         // Bulgarian DataAnnotations messages on the scaffolded code-behind InputModels
         // (Login/Register/etc .cshtml.cs) - ADR-002b leaves this code untouched otherwise,
         // so [Required]/[EmailAddress]/[Compare] fall back to English defaults without this.
-        InjectBgValidationMessages(ctx);
+        // Skipped for a non-Bulgarian project: the English defaults ARE the correct messages.
+        if (spec.Meta.IsBulgarian)
+            InjectBgValidationMessages(ctx);
 
         (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, timeout: TimeSpan.FromMinutes(5)))
             .ThrowIfFailed("build after identity");

@@ -312,6 +312,10 @@ public sealed class EmitControllersViewsStage : IStage
     /// </summary>
     internal static void ApplyBgResiduePass(StageContext ctx, ControllerSpec c)
     {
+        // Retrofit-translates the scaffolder's own English residue into Bulgarian - only
+        // meaningful for a Bulgarian project. For an English one the scaffolder's native output
+        // is already correct, so there's nothing to translate away from.
+        if (!ctx.Spec.Meta.IsBulgarian) return;
         var mapPath = Path.Combine(ctx.GenesisRoot, "templates", "bg-term-map.json");
         if (!File.Exists(mapPath)) return;
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(mapPath));

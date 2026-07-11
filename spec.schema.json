@@ -42,7 +42,8 @@
         "language": {
           "type": "string",
           "enum": [
-            "bg"
+            "bg",
+            "en"
           ]
         },
         "targetFramework": {

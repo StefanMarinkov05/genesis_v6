@@ -112,6 +112,55 @@ public class SpecValidationTests
         var primary = SpecExpandStage.ResolvePrimaryModel(spec, spec.Features["catalogues"]); // has "model": "Product" explicitly
         Assert.Equal("Product", primary);
     }
+
+    // Task: language flag - schema now accepts "en" alongside "bg" (was bg-only). The FaceNote
+    // fixture itself stays "bg" - this only proves the SCHEMA no longer hard-rejects "en".
+    [Fact]
+    public void Schema_accepts_english_language_alongside_bulgarian()
+    {
+        const string json = """
+        {
+          "specVersion": "1.1",
+          "meta": { "projectName": "TestProj", "solutionName": "TestProjSolution", "rootNamespace": "TestProj", "language": "en" },
+          "models": []
+        }
+        """;
+        var spec = new SpecLoader(Paths.Schema).LoadFromString(json);
+        Assert.Equal("en", spec.Meta.Language);
+    }
+
+    [Fact]
+    public void Facenote_fixture_language_is_bulgarian()
+    {
+        var spec = new SpecLoader(Paths.Schema).Load(Paths.Fixture);
+        Assert.Equal("bg", spec.Meta.Language);
+        Assert.True(spec.Meta.IsBulgarian);
+    }
+}
+
+// The single authoritative switch (MetaSection.IsBulgarian) that every retrofit BG-translation
+// pass reads, so a language-flag bug can't silently diverge between stages (the "two paths, one
+// concept" bug class this project has been bitten by before - see changelog 054).
+public class LanguageGateTests
+{
+    [Theory]
+    [InlineData("bg", true)]
+    [InlineData("BG", true)]
+    [InlineData("Bg", true)]
+    [InlineData("en", false)]
+    [InlineData("EN", false)]
+    [InlineData("fr", false)]
+    public void Is_bulgarian_matches_language_case_insensitively(string language, bool expected)
+    {
+        var meta = new MetaSection { Language = language };
+        Assert.Equal(expected, meta.IsBulgarian);
+    }
+
+    [Fact]
+    public void Is_bulgarian_defaults_true_when_language_unset()
+    {
+        Assert.True(new MetaSection().IsBulgarian); // MetaSection.Language defaults to "bg"
+    }
 }
 
 public class VariationTests

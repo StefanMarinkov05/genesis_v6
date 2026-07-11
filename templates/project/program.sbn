@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using {{ meta.root_namespace }};
 using {{ meta.root_namespace }}.Data;
+{{~ if meta.is_bulgarian ~}}
 using {{ meta.root_namespace }}.Infrastructure.Identity;
+{{~ end ~}}
 using {{ meta.root_namespace }}.Models;
 {{~ has_images = false ~}}
 {{~ for m in spec.models; if m.images; has_images = true; end; end ~}}
@@ -35,7 +37,9 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
         options.Password.RequiredLength = 6;
     })
     .AddRoles<IdentityRole>()
+{{~ if meta.is_bulgarian ~}}
     .AddErrorDescriber<BgIdentityErrorDescriber>()
+{{~ end ~}}
     .AddEntityFrameworkStores<{{ meta.project_name }}Context>();
 
 builder.Services.AddControllersWithViews();

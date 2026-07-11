@@ -415,3 +415,17 @@
      provably race-free pure-CPU emission (weakest-guarantee-that's-correct / don't over-engineer for scale
      the work set doesn't have - a few dozen files). Verified with a real full run --all -> verify PASSED,
      with all five workers observed across both parallelized stages.
+- Session 25 (Sonnet, meta.language="en" support): the scope-boundary decision is the one worth keeping.
+  A request framed as "if en, skip the Bulgarian translations (the simple version)" assumed this was a
+  small switch. Before writing any code, counted actual Bulgarian content in the codebase and found 54
+  template files with hardcoded Cyrillic baked directly into hand-written .sbn templates (not spec-
+  sourced) - a completely different, much larger thing than the ~4 retrofit passes that translate
+  SCAFFOLDED code (which genuinely CAN be skipped cheaply). Surfaced this gap explicitly via
+  AskUserQuestion rather than either (a) silently implementing the narrow version and letting Stefan
+  discover later that "en" doesn't produce an English UI, or (b) guessing he wanted the full 54-template
+  rewrite and doing a much bigger job than asked. Confirmed: narrow version (gate the retrofit passes),
+  scope boundary documented prominently in the code (MetaSection.IsBulgarian's own doc comment) and the
+  changelog, not just mentioned once and left implicit. Also declined to widen the schema based on
+  spec.meta.language for a DIFFERENT feature (issue #5's follow-up funny-English-worker-names ask) for
+  the same reason in reverse - that field is a hard product requirement (Bulgarian-only generated UI),
+  not a place to bolt on unrelated tool-console preferences.

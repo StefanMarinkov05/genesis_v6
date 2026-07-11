@@ -98,15 +98,21 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
                     hasImages = m.Images is not null,
                 }),
             };
+            // Only the language/script requirement (rule 1) actually depends on spec.Meta.Language -
+            // everything else below (realism, variety, refs, scenario coverage) is language-agnostic.
+            var languageRule = spec.Meta.IsBulgarian
+                ? "1. ALL human-readable string values in Bulgarian (Cyrillic): names, titles, descriptions, categories, " +
+                  "cities, comments. Internationally-branded proper nouns (BMW, iPhone, Adidas) stay in their original " +
+                  "script.\n"
+                : "1. ALL human-readable string values in English: names, titles, descriptions, categories, cities, " +
+                  "comments.\n";
             doc = await llm.ExchangeAsync("seed",
-                "Generate a COMPLETE, realistic seed dataset for a BULGARIAN application (domainHint describes the " +
-                "domain) - every model key in rowsPerModel MUST have data, none skipped, so the generated app is fully " +
-                "testable end-to-end with zero manual setup. Rules:\n" +
-                "1. ALL human-readable string values in Bulgarian (Cyrillic): names, titles, descriptions, categories, " +
-                "cities, comments. Internationally-branded proper nouns (BMW, iPhone, Adidas) stay in their original " +
-                "script.\n" +
+                $"Generate a COMPLETE, realistic seed dataset for {(spec.Meta.IsBulgarian ? "a BULGARIAN" : "an English-language")} " +
+                "application (domainHint describes the domain) - every model key in rowsPerModel MUST have data, none " +
+                "skipped, so the generated app is fully testable end-to-end with zero manual setup. Rules:\n" +
+                languageRule +
                 "2. Data must be plausible for the target market: real city names, realistic prices, real-world " +
-                "category names, believable dates. NO placeholder text, NO 'Тест 1', NO lorem ipsum.\n" +
+                "category names, believable dates. NO placeholder text (e.g. 'Test 1'), NO lorem ipsum.\n" +
                 "3. Rows must be varied - no two rows may share the same descriptive string.\n" +
                 "4. Respect each property's 'hint' when present - it constrains realistic ranges/content.\n" +
                 "5. Every parent row: unique refKey (kebab-case, Latin). Every child row: parentRef_{Target} " +
