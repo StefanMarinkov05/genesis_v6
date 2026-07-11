@@ -542,3 +542,70 @@ Four bundled requests. 111 tests green after (was 106).
 - Recorded (memory, not code): Stefan will supply English seed data himself for a fully-English
   project - no generator change needed for that, only documentation later (he'll ask separately).
 - Did NOT file GitHub issues for any of this (explicitly told it's not necessary this time).
+
+## Session 27 (Sonnet: round-2 23-item fix batch from live FaceNote usage) - changelogs 057-071, v6.4.0
+Stefan hand-tested the generated FaceNote app and reported 23 real issues. Planned into 5 dependency-
+ordered checkpoints (translation infra -> Product structural changes -> images/seed -> small bug
+fixes -> new features), each item its own commit/VERSION bump (6.3.1 -> 6.3.15) per explicit
+instruction, every item live-verified via a full `run --all` regenerate against real generated
+output - not just unit tests. 111/111 tests green throughout (one known-flaky parallel-timing test
+unrelated to any of this work, confirmed by isolation reruns each time it fired).
+- **Translation/display-name infra** (item 1): new `meta.domainHintBg`, `ModelSpec.displayName`,
+  `ControllerSpec.displayName`/`isLookup`, enum values restructured to `{value, displayName}`
+  objects. Caught mid-implementation: Scriban's `||` returns a BOOLEAN not an operand (unlike JS/
+  Python) - a `label = c.display_name || short` pattern silently printed the literal string "true"
+  in three spots; recurred again in checkpoint 5's Характеристики view and was caught before ever
+  reaching a build the second time. Role display names (item 16) bundled in.
+- **Product structural changes** (items 18+19): `Product.UserId` auto-stamped on Create (both
+  areas), ownership-`Forbid()`-guarded on client Edit/Delete - new generic `InjectOwnerAutoAssign`
+  transform (regex surgery on scaffolded controllers, same family as existing
+  `StripSystemFieldsFromViews`/`InjectReviewLoadingIntoDetails`). Client Products Create/Edit/Delete
+  UN-removed (a PRIOR session had deliberately stripped them - this request reverses that). Added
+  `Product.Quantity`; `Status` now derived server-side (`InjectQuantityDerivedStatus`), never hand-
+  set - stays visible on Details (unlike audit fields) via a form-only vs. display-strip split.
+  Caught a silent regex-match failure: `Create\([^)]*\)` couldn't backtrack past `[Bind("...")]`'s
+  own closing paren, so Create's owner-stamp never fired - found by inspecting real generated code,
+  not by a build error (the regex just silently didn't match).
+- **Images + seed** (items 8, 10, 11, 14, 15): root cause for "images not displaying" found -
+  `FileUploadService` returns paths with no leading `/`, 7 render sites used them raw (resolved
+  relative to the current page URL, a 404). Fixed all 7. Admin Posts Edit gained a "remove image"
+  checkbox instead of a raw URL textbox (`InjectImageRemoveOption`, form-only-strip pattern reused
+  from Status). PostComment got real image upload (Review already had it - narrowed scope after
+  checking, didn't redo existing work). Seed data: closed user-5 coverage gaps (added mid-session as
+  2nd admin, was absent from every engagement model), filled receiver/address on all orders. 2nd-
+  image-per-product explicitly deferred (needs a real SeedStage.cs change, flagged not done).
+- **Bug fixes** (items 2, 3, 4, 5, 9, 12, 13, 20): sorting-direction inversion + add-to-cart hidden
+  by the catalogue button (both 1-line fixes). Admin Orders Create removed (`removedActions`, an
+  existing mechanism, just applied). Admin-table FK columns now link to the related record (real
+  target-controller lookup, not naive "+s" pluralization guessing - would've broken on Category).
+  Unfollow `DbUpdateConcurrencyException` (double-click race) now an idempotent no-op instead of a
+  500. Item 4 (OrderDetails receiver/address) needed NO code change - investigation found the
+  checkout form/controller/view were already fully correct, the gap was purely seed data (folded
+  into item 8). Item 12 (profile changes over time) - investigated, found NO reproducible code path
+  in the seed/identity stages (they're correctly idempotent) - flagged as needing a live repro from
+  Stefan, not guessed at a third time. **Recovered a dropped item**: Stefan's original "Admin Posts
+  Details - add postcomments" got lost during this session's own planning renumbering into
+  checkpoints - caught by re-checking generated output against his original list, not re-reported.
+- **New features** (items 6/7, 17, 21): consolidated "Характеристики" admin page - one nav entry,
+  tabbed by model, for the 5 small lookup/join models, replacing 5 separate full-CRUD nav entries.
+  Hashed public profile URLs (`ProfileHash.Of`, SHA256-truncated, resolved by materializing+
+  comparing in-memory since the hash isn't SQL-translatable) + Identity Manage page scaffolded for
+  the FIRST TIME this session (flagged as a real unknown during planning - resolved via `dotnet
+  aspnet-codegenerator identity --listFiles`). 2FA/Personal-data deliberately never scaffolded
+  (not just hidden). Own-PFP change/delete. This cluster took 6 live-regenerate iterations to land
+  cleanly, each catching a genuinely NEW failure mode: (1) the BG residue map blindly corrupted C#
+  identifiers containing "Email"/"Password" as substrings (`EmailModel` -> `ИмейлModel`,
+  `ManageNavPages.Email` -> `ManageNavPages.Имейл`) - excluded the whole `Manage/` subtree from the
+  blind map rather than attempt fragile prose-vs-identifier text heuristics; (2) TWO separate
+  `_ViewImports.cshtml` layers needed the new `Infrastructure` using (per-MVC-area ones dps-nn
+  already generates, AND the separate Identity Razor Pages one, scaffolder-owned, cascades from the
+  top-level file down the folder tree); (3) `ProfileHash.cs` was originally emitted in a LATER
+  pipeline stage than `IdentityStage`'s own build check that needed it - moved the emission earlier.
+  Also caught (before ever building): `RedirectToAction` doesn't work on a Razor Page target -
+  Identity's Manage/Index is a Page, not an MVC action - fixed to `RedirectToPage`.
+- Session was briefly interrupted mid-checkpoint-5 by an abrupt process teardown unrelated to the
+  work itself - left a torn (all-null-bytes) `out/FaceNote/FaceNote/plan/state.json` and a few
+  orphaned `dotnet.exe` processes holding stale locks. No code lost (everything through item 14 was
+  already committed) - recovered by killing the orphans and one more clean `out/` wipe + regenerate.
+- Final: both BG and EN full regenerates green (verify PASSED on both, language gate correctly
+  skipped for EN), VERSION bumped 6.3.15 -> 6.4.0.
