@@ -134,7 +134,7 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
 {{~ if has_pfp ~}}
                         <li class="nav-item">
                             <a class="nav-link" asp-area="Identity" asp-page="/Account/Manage/Index" title="Профил">
-                                <img src="@(string.IsNullOrEmpty(navUser?.ProfilePicturePath) ? "/images/avatar-default.png" : navUser!.ProfilePicturePath)"
+                                <img src="@(string.IsNullOrEmpty(navUser?.ProfilePicturePath) ? "/images/avatar-default.png" : "/" + navUser!.ProfilePicturePath)"
                                      alt="профил" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;" />
                             </a>
                         </li>

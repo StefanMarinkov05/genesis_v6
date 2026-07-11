@@ -86,6 +86,8 @@ public sealed class EmitControllersViewsStage : IStage
                     StripSystemFieldsFromViews(ctx, controller);
                     InjectOwnerAutoAssign(ctx, controller);
                     InjectQuantityDerivedStatus(ctx, controller);
+                    InjectImageRemoveOption(ctx, controller);
+                    InjectPostCommentsIntoAdminDetails(ctx, controller);
                     InjectReviewLoadingIntoDetails(ctx, controller);
                     ApplyDeviations(ctx, controller, engine);
                     break;
@@ -358,6 +360,12 @@ public sealed class EmitControllersViewsStage : IStage
             ? model.Properties.FirstOrDefault(p => p.Name == "Status" && p.Type == "enum")
             : null;
 
+    /// <summary>Model has a single raw stored-path string field (e.g. Post.ImagePath) - the same
+    /// "ends with Path" heuristic admin_table.sbn already uses to detect an image column. Editable
+    /// only via upload/remove, never as a hand-typed URL (item 11).</summary>
+    internal static PropertySpec? LegacyImagePathProperty(ModelSpec model) =>
+        model.Properties.FirstOrDefault(p => p.Type == "string" && p.Name.EndsWith("Path"));
+
     internal static void StripSystemFieldsFromViews(StageContext ctx, ControllerSpec c)
     {
         List<string> fieldList = ["CreatedAt", "UpdatedAt", "DeletedAt", "IsDeleted"];
@@ -368,8 +376,15 @@ public sealed class EmitControllersViewsStage : IStage
         // from [Bind] + Create/Edit forms only, never from the display-stripping loop below.
         var derivedStatus = model is not null ? DerivedStatusProperty(model) : null;
         if (derivedStatus is not null) fieldList.Add("Status");
+        // Legacy image-path field (item 11): never a hand-typed URL on Create/Edit, but stays
+        // visible on Details/Index as an actual <img> (admin_table.sbn already renders it there).
+        var legacyImage = model is not null ? LegacyImagePathProperty(model) : null;
+        if (legacyImage is not null) fieldList.Add(legacyImage.Name);
         var fields = fieldList.ToArray();
-        var formOnlyFields = derivedStatus is not null ? new[] { "Status" } : [];
+        List<string> formOnlyList = [];
+        if (derivedStatus is not null) formOnlyList.Add("Status");
+        if (legacyImage is not null) formOnlyList.Add(legacyImage.Name);
+        var formOnlyFields = formOnlyList.ToArray();
 
         // controller [Bind("A,B,CreatedAt,...")] lists: rewrite each list without the
         // system entries (parse -> filter -> rejoin; never blind string surgery).
@@ -631,6 +646,111 @@ public sealed class EmitControllersViewsStage : IStage
             File.WriteAllText(path, src);
             ctx.Info($"derived status wired into {c.Name}");
         }
+    }
+
+    /// <summary>
+    /// Item 11: a legacy single-image-path field (e.g. Post.ImagePath) is never hand-typed as a
+    /// URL - StripSystemFieldsFromViews already removed it from [Bind] and the form entirely.
+    /// This adds a "remove image" checkbox to Edit only (Create has no existing image to remove)
+    /// and preserves the existing value unless the checkbox was ticked - same
+    /// preserve-unless-told-otherwise idiom as InjectOwnerAutoAssign's Edit handling.
+    /// </summary>
+    internal static void InjectImageRemoveOption(StageContext ctx, ControllerSpec c)
+    {
+        if (c.Model is null) return;
+        var model = ctx.Spec.Models.FirstOrDefault(m => m.Name == c.Model);
+        if (model is null || LegacyImagePathProperty(model) is not { } imgProp) return;
+
+        var ctrlPath = Path.Combine(ctx.ProjectDir, c.File);
+        if (File.Exists(ctrlPath))
+        {
+            var src = File.ReadAllText(ctrlPath);
+            if (!src.Contains("// image remove option"))
+            {
+                var editRx = new Regex(
+                    @"(public async Task<IActionResult> Edit\(int id, \[Bind\(""[^""]*""\)\] " + c.Model + @" )(\w+)(\)[\s\S]*?try\s*\{\s*)([\s\S]*?)(_context\.Update\(\2\);)");
+                var em = editRx.Match(src);
+                if (em.Success)
+                {
+                    var varName = em.Groups[2].Value;
+                    var line = $"// image remove option\n                    {varName}.{imgProp.Name} = removeImage ? null : (await _context.{c.Model}s.AsNoTracking().FirstAsync(x => x.Id == {varName}.Id)).{imgProp.Name};\n                    ";
+                    src = editRx.Replace(src,
+                        $"{em.Groups[1].Value}{varName}{em.Groups[3].Value}{em.Groups[4].Value}{line}{em.Groups[5].Value}", 1);
+                    // add the bool parameter to the method signature (kept separate from [Bind] - a plain form field, not model-bound).
+                    src = new Regex(@"(public async Task<IActionResult> Edit\(int id, \[Bind\(""[^""]*""\)\] " + c.Model + @" \w+)(\))")
+                        .Replace(src, $"$1, bool removeImage = false$2", 1);
+                    File.WriteAllText(ctrlPath, src);
+                    ctx.Info($"image remove option wired into {c.Name}");
+                }
+            }
+        }
+
+        var editViewPath = Path.Combine(ctx.ProjectDir, "Areas", c.Area ?? "", "Views", c.Name.Replace("Controller", ""), "Edit.cshtml");
+        if (File.Exists(editViewPath))
+        {
+            var vsrc = File.ReadAllText(editViewPath);
+            if (!vsrc.Contains("removeImage"))
+            {
+                var checkbox =
+                    $"            <div class=\"form-group form-check\">\n" +
+                    $"                <label class=\"form-check-label\">\n" +
+                    $"                    <input class=\"form-check-input\" type=\"checkbox\" name=\"removeImage\" value=\"true\" /> Премахни текущата снимка\n" +
+                    $"                </label>\n" +
+                    $"            </div>\n";
+                var beforeSubmit = new Regex(@"(\s*)(<input type=""submit""[^>]*/>)");
+                var vNew = beforeSubmit.Replace(vsrc, m => $"\n{checkbox}{m.Groups[1].Value}{m.Groups[2].Value}", 1);
+                if (vNew != vsrc) { File.WriteAllText(editViewPath, vNew); ctx.Info($"remove-image checkbox added to {c.Name}/Edit.cshtml"); }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Post's admin Details page didn't surface its comments at all - narrowly gated to the Post
+    /// admin controller specifically (same style as InjectReviewLoadingIntoDetails's feature+model
+    /// gate) rather than a generic "show every child collection" mechanism, since only this one
+    /// case was actually requested.
+    /// </summary>
+    internal static void InjectPostCommentsIntoAdminDetails(StageContext ctx, ControllerSpec c)
+    {
+        if (!string.Equals(c.Area, "Admin", StringComparison.OrdinalIgnoreCase) || c.Model != "Post") return;
+
+        var path = Path.Combine(ctx.ProjectDir, c.File);
+        if (!File.Exists(path)) return;
+        var src = File.ReadAllText(path);
+        if (src.Contains("// admin post comments")) return;
+
+        var loadRx = new Regex(
+            @"var (\w+) = await _context\.Posts\s*\.FirstOrDefaultAsync\(([^;]+?)\);", RegexOptions.Singleline);
+        var lm = loadRx.Match(src);
+        if (!lm.Success) return;
+        var varName = lm.Groups[1].Value;
+        var pred = lm.Groups[2].Value;
+        src = loadRx.Replace(src,
+            $"// admin post comments\n            var {varName} = await _context.Posts\n" +
+            $"                .Include(x => x.Comments)\n" +
+            $"                .FirstOrDefaultAsync({pred});", 1);
+        File.WriteAllText(path, src);
+        ctx.Info($"post comments included in {c.Name}.Details");
+
+        var detailsViewPath = Path.Combine(ctx.ProjectDir, "Areas", "Admin", "Views", "Posts", "Details.cshtml");
+        if (!File.Exists(detailsViewPath)) return;
+        var vsrc = File.ReadAllText(detailsViewPath);
+        if (vsrc.Contains("Model.Comments")) return;
+        var commentsBlock =
+            "\n<h4 class=\"mt-4\">Коментари (@Model.Comments.Count)</h4>\n" +
+            "<ul class=\"list-group mb-3\">\n" +
+            "    @foreach (var c in Model.Comments.OrderBy(x => x.CreatedAt))\n" +
+            "    {\n" +
+            "        <li class=\"list-group-item\">\n" +
+            "            <div>@c.Content</div>\n" +
+            "            <small class=\"text-muted\">@c.CreatedAt.ToString(\"dd.MM.yyyy HH:mm\")</small>\n" +
+            "        </li>\n" +
+            "    }\n" +
+            "</ul>\n";
+        // Insert right before the closing </div> that wraps the scaffolded <dl>, or fall back to appending before the edit/back links.
+        var anchorRx = new Regex(@"(\r?\n)(<div>\s*\r?\n\s*<a asp-action=""Edit"")");
+        var vNew = anchorRx.Replace(vsrc, m => $"{commentsBlock}{m.Groups[1].Value}{m.Groups[2].Value}", 1);
+        if (vNew != vsrc) File.WriteAllText(detailsViewPath, vNew);
     }
 
     private static IEnumerable<string> ViewFilesOf(StageContext ctx, ControllerSpec c)

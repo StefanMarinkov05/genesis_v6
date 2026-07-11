@@ -20,7 +20,7 @@ for r in spec.identity.roles; if r.is_admin; admin_role = r.name; break; end; en
 
 <div class="d-flex align-items-center gap-3 mb-3">
 {{~ if has_pfp ~}}
-    <img src="@(string.IsNullOrEmpty(Model.User.ProfilePicturePath) ? "/images/avatar-default.png" : Model.User.ProfilePicturePath)"
+    <img src="@(string.IsNullOrEmpty(Model.User.ProfilePicturePath) ? "/images/avatar-default.png" : "/" + Model.User.ProfilePicturePath)"
          class="rounded-circle" style="width:96px;height:96px;object-fit:cover;" alt="Профилна снимка" />
 {{~ end ~}}
     <div>

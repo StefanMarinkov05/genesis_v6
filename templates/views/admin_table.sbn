@@ -69,7 +69,7 @@ sorting_on = owner && owner.sorting && owner.sorting.enabled
                 <td>
                     @if (!string.IsNullOrEmpty(item.{{ p.name }}))
                     {
-                        <img src="@item.{{ p.name }}" alt="Image" style="max-width: 100px; max-height: 100px; object-fit: cover;" />
+                        <img src="/@item.{{ p.name }}" alt="Image" style="max-width: 100px; max-height: 100px; object-fit: cover;" />
                     }
                     else
                     {
