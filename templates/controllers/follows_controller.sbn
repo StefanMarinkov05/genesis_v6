@@ -62,7 +62,16 @@ public class FollowsController : Controller
             _context.Follows.Add(new Follow { FollowerUserId = userId, FollowedUserId = targetUserId });
         else
             _context.Follows.Remove(existing);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Двоен клик/паралелна заявка вече е приложила същата промяна (0 засегнати редове
+            // при изтриване или конфликт при добавяне) - крайното състояние вече е постигнато,
+            // третираме като идемпотентен успех вместо грешка.
+        }
         return Redirect(Request.Headers.Referer.FirstOrDefault() ?? Url.Action(nameof(List))!);
     }
 }
