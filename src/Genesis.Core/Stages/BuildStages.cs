@@ -336,6 +336,8 @@ public sealed class IdentityStage : IStage
         // id.Modules above doesn't include them - so the stock nav's links to them would 404),
         // and add a link to the current user's own public profile.
         RestructureManageNav(ctx);
+        // Item 21: let the user change/delete their own profile picture from the Manage page.
+        InjectPfpFormIntoManageIndex(ctx);
 
         // Bulgarian page markup, two layers (ADR-002b) - BOTH are retrofit overrides of the
         // scaffolder's own (English) output, so both are skipped for a non-Bulgarian project:
@@ -539,5 +541,48 @@ public sealed class IdentityStage : IStage
 
         File.WriteAllText(path, src);
         ctx.Info("Manage nav restructured: 2FA/Personal data removed, Публичен акаунт link added");
+    }
+
+    /// <summary>
+    /// Item 21: adds a self-contained profile-picture upload/remove form to the scaffolded
+    /// Manage/Index.cshtml MARKUP - posts to ProfilesController.ChangePicture/RemovePicture
+    /// (a separate MVC controller, coexists fine alongside the page's own scaffolded Razor Page
+    /// form/model) rather than touching the scaffolded PageModel code-behind, which would need a
+    /// much riskier C# injection into generated Razor Page logic for a small, self-contained
+    /// feature that doesn't need to share state with the rest of the page.
+    /// </summary>
+    internal static void InjectPfpFormIntoManageIndex(StageContext ctx)
+    {
+        var hasPfp = ctx.Spec.Identity?.ApplicationUser.ExtraProperties.Any(p => p.Name == "ProfilePicturePath") ?? false;
+        if (!hasPfp) return;
+        var path = Path.Combine(ctx.ProjectDir, "Areas", "Identity", "Pages", "Account", "Manage", "Index.cshtml");
+        if (!File.Exists(path)) return;
+        var src = File.ReadAllText(path);
+        if (src.Contains("ChangePicture")) return; // idempotent rerun
+
+        var pfpBlock =
+            "\n<div class=\"row mt-4\">\n" +
+            "    <div class=\"col-md-6\">\n" +
+            "        <h5>Профилна снимка</h5>\n" +
+            "        <form asp-area=\"Client\" asp-controller=\"Profiles\" asp-action=\"ChangePicture\" method=\"post\" enctype=\"multipart/form-data\" class=\"mb-2\">\n" +
+            "            <div class=\"mb-2\">\n" +
+            "                <input class=\"form-control\" type=\"file\" name=\"picture\" accept=\"image/*\" />\n" +
+            "            </div>\n" +
+            "            <button type=\"submit\" class=\"btn btn-primary btn-sm\">Качи нова снимка</button>\n" +
+            "        </form>\n" +
+            "        <form asp-area=\"Client\" asp-controller=\"Profiles\" asp-action=\"RemovePicture\" method=\"post\">\n" +
+            "            <button type=\"submit\" class=\"btn btn-outline-danger btn-sm\">Изтрий текущата снимка</button>\n" +
+            "        </form>\n" +
+            "    </div>\n" +
+            "</div>\n";
+
+        // Append right before the closing </div> that wraps the scaffolded row, or at end of file if not found.
+        if (src.Contains("</div>\n\n@section Scripts"))
+            src = src.Replace("</div>\n\n@section Scripts", $"</div>\n{pfpBlock}\n@section Scripts");
+        else
+            src += pfpBlock;
+
+        File.WriteAllText(path, src);
+        ctx.Info("profile-picture upload/remove form added to Manage/Index.cshtml");
     }
 }

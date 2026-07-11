@@ -8,6 +8,12 @@ using {{ meta.root_namespace }}.Services;
 
 {{ ns_open (meta.root_namespace + ".Areas.Client.Controllers") }}
 
+{{~
+has_pfp = false
+if spec.identity
+  for ep in spec.identity.application_user.extra_properties; if ep.name == "ProfilePicturePath"; has_pfp = true; end; end
+end
+~}}
 /// <summary>
 /// A9 / Задача 26: публична страница на потребител - само за четене, достъпна без вход.
 /// Показва снимка/име + обобщеното публично съдържание (обяви, публикации, отзиви,
@@ -21,12 +27,22 @@ public class ProfilesController : Controller
 {
     private readonly UserProfileService _profiles;
     private readonly UserManager<ApplicationUser> _userManager;
+{{~ if has_pfp ~}}
+    private readonly FileUploadService _fileUpload;
 
+    public ProfilesController(UserProfileService profiles, UserManager<ApplicationUser> userManager, FileUploadService fileUpload)
+    {
+        _profiles = profiles;
+        _userManager = userManager;
+        _fileUpload = fileUpload;
+    }
+{{~ else ~}}
     public ProfilesController(UserProfileService profiles, UserManager<ApplicationUser> userManager)
     {
         _profiles = profiles;
         _userManager = userManager;
     }
+{{~ end ~}}
 
     public async Task<IActionResult> Public(string id)
     {
@@ -40,5 +56,37 @@ public class ProfilesController : Controller
         if (vm is null) return NotFound();
         return View(vm);
     }
+{{~ if has_pfp ~}}
+
+    // Задача 21: собственикът може да смени или изтрие СВОЯТА профилна снимка - винаги
+    // текущо логнатия потребител, независимо какъв route/form параметър би бил подаден.
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePicture(IFormFile? picture)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null) return NotFound();
+        var saved = await _fileUpload.SaveImageAsync(picture, "uploads/avatars");
+        if (saved is not null)
+        {
+            user.ProfilePicturePath = saved;
+            await _userManager.UpdateAsync(user);
+        }
+        return RedirectToPage("/Account/Manage/Index", new { area = "Identity" });
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemovePicture()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null) return NotFound();
+        user.ProfilePicturePath = null;
+        await _userManager.UpdateAsync(user);
+        return RedirectToPage("/Account/Manage/Index", new { area = "Identity" });
+    }
+{{~ end ~}}
 }
 {{ ns_close }}
