@@ -76,7 +76,13 @@ ordering: `docs/architecture.md`. Stage implementations live in `src/Genesis.Cor
   generation's spec+seed (gitignored, local-only)
 - `out/` — generated output, disposable, gitignored — **never hand-edit anything under here**
 - `1-build-and-check.bat` / `2-generate.bat` — SDK check+build+test / fresh pipeline run
+- `images/` — GUI asset drop folder (logo, flags, wallpapers), empty until Task B of the 6.5.0 spec
+- `design/design-specs.md` / `design/footer.md` — GUI theme spec + runtime footer content,
+  both placeholders until Task B/Stefan fill them in
 
-**Not yet built** (planned in `plan/dps-nn-6.5.0-spec.md`): the `./DPS-NN/` module repositioning,
-`images/`, `design/`, and the Electron GUI. Do not assume any of that exists until Task 0 of that
-spec has actually run.
+**Not yet built** (planned in `plan/dps-nn-6.5.0-spec.md`): the Electron GUI itself (Task B) and
+its supporting content. Task 0's literal "move everything under `./DPS-NN/`" was deliberately
+**not** done — this repo root already *is* ДПС-НН/DPS-NN, and a full physical repositioning would
+touch every path reference in the build scripts, this file, and IDE configs for no benefit until a
+`gui/` sibling actually needs the separation (see ADR-009 for the same reasoning applied to a
+different rename). Only the `images/`/`design/` folders were created at the current root.
