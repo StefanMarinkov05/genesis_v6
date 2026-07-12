@@ -16,6 +16,8 @@ export interface FileHandle {
   name: string;
   /** Where it was found — drives grouping in the list-select. */
   source: 'fixtures' | 'archive' | 'cwd' | 'seeds' | 'uploaded';
+  /** Exact size in bytes — shown everywhere a file is listed, so identical/edited copies are visible at a glance. */
+  size: number;
 }
 
 /** Result of a duplicate check: a prior completed build for this (spec+seed) hash, or null. */

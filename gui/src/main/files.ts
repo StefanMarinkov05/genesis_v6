@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { FileHandle } from '@shared/ipc-types';
 import { seedSearchDirs, specSearchDirs, uploadsDir } from './paths';
@@ -33,7 +33,12 @@ export function listSpecs(): FileHandle[] {
     for (const path of specs) {
       if (seen.has(path)) continue;
       seen.add(path);
-      out.push({ path, name: basename(path), source: source === 'cwd' ? 'cwd' : source });
+      out.push({
+        path,
+        name: basename(path),
+        source: source === 'cwd' ? 'cwd' : source,
+        size: statSync(path).size,
+      });
     }
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
@@ -46,7 +51,7 @@ export function listSeeds(): FileHandle[] {
     for (const path of listDir(dir, (n) => n.endsWith('.json'))) {
       if (seen.has(path)) continue;
       seen.add(path);
-      out.push({ path, name: basename(path), source });
+      out.push({ path, name: basename(path), source, size: statSync(path).size });
     }
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
@@ -71,7 +76,7 @@ function stage(bytes: Uint8Array, name: string, kind: 'spec' | 'seed'): FileHand
   const safe = basename(name).replace(/[^\w.\-]+/g, '_');
   const path = join(dir, safe);
   writeFileSync(path, text, 'utf8');
-  return { path, name: safe, source: 'uploaded' };
+  return { path, name: safe, source: 'uploaded', size: statSync(path).size };
 }
 
 export function uploadSpec(bytes: Uint8Array, name: string): FileHandle {

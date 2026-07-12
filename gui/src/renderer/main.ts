@@ -102,8 +102,16 @@ function setProgress(index: number, total: number, stage: string, cls: '' | 'run
 }
 
 // ---- selection UI -----------------------------------------------------------
+// Exact byte count (never rounded to KB/MB) shown everywhere a file is listed, so two
+// otherwise-identical-looking entries (e.g. a fixture vs its stale archived copy) are
+// distinguishable at a glance without opening either file.
+function formatBytes(n: number): string {
+  return `${n.toLocaleString('en-US')} B`;
+}
+
 function optionLabel(f: FileHandle): string {
-  return f.source === 'uploaded' ? `${f.name} (uploaded)` : `${f.name} · ${f.source}`;
+  const size = formatBytes(f.size);
+  return f.source === 'uploaded' ? `${f.name} (uploaded, ${size})` : `${f.name} · ${f.source} · ${size}`;
 }
 
 function populateSelect(select: HTMLSelectElement, list: FileHandle[], placeholder: string): void {
@@ -128,12 +136,12 @@ async function reloadLists(): Promise<void> {
 
 function onSpecChosen(f: FileHandle | null): void {
   selectedSpec = f;
-  $('spec-well').textContent = f ? f.name : t.spec.none;
+  $('spec-well').textContent = f ? `${f.name} (${formatBytes(f.size)})` : t.spec.none;
   setRunState(runState); // re-evaluate Start enablement
 }
 function onSeedChosen(f: FileHandle | null): void {
   selectedSeed = f;
-  $('seed-well').textContent = f ? f.name : t.seed.none;
+  $('seed-well').textContent = f ? `${f.name} (${formatBytes(f.size)})` : t.seed.none;
 }
 
 // ---- build lifecycle --------------------------------------------------------
@@ -157,7 +165,9 @@ async function doStart(): Promise<void> {
   setProgress(0, TOTAL_STAGES, '…', 'running');
   runId = await gui.buildStart(selectedSpec, selectedSeed);
   setRunState('running');
-  toast('info', t.toast.started, selectedSpec.name + (selectedSeed ? ` · ${selectedSeed.name}` : ''));
+  const specPart = `${selectedSpec.name} (${formatBytes(selectedSpec.size)})`;
+  const seedPart = selectedSeed ? ` · ${selectedSeed.name} (${formatBytes(selectedSeed.size)})` : '';
+  toast('info', t.toast.started, specPart + seedPart);
 }
 
 async function doStop(): Promise<void> {
@@ -334,7 +344,7 @@ async function uploadFile(kind: 'spec' | 'seed'): Promise<void> {
         seeds.push(handle);
         onSeedChosen(handle);
       }
-      toast('success', `${kind === 'spec' ? 'Spec' : 'Seed'} uploaded`, handle.name);
+      toast('success', `${kind === 'spec' ? 'Spec' : 'Seed'} uploaded`, `${handle.name} (${formatBytes(handle.size)})`);
     } catch (e) {
       toast('danger', 'Upload failed', (e as Error).message);
     }

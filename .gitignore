@@ -13,6 +13,8 @@ out/
 logs/*.jsonl
 logs/registry.json
 logs/registry.jsonl
+logs/*.log
+logs/gui-build-manifest.json
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 out_facenote_run*.log
