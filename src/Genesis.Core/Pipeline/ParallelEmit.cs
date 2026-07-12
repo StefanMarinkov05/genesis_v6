@@ -1,3 +1,4 @@
+// FILE-MAP: parallel-worker execution for the emission stages, plus the Bulgarian worker-name tagging used to disambiguate concurrent log lines.
 using System.Collections.Concurrent;
 
 namespace GenesisV6.Core.Pipeline;

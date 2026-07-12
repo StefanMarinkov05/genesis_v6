@@ -1,3 +1,4 @@
+// FILE-MAP: the POCO object model mirroring spec.schema.json — every group (meta, models, identity, controllers, views, features, seeding...) as a C# type.
 using System.Text.Json;
 using System.Text.Json.Serialization;
 

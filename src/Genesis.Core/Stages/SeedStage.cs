@@ -1,3 +1,4 @@
+// FILE-MAP: stage 7 — LLM seed-row generation via symbolic refs, image sourcing (Pexels/Pixabay/Picsum/local pack), SeedData.cs emission, EF migration add + apply.
 using System.Text.Json;
 using GenesisV6.Core.Llm;
 using GenesisV6.Core.Pipeline;

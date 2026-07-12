@@ -1,3 +1,4 @@
+// FILE-MAP: stages 3-5 — ScaffoldStage (dotnet new mvc + build), EmitModelsStage (models/DTOs/DbContext), IdentityStage (Identity scaffold, BG localization, roles + seed users).
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using GenesisV6.Core.Pipeline;

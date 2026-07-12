@@ -1,4 +1,4 @@
-<!-- last-verified: 1b5fea4319805d9a0571619a0318462c896ee4ba -->
+<!-- last-verified: e95fedf -->
 # dps-nn (ДПС-НН)
 
 > ASCII name `dps-nn`, display name `ДПС-НН`. Internal C# assemblies/namespaces remain `Genesis.*` by design (ADR-009); the installed tool command is `dps-nn`.
@@ -6,6 +6,18 @@
 Declarative generator for complete, self-contained ASP.NET Core 10 MVC + EF Core (SQL Server) applications with Bulgarian-only UI, driven by a single `project-spec.json`.
 
 Built as a diploma-work sample factory: one spec in -> one buildable, runnable, seeded, verified project out, plus a machine-readable report (`wwwroot/output/project-summary.json`) consumed by downstream documentation tooling.
+
+## Overview
+
+```mermaid
+flowchart LR
+  spec["project-spec.json\n(you write this)"] -->|"9-stage pipeline\n(spec-expand -> ... -> verify -> report)"| app["a running,\nseeded, verified\nASP.NET MVC app"]
+  app -->|"report stage"| summary["wwwroot/output/\nproject-summary.json"]
+```
+
+One `dotnet run --project src/Genesis.Cli -- run --all --spec ... --out ...` turns a spec into a
+buildable, seeded, verified project — see `docs/reference/control-flow.md` for the full 9-stage
+breakdown and `docs/explanation/architecture-decisions.md` for *why* it's built this way.
 
 ## Quickstart (clean machine)
 
@@ -25,8 +37,8 @@ dotnet tool update -g dotnet-ef --version 10.0.*
 # happens during `seed`.
 
 # build the tool itself (assemblies stay Genesis.*)
-dotnet new sln -n Genesis
-dotnet sln add src/Genesis.Core src/Genesis.Cli tests/Genesis.Tests
+# dps-nn.slnx is already checked in - do NOT recreate a .sln (the .NET 10 SDK defaults
+# `dotnet new sln` to .slnx anyway; 1-build-and-check.bat handles this for you too)
 dotnet build
 dotnet test
 
@@ -60,7 +72,7 @@ Both menus are skipped entirely under `--no-interactive`.
 
 ## prompts/out/schemas + prompts/out/seeds (project history)
 
-When `run --all` finishes a project successfully, the spec (+ its `.lock.json`) and the seed-response file used are **moved** (not copied) into `prompts/out/schemas/<project>-schema.json` (+ `-schema.lock.json`) and `prompts/out/seeds/<project>-seed.json` - a permanent, per-project archive of exactly which spec and seed produced that generation. Both picker searches above already include these two folders, so an archived spec/seed stays selectable in later runs; re-running the same project again will find it there instead of at its original location. Overwrites any previous archive entry for the same project name (same "keep the latest" convention as `logs/registry.json`).
+When `run --all` finishes a project successfully, the spec (+ its `.lock.json`) and the seed-response file used are **copied** (originals left in place) into `prompts/out/schemas/<project>-schema.json` (+ `-schema.lock.json`) and `prompts/out/seeds/<project>-seed.json` - a permanent, per-project archive of exactly which spec and seed produced that generation. Both picker searches above already include these two folders, so an archived spec/seed stays selectable in later runs; re-running the same project again will find it there instead of at its original location. Overwrites any previous archive entry for the same project name (same "keep the latest" convention as `logs/registry.json`).
 
 ## One-click scripts (Windows)
 
@@ -75,9 +87,17 @@ Two separate `.bat` files at the repo root, matching two separate concerns:
 
 ## Documentation map
 
-- `docs/architecture.md` - stage-by-stage internals
-- `docs/adr/` - the architecture decision records (ADR-001..009)
-- `plan/` - living state + decision log (context-handoff format)
+- `CLAUDE.md` - the router; start there for "which doc do I need"
+- `docs/reference/control-flow.md` - the 9-stage pipeline, Mermaid diagram + stage table + verify-gate ordering
+- `docs/reference/spec-format.md` - `project-spec.json` concepts (authoritative shape: `spec.schema.json`)
+- `docs/reference/file-map.md` - generated per-file purpose map (`scripts/generate-file-map.ps1`)
+- `docs/explanation/architecture-decisions.md` - *why* it's built this way, indexing all 11 ADRs
+- `docs/explanation/techniques.md` - hard-won Scriban/Razor/EF patterns and traps
+- `docs/adr/` - the architecture decision records (ADR-001..010, + 002b)
+- `docs/how-to/` - task guides (adding a stage, adding a template)
+- `docs/01-tutorial-genesis.md` - one-time end-to-end walkthrough
+- `plan/` - living state + decision log (context-handoff format); `plan/task-a-doc-architecture.md`
+  is this doc tree's own design record
 
 ## Known first-build risk spots (written without a compiler at hand)
 

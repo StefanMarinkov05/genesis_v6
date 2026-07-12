@@ -1,3 +1,4 @@
+// FILE-MAP: stages 1-2 — SpecBuildStage (notes.md -> draft spec via LLM) and SpecExpandStage (deterministic feature + $variation:* expansion into the lock file).
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using GenesisV6.Core.Llm;

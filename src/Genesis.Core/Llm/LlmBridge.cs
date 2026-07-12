@@ -1,3 +1,4 @@
+// FILE-MAP: the ADR-005 LLM file contract — request/response files, automatic vs manual (exit-3) mode, schema-validated retries, hash-logged exchanges.
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;

@@ -1,3 +1,4 @@
+// FILE-MAP: stage 8 — VerifyStage, the blocking gate (build, EF migrate, boot, HTTP checks, English-leak scan); stage 9 — ReportStage (project-summary.json).
 using System.Diagnostics;
 using System.Net;
 using System.Text.Json;

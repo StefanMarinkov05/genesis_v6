@@ -1,3 +1,4 @@
+// FILE-MAP: stage 6 — controllers from three provenances (scaffold+deviations, template, hand-written) plus their views; deviations applied as anchored regex transforms.
 using System.Text.RegularExpressions;
 using GenesisV6.Core.Pipeline;
 using GenesisV6.Core.Spec;

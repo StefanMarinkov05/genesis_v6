@@ -1,3 +1,4 @@
+// FILE-MAP: the single Scriban rendering surface every stage emits code through, plus its helper functions that carry variation into every emitted file.
 using GenesisV6.Core.Spec;
 using GenesisV6.Core.Variation;
 using Scriban;

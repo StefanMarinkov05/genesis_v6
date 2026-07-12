@@ -1,3 +1,4 @@
+// FILE-MAP: the pipeline engine — StageContext, the resumable StateStore, PipelineRunner (the stage loop + progress log), and the Proc external-process wrapper.
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;

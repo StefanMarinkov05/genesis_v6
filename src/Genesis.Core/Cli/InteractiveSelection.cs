@@ -1,3 +1,4 @@
+// FILE-MAP: shared candidate-discovery + numbered-menu helpers behind the CLI's interactive spec/seed pickers.
 namespace GenesisV6.Core.Cli;
 
 /// <summary>

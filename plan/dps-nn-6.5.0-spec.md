@@ -27,6 +27,12 @@
 
 Applies the tiered / Diataxis / anti-drift architecture (not the flat "4 big docs" version). Serves **both** a human reader and a fresh Claude Code session from one source - no double-writing.
 
+> **Detailed design (done, Opus):** `plan/task-a-doc-architecture.md`. The A.1 layout below is the
+> original aspirational sketch; the design record reconciles it with the docs that now exist (the
+> 11 ADRs stay the decision store, `docs/architecture.md` is split+retired, spec-format is a
+> concepts companion, FAILED-ATTEMPTS is scoped to structural dead-ends). Follow the design record,
+> not the raw A.1 tree, where they differ.
+
 ### A.1 Documentation layout
 ```
 ./DPS-NN/CLAUDE.md                       # TINY router (~150 lines max). Auto-loaded every CC session.

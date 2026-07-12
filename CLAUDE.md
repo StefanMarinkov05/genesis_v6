@@ -17,14 +17,18 @@ decision and bug fix so far. Do not re-propose a fix already tried and recorded 
 
 | If you are... | Read |
 |---|---|
-| Orienting for the first time | `README.md` |
-| Working on pipeline order / stages | `docs/architecture.md` (data flow + verify-gate ordering) |
-| Asking *why* it is built this way | `docs/adr/adr-*.md` (11 ADRs, one per non-obvious decision) |
-| Touching `project-spec.json` shape | `spec.schema.json` |
+| Orienting for the first time | `README.md` → `docs/01-tutorial-genesis.md` for the full walkthrough |
+| Working on pipeline order / stages | `docs/reference/control-flow.md` (Mermaid diagram + stage table + verify-gate ordering) |
+| Asking *why* it is built this way | `docs/explanation/architecture-decisions.md` (synthesis, links each of the 11 `docs/adr/adr-*.md`) |
+| Touching `project-spec.json` shape | `spec.schema.json` (authoritative) + `docs/reference/spec-format.md` (concepts) |
 | Looking for the current priority / work queue | `plan/v6-task-breakdown.md` |
 | Tracking a specific bug/decision's history | `plan/decisions.md` |
 | About to write a changelog entry | `changelogs/README.md` (numbering + template convention) |
+| Wondering what a source file does | `docs/reference/file-map.md` (generated — regenerate via `scripts/generate-file-map.ps1`) |
+| Fighting Scriban / Razor / EF migrations, or a recurring build trap | `docs/explanation/techniques.md` |
+| Adding a stage / a template | `docs/how-to/add-a-stage.md` / `docs/how-to/add-a-template.md` |
 | Planning the 6.5.0 modularization + GUI | `plan/dps-nn-6.5.0-spec.md` |
+| Restructuring the docs (Task A) | `plan/task-a-doc-architecture.md` (target tree + per-doc contract; `docs/reference/`, `docs/how-to/` are stubs until filled) |
 | Building the GUI (Electron shell over the CLI) | `docs/explanation/gui-architecture.md` (+ ADR-010) |
 | Styling/theming the GUI (tokens, the 5 themes) | `design/design-specs.md` |
 
@@ -57,7 +61,7 @@ decision and bug fix so far. Do not re-propose a fix already tried and recorded 
 9. `report` — machine-readable `wwwroot/output/project-summary.json`
 
 Every code-emitting stage ends in a `dotnet build` gate. Full data-flow diagram + verify-gate
-ordering: `docs/architecture.md`. Stage implementations live in `src/Genesis.Core/Stages/*.cs`
+ordering: `docs/reference/control-flow.md`. Stage implementations live in `src/Genesis.Core/Stages/*.cs`
 (one class per stage; several stages share a file — e.g. `IdentityStage` lives in `BuildStages.cs`).
 
 ## Layout (verified against the real tree, not the aspirational 6.5.0 one)

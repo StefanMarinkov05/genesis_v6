@@ -1,3 +1,4 @@
+// FILE-MAP: CLI entry point — command surface, interactive spec/seed pickers, registry + archive bookkeeping, the completion banner.
 using System.CommandLine;
 using GenesisV6.Core.Cli;
 using GenesisV6.Core.Llm;

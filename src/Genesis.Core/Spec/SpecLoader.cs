@@ -1,3 +1,4 @@
+// FILE-MAP: loads a project-spec.json file and validates it against spec.schema.json before returning a ProjectSpec.
 using System.Text.Json;
 using Json.Schema;
 
