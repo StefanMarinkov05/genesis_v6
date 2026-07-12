@@ -170,7 +170,7 @@ maintainable structures — and the count is not a ceiling on *looks*, only on *
 | # | Theme (family) | Signature | Accent | Display type | `showLogo` | Notes |
 |---|---|---|---|---|---|---|
 | 1 | **NOVA** (hud) — *default* | Clean blue circuit/HUD; sharpest, most "robotic hi-tech" | Cyan-blue | Techno-mono | ✅ hud | The baseline every theme is measured against. Ties to "Нова Надежда". |
-| 2 | **IMPERATOR** (baroque) | Veselin Marinov gold-baroque cosmos; opulent, ceremonial | Gold | Ornate serif (Cyrillic-first) | ❌ **none** | VM art self-brands → logo suppressed. The personal/meme theme. |
+| 2 | **IMPERATOR** (baroque) | **Veselin Marinov photos only** — opulent, ceremonial, gold-baroque cosmos | Gold | Ornate serif (Cyrillic-first) | ❌ **none, always** | VM-exclusive: this theme has no other backgrounds. Art self-brands → logo permanently suppressed. The personal/meme theme. |
 | 3 | **VEIL** (arcane) | Violet "forbidden-knowledge" portal; carved arcane instrumentation | Violet-magenta | Engraved/mystic | ✅ arcane | Hosts the **Islamic (Sufi)** and **Occult (Veil of Isis)** looks as **skins**. |
 | 4 | **FORGE** (forged) | Molten soul-forge; aggressive, code-in-lava, angular | Ember red-orange | Industrial mono | ✅ hud | The "hell-tech" theme; hottest glow, sharpest frame. |
 | 5 | **ENCHANT** (astral) | Cyan-magenta aurora + runic frame; ties to the SGA "language" | Aurora (cyan↔magenta) | Runic/arcane | ✅ rune | Home of the Standard Galactic Alphabet display font + enchant motifs. |
@@ -178,8 +178,8 @@ maintainable structures — and the count is not a ceiling on *looks*, only on *
 **Skins** documented from the art (inherit a family's structure, swap background+accent):
 - **Islamic / Sufi** → skin of **VEIL** (violet base; Arabic-calligraphy background; astrolabe HUD).
 - **Occult / Veil of Isis** → skin of **VEIL** (eye-of-providence background; same violet structure).
-- **German (Das Deutsche Herz)** → skin of **IMPERATOR** or **NOVA** (black-red-gold accent; German
-  cultural background) — your call which structure it should inherit.
+- **German (Das Deutsche Herz)** → skin of **NOVA** (black-red-gold accent over the HUD structure;
+  German cultural background). Imperator is ruled out — it is VM-exclusive (see decision #1 below).
 
 Naming note: **NOVA** deliberately echoes the app's tagline "Нова Надежда" (New Hope) and pairs with
 the mockup's default look.
@@ -217,6 +217,64 @@ resolve differently. Structure is invariant (R1).
   animation and the progress bar. On completion, it resolves into a **readout** of the completion
   banner (URL, seeded credentials, DB, start command — from `report:get`). Test images stand in
   until real wallpapers are supplied (spec B.0).
+- **Duplicate-detection dialog.** ADR-010 fixes dedup as GUI-side (spec+seed hash → the GUI's own
+  manifest, no CLI change) but names no UI for it — this is that UI. A modal at the `overlay`
+  z-layer, opened the instant `build:start` would fire against a hash already in the manifest
+  (blocks the run, does not silently proceed or silently skip):
+  - **Title**: "Дублиран билд" (Duplicate build). **Body**: the matched project's name, the
+    timestamp of its last successful run, and its output path — three `type.label`/`type.body` rows,
+    not prose.
+  - **Three actions**, ranked left→right by how non-destructive they are, styled by intent rather
+    than the run-control palette (this is a decision dialog, not a run control, so it does **not**
+    borrow R2's colors — R2 is reserved for the run row):
+    `Отвори съществуващия` (open the existing output folder, closes dialog, no pipeline call) as the
+    quiet default action; `Генерирай отново` (proceed anyway — calls `build:start` with a
+    force-regenerate flag) styled `state.warning`, since it is the one action with a real cost
+    (overwrites/re-runs); `Отказ` (cancel, return to the setup screen) as a plain text action.
+  - Keyboard: `Esc` = Отказ, `Enter` = the quiet default (open existing), never the warning action —
+    a destructive-leaning path must never be the Enter-key default.
+- **Toasts.** The `toast` z-layer (top of the stack, §1) — transient, non-blocking status that must
+  never steal focus or cover the run controls. A bottom-right stack, newest on top, each an edge-lit
+  `surface.panel-raised` pill with a leading state dot, one line of `type.body`, and an optional
+  `type.caption` detail. Four semantic variants, colored by `state.*` (not the run palette): **info**
+  (`state.info`, e.g. "Билдът стартира"), **success** (`state.success`, "Етап 6/9 завършен" /
+  "Готово"), **warning** (`state.warning`, duplicate found, LLM key missing), **danger**
+  (`state.danger`, stage failed). Auto-dismiss after `~5s` with a thin accent countdown rail; a
+  hover pauses the timer; a manual **✕** dismisses immediately. `prefers-reduced-motion` → no slide,
+  just fade; the countdown rail becomes a static bar. Toasts are cosmetic mirrors of events already
+  visible elsewhere (progress, terminal) — never the *only* place a state is shown (a11y).
+- **Completion / report readout.** The success resolution of the generation screen (`build:done` →
+  `report:get`). A full-bleed `surface.scrim`'d screen over the project wallpaper, centered on a
+  `surface.panel-raised` "readout card": a `state.success` header ("Готово — приложението е
+  генерирано"), then a labeled `dl` of the completion banner — **URL**, **seeded credentials**
+  (admin + demo user, each a copy-on-click `surface.inset` field), **database**, **start command** —
+  in `font.technical`, `font-variant-numeric: tabular-nums`. Primary actions: **Отвори в браузър**
+  (`accent.primary`, launches the URL), **Отвори папката** (opens the output dir), **Нов билд**
+  (returns to setup). Credentials are the sensitive bit: shown, copyable, but never auto-logged to
+  the terminal transcript.
+- **Error / retry state.** The failure resolution (`build:error`). The progress bar turns
+  `state.danger` and freezes at the failed stage; the debug terminal auto-expands and pins the
+  failing line (a `state.danger` left-rule + the stderr tail). A readout card names **which stage**
+  failed (e.g. `verify` — English-leak scan) and the one-line cause. Actions: **Опитай пак от този
+  етап** (`accent.primary` — respawns `build:resume`, safe because stages are idempotent +
+  checkpointed per ADR-010), **Пълен лог** (opens the full `dps-nn.log.jsonl`), **Спри**
+  (`state.stop` — abandons the run, keeps `state.json`). Retry-from-stage is the default because the
+  pipeline is resumable; a full restart is never forced on a recoverable stage failure.
+- **Recent projects.** A `surface.panel` list opened from the setup screen (and empty-state on first
+  launch), sourced from `logs/registry.json` — every past run without re-uploading spec+seed. Each
+  row: project name (`type.heading`), last-run timestamp + status pill (success/failed/`state.*`),
+  and its spec+seed handles as a `type.caption`. Click = rehydrate the setup screen with that run's
+  inputs (re-selects the spec/seed, ready to Start or regenerate). A per-row **⋯** menu: open output
+  folder, open in browser (if built), remove from list. This is the single biggest re-entry
+  convenience; it reads the registry the CLI already writes, adds nothing to the CLI.
+- **Settings panel.** An `overlay` modal (gear in the title bar) over `settings:get`/`settings:set`.
+  Fields: **Anthropic API key** — a masked `surface.inset` field, **write-only** (never rendered
+  back per the architecture doc; shows `••••••••` + a "заменен" state after a save, never the value),
+  with a "Провери ключа" test action; **Genesis команда** — the CLI invocation override for power
+  users / batch / debug (defaults to the bundled command; this is the "CLI stays first-class" seam
+  from ADR-010); **Папка за изход** — default output directory; plus **тема** and **език** mirrors of
+  the title-bar pickers. Save = `settings:set(patch)`; the key travels to the main process only and
+  is injected into the child env there, never held in the renderer.
 
 ---
 
@@ -259,10 +317,15 @@ are added. Getting NOVA right *proves the token system*; the rest are then descr
 
 ---
 
-## 8. Open decisions for Stefan
+## 8. Decisions (resolved)
 
-1. **The five-theme lineup** above is derived from your art but is a proposal — confirm or reshuffle
-   the five family slots (and say whether **German** should be an Imperator skin or a Nova skin).
-2. **Imperator = logo suppressed** is locked from your instruction (VM art self-brands). Confirm no
-   other theme should suppress the logo.
-3. **Default theme = NOVA** (the mockup's blue HUD). Confirm, or pick a different default.
+1. **Five-theme lineup confirmed as proposed.** **Imperator is Veselin-Marinov-photos only** — no
+   other background ever rides under that theme, and it never gains skins. German (Das Deutsche
+   Herz) is therefore a **NOVA** skin instead, not an Imperator skin.
+2. **Imperator suppresses the logo, always — no other theme does.** VM art self-brands; every other
+   theme keeps `structure.showLogo: true` (or its family default).
+3. **Default theme = NOVA**, unchallenged — stands as the mockup's blue HUD baseline.
+4. The 8 uploaded reference images are near-final ("pretty much the same with minor corrections that
+   won't affect the design") — treat their color/mood as reliable, not provisional, for token tuning.
+   Real background assets land later in `images/bg/`; `design/preview.html` stands in with CSS-only
+   approximations until then.
