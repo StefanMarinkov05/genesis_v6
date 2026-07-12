@@ -107,7 +107,7 @@ stateDiagram-v2
   AwaitingLLM --> Running: seed/response filled + --resume
   Running --> Done: natural completion (banner + report)
   Running --> Error: stage error (non-zero, ≠3)
-  Running --> Idle: Stop (kill; optionally discard out dir)
+  Running --> Idle: Stop (kill; state.json kept)
   Paused --> Idle: Stop
   Error --> Running: Resume (idempotent re-run)
   Done --> [*]
@@ -117,9 +117,15 @@ stateDiagram-v2
 and `MarkDone` only fires *after* a stage completes. So killing the child mid-stage leaves that
 stage un-done in `state.json`; the next `run --all` re-runs only that stage (and its own internal
 idempotency detects any partial work). Combined with checkpoints, this gives correct pause/resume
-with **zero** mid-stage-freeze machinery — exactly decision #6 in the 6.5.0 spec. "Pause" may
-either kill immediately or wait for the current stage's `"end"` line then kill; waiting is gentler
-(no wasted re-run) and is the recommended default, but both are correct.
+with **zero** mid-stage-freeze machinery — exactly decision #6 in the 6.5.0 spec.
+
+**Pause waits for the checkpoint (resolved).** On `Pause`, main lets the current stage finish —
+waits for its `"end"` line in `dps-nn.log.jsonl` — then kills the child. No wasted re-run. An
+immediate kill is kept only as a fallback for a stage that appears hung (a manual "force stop").
+
+**Stop keeps state (resolved).** On `Stop`, main kills the child but **preserves `state.json`**, so
+the same (spec, out dir) can be resumed later via a fresh `run --all`. A separate explicit
+"discard build" action is what clears the out dir — Stop alone never destroys work.
 
 **One process per Start/Resume.** The GUI spawns a single `run --all` and controls its lifecycle.
 It never orchestrates stage-by-stage CLI calls — that would be reimplementing `RunAllAsync` in Node,
@@ -223,14 +229,17 @@ the renderer framework choice and screen implementation; the Claude-seed prompt/
 phasing: **MVP first** — one theme, EN only, spec/seed input + dedup + Start/Stop + progress + debug
 terminal + generation screen, generating end-to-end — before themes/languages expand.
 
-## Open decisions for Stefan
+## Resolved decisions
 
-1. **Genesis command in dev vs packaged.** MVP default: spawn `dotnet run --project
-   <root>/src/Genesis.Cli --` with cwd = repo root (needs the .NET SDK, slower first start). A
-   packaged `dps-nn` executable (`dotnet publish`) is faster and SDK-free but adds a build step.
-   Recommend: make it a settings value (`settings.genesisCommand`), default to the dev form, allow
-   pointing at a published exe later. Flagging rather than hard-coding.
-2. **Stop semantics.** On `Stop`, keep `state.json` (so a later `run --all` could resume) or discard
-   the out dir entirely? Recommend keep-by-default with an explicit "discard build" action.
-3. **Pause timing.** Kill immediately vs. wait-for-current-stage-`end` then kill. Recommend
-   wait-for-checkpoint (no wasted re-run); immediate kill is the fallback if a stage hangs.
+1. **The GUI is the primary way to run Genesis; the CLI stays a first-class parallel surface** for
+   debugging and fast batch runs (the `1-build-and-check.bat` / `2-generate.bat` workflow). This
+   *reinforces* the inviolable rule: the CLI must remain independently usable and testable, because
+   the batch/debug workflow depends on it — the GUI is one caller among two, never the sole entry
+   point. Concretely: main spawns via a configurable `settings.genesisCommand`, default to the dev
+   form `dotnet run --project <root>/src/Genesis.Cli --` (same invocation the batch scripts use),
+   overridable to a published `dps-nn` exe later. Nothing about the GUI may assume it is the only
+   caller.
+2. **Stop keeps `state.json`.** A later `run --all` can resume the same (spec, out dir). Clearing
+   the out dir is a separate, explicit "discard build" action — Stop never destroys work.
+3. **Pause waits for the current stage's checkpoint** (its `"end"` line) then kills — no wasted
+   re-run. Immediate kill is retained only as a manual "force stop" fallback for a hung stage.
