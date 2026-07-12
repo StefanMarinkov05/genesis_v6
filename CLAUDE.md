@@ -19,12 +19,13 @@ decision and bug fix so far. Do not re-propose a fix already tried and recorded 
 |---|---|
 | Orienting for the first time | `README.md` |
 | Working on pipeline order / stages | `docs/architecture.md` (data flow + verify-gate ordering) |
-| Asking *why* it is built this way | `docs/adr/adr-*.md` (10 ADRs, one per non-obvious decision) |
+| Asking *why* it is built this way | `docs/adr/adr-*.md` (11 ADRs, one per non-obvious decision) |
 | Touching `project-spec.json` shape | `spec.schema.json` |
 | Looking for the current priority / work queue | `plan/v6-task-breakdown.md` |
 | Tracking a specific bug/decision's history | `plan/decisions.md` |
 | About to write a changelog entry | `changelogs/README.md` (numbering + template convention) |
 | Planning the 6.5.0 modularization + GUI | `plan/dps-nn-6.5.0-spec.md` |
+| Building the GUI (Electron shell over the CLI) | `docs/explanation/gui-architecture.md` (+ ADR-010) |
 
 ## Critical rules (DO NOT)
 
@@ -70,7 +71,7 @@ ordering: `docs/architecture.md`. Stage implementations live in `src/Genesis.Cor
 - `changelogs/` — one file per change, see `changelogs/README.md` for the convention
 - `plan/` — `state.md` (session log), `decisions.md` (bug/decision history), `v6-task-breakdown.md`
   (current priority), `dps-nn-6.5.0-spec.md` (modularization + GUI plan, not yet started)
-- `docs/` — `architecture.md` + `adr/` (10 ADRs)
+- `docs/` — `architecture.md`, `adr/` (11 ADRs), `explanation/gui-architecture.md`
 - `logs/` — `registry.json` + per-project `actions.log.jsonl`, tracks every generation run
 - `prompts/out/schemas/` + `prompts/out/seeds/` — permanent archive of every completed
   generation's spec+seed (gitignored, local-only)
