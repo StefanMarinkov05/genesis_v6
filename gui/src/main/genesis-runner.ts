@@ -1,0 +1,346 @@
+import { type ChildProcess, spawn } from 'node:child_process';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import type {
+  BuildError,
+  BuildReport,
+  FileHandle,
+  ProgressEvent,
+  RunId,
+  StageName,
+} from '@shared/ipc-types';
+import { genesisRoot } from './paths';
+import { effectiveApiKey, effectiveGenesisCommand, effectiveOutDir } from './settings';
+import { recordBuild } from './dedup';
+import { parseCompletionBanner } from './report';
+
+// This module owns the CLI child-process lifecycle. It embodies the inviolable rule from
+// docs/explanation/gui-architecture.md: it spawns ONE `run --all` and controls its
+// lifecycle; it never drives stages one-by-one or reimplements pipeline logic in Node.
+//
+// Progress comes from tailing {out}/{Project}/dps-nn.log.jsonl (PipelineRunner.AppendLog),
+// reconciled with the state.json baseline so a resume that skips half the pipeline still
+// shows an accurate bar. The debug terminal is fed separately from raw stdout/stderr.
+
+/** The seven pipeline stages that `run --all` executes and that emit to dps-nn.log.jsonl. */
+const PIPELINE_STAGES: StageName[] = [
+  'scaffold',
+  'emit-models',
+  'identity',
+  'emit-controllers-views',
+  'seed',
+  'verify',
+  'report',
+];
+
+/** Exit code the CLI uses for "waiting for a manual LLM response" (Program.cs). */
+const EXIT_AWAITING_LLM = 3;
+
+export interface RunnerEvents {
+  progress(e: ProgressEvent): void;
+  log(line: string): void;
+  awaitingLlm(e: { stage: string; requestPath: string }): void;
+  done(e: BuildReport): void;
+  error(e: BuildError): void;
+}
+
+interface RunState {
+  runId: RunId;
+  spec: FileHandle;
+  seed: FileHandle | null;
+  child: ChildProcess | null;
+  projectName: string;
+  outDirAbs: string;
+  projectDir: string;
+  logPath: string;
+  /** Byte offset in the jsonl at spawn time — only bytes past this are new. */
+  logOffset: number;
+  /** Completed pipeline stages carried from a prior run (state.json baseline). */
+  baselineDone: number;
+  index: number;
+  /** Accumulated stdout for banner parsing at exit. */
+  stdout: string;
+  /** Tail of stderr for error reporting. */
+  stderrTail: string[];
+  lastStartedStage: string | null;
+  tailTimer: NodeJS.Timeout | null;
+  /** Set when the user explicitly Stopped — suppresses the error path on the resulting kill. */
+  stopping: boolean;
+  report: BuildReport | null;
+}
+
+export class GenesisRunner {
+  private readonly runs = new Map<RunId, RunState>();
+
+  constructor(private readonly ev: RunnerEvents) {}
+
+  /** Spawn `run --all` for a (spec, seed) pair. Returns a runId addressing its lifecycle. */
+  start(spec: FileHandle, seed: FileHandle | null): RunId {
+    const root = genesisRoot();
+    const outDirAbs = effectiveOutDir();
+    const projectName = readProjectName(spec.path);
+    const projectDir = join(outDirAbs, projectName);
+    const logPath = join(projectDir, 'dps-nn.log.jsonl');
+
+    // Pre-place the chosen seed where the CLI reads it. Under --no-interactive the CLI's
+    // own seed picker is skipped, so the GUI must stage the file itself (arch doc).
+    if (seed) placeSeed(root, seed.path, projectDir);
+
+    const st: RunState = {
+      runId: randomUUID(),
+      spec,
+      seed,
+      child: null,
+      projectName,
+      outDirAbs,
+      projectDir,
+      logPath,
+      logOffset: existsSync(logPath) ? statSync(logPath).size : 0,
+      baselineDone: countBaselineDone(projectDir),
+      index: 0,
+      stdout: '',
+      stderrTail: [],
+      lastStartedStage: null,
+      tailTimer: null,
+      stopping: false,
+      report: null,
+    };
+    st.index = st.baselineDone;
+    this.runs.set(st.runId, st);
+
+    this.spawnChild(st);
+    return st.runId;
+  }
+
+  /** Stop: kill the child, keep state.json (a later run --all can resume). Never destroys work. */
+  stop(runId: RunId): void {
+    const st = this.runs.get(runId);
+    if (!st) return;
+    st.stopping = true;
+    this.killChild(st);
+  }
+
+  /**
+   * Pause (phase 2, UI-disabled in the MVP): kill after the current stage's checkpoint.
+   * Implemented via the same idempotent kill the state machine relies on — the next
+   * resume re-runs only the un-done stage. Kept minimal until phase 2 wires the UI.
+   */
+  pause(runId: RunId): void {
+    const st = this.runs.get(runId);
+    if (!st) return;
+    st.stopping = true; // treat the kill as intentional, not an error
+    this.killChild(st);
+  }
+
+  /** Resume (phase 2, UI-disabled): re-spawn run --all; done stages are skipped via state.json. */
+  resume(runId: RunId): void {
+    const st = this.runs.get(runId);
+    if (!st) return;
+    st.stopping = false;
+    st.logOffset = existsSync(st.logPath) ? statSync(st.logPath).size : 0;
+    st.baselineDone = countBaselineDone(st.projectDir);
+    st.index = st.baselineDone;
+    this.spawnChild(st);
+  }
+
+  getReport(runId: RunId): BuildReport | null {
+    return this.runs.get(runId)?.report ?? null;
+  }
+
+  // ---- internals ------------------------------------------------------------
+
+  private spawnChild(st: RunState): void {
+    const root = genesisRoot();
+    const { program, baseArgs } = effectiveGenesisCommand();
+    const args = [
+      ...baseArgs,
+      'run',
+      '--all',
+      '--spec',
+      st.spec.path,
+      '--out',
+      st.outDirAbs,
+      '--no-interactive',
+    ];
+
+    const env = { ...process.env };
+    const key = effectiveApiKey();
+    if (key) env.ANTHROPIC_API_KEY = key; // injected into the child env only (security model)
+
+    const child = spawn(program, args, { cwd: root, env, shell: false });
+    st.child = child;
+    st.stopping = false;
+
+    child.stdout?.on('data', (buf: Buffer) => this.onStdout(st, buf.toString()));
+    child.stderr?.on('data', (buf: Buffer) => this.onStderr(st, buf.toString()));
+    child.on('error', (e) => {
+      this.stopTail(st);
+      this.ev.error({ stage: null, message: `Failed to launch Genesis CLI: ${e.message}` });
+    });
+    child.on('exit', (code) => this.onExit(st, code));
+
+    this.startTail(st);
+  }
+
+  private onStdout(st: RunState, chunk: string): void {
+    st.stdout += chunk;
+    for (const line of chunk.split(/\r?\n/)) if (line) this.ev.log(line);
+  }
+
+  private onStderr(st: RunState, chunk: string): void {
+    for (const line of chunk.split(/\r?\n/)) {
+      if (!line) continue;
+      this.ev.log(line);
+      st.stderrTail.push(line);
+      if (st.stderrTail.length > 40) st.stderrTail.shift();
+    }
+  }
+
+  private startTail(st: RunState): void {
+    // Poll the jsonl for appended stage-boundary lines. Polling (not fs.watch) is the
+    // robust cross-platform choice and the file may not exist until the first stage runs.
+    st.tailTimer = setInterval(() => this.readTail(st), 250);
+  }
+
+  private stopTail(st: RunState): void {
+    if (st.tailTimer) {
+      clearInterval(st.tailTimer);
+      st.tailTimer = null;
+    }
+  }
+
+  private readTail(st: RunState): void {
+    if (!existsSync(st.logPath)) return;
+    const size = statSync(st.logPath).size;
+    if (size <= st.logOffset) return;
+    const buf = readFileSync(st.logPath);
+    const fresh = buf.subarray(st.logOffset, size).toString('utf8');
+    st.logOffset = size;
+    for (const line of fresh.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      let entry: { stage?: string; phase?: string };
+      try {
+        entry = JSON.parse(trimmed);
+      } catch {
+        continue; // a partially-flushed line; the next poll re-reads from the same offset boundary
+      }
+      if (!entry.stage || !entry.phase) continue;
+      if (entry.phase === 'start') {
+        st.lastStartedStage = entry.stage;
+      } else if (entry.phase === 'end') {
+        st.index = Math.min(st.index + 1, PIPELINE_STAGES.length);
+      }
+      this.emitProgress(st, entry.stage, entry.phase as ProgressEvent['phase']);
+    }
+  }
+
+  private emitProgress(st: RunState, stage: string, phase: ProgressEvent['phase']): void {
+    this.ev.progress({ stage, phase, index: st.index, total: PIPELINE_STAGES.length });
+  }
+
+  private killChild(st: RunState): void {
+    if (!st.child) return;
+    try {
+      // Kill the whole tree — `dotnet run` spawns the actual app as a grandchild.
+      if (process.platform === 'win32') {
+        spawn('taskkill', ['/pid', String(st.child.pid), '/T', '/F']);
+      } else {
+        st.child.kill('SIGTERM');
+      }
+    } catch {
+      /* already gone */
+    }
+  }
+
+  private onExit(st: RunState, code: number | null): void {
+    this.stopTail(st);
+    this.readTail(st); // drain any final lines
+    st.child = null;
+
+    if (st.stopping) return; // intentional Stop/Pause — no done/error event
+
+    if (code === 0) {
+      const report = parseCompletionBanner(st.stdout, st.projectDir);
+      report.summaryPath = summaryPathIfExists(st.projectDir);
+      st.report = report;
+      recordBuild(st.spec, st.seed, {
+        project: st.projectName,
+        outDir: st.projectDir,
+        ts: new Date().toISOString(),
+        status: 'success',
+      });
+      this.ev.done(report);
+      return;
+    }
+
+    if (code === EXIT_AWAITING_LLM) {
+      this.ev.awaitingLlm({
+        stage: st.lastStartedStage ?? 'seed',
+        requestPath: join(genesisRoot(), 'prompts', 'in'),
+      });
+      return;
+    }
+
+    // Any other non-zero (or null on kill we didn't initiate) is a genuine failure.
+    const stage = st.lastStartedStage ?? null;
+    const message = st.stderrTail.slice(-6).join('\n') || `Genesis exited with code ${code}`;
+    recordBuild(st.spec, st.seed, {
+      project: st.projectName,
+      outDir: st.projectDir,
+      ts: new Date().toISOString(),
+      status: 'failed',
+    });
+    this.ev.error({ stage, message });
+  }
+}
+
+// ---- helpers ----------------------------------------------------------------
+
+/** Read meta.projectName from a spec JSON; the log/state paths are keyed by it. */
+function readProjectName(specPath: string): string {
+  try {
+    const doc = JSON.parse(readFileSync(specPath, 'utf8'));
+    const name = doc?.meta?.projectName;
+    if (typeof name === 'string' && name.length) return name;
+  } catch {
+    /* fall through */
+  }
+  throw new Error(`Spec at ${specPath} has no meta.projectName — cannot locate its output.`);
+}
+
+/** Copy the chosen seed to prompts/in/seed-response.json and clear any stale seed-data.json. */
+function placeSeed(root: string, seedPath: string, projectDir: string): void {
+  const promptsIn = join(root, 'prompts', 'in');
+  if (!existsSync(promptsIn)) mkdirSync(promptsIn, { recursive: true });
+  copyFileSync(seedPath, join(promptsIn, 'seed-response.json'));
+  // Mirror ResolveSeedInteractively: a stale Data/seed-data.json would let SeedStage reuse
+  // old data and silently ignore the fresh choice.
+  const stale = join(projectDir, 'Data', 'seed-data.json');
+  if (existsSync(stale)) {
+    try {
+      rmSync(stale);
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+/** Count completed pipeline stages from state.json (the resume baseline). */
+function countBaselineDone(projectDir: string): number {
+  const path = join(projectDir, 'plan', 'state.json');
+  if (!existsSync(path)) return 0;
+  try {
+    const doc = JSON.parse(readFileSync(path, 'utf8'));
+    const done: string[] = doc?.completedStages ?? [];
+    return PIPELINE_STAGES.filter((s) => done.includes(s)).length;
+  } catch {
+    return 0;
+  }
+}
+
+function summaryPathIfExists(projectDir: string): string | null {
+  const p = join(projectDir, 'wwwroot', 'output', 'project-summary.json');
+  return existsSync(p) ? p : null;
+}

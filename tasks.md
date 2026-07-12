@@ -1,16 +1,31 @@
-# Tasks — Opus Task 2: Visual design system (theme tokens + consistency rules)
+# Tasks — GUI MVP build (spec B.0 phase 1: NOVA + EN)
 
-[>] 1. Define the shared design language ("Arcane HUD") — the invariant visual grammar that makes
-    all 5 themes read as one app (layered depth, carved frame = window chrome, edge-lit panels,
-    inscription typography, glow-as-energy, fixed run-button semantics) (~high)
-[ ] 2. Token architecture: primitive → semantic two-tier; surfaces/text/accent/state/frame/effects/
-    radius/typography/motion/z-layers; the per-theme descriptor schema (incl. structural overrides
-    like VM→no-logo from the architecture doc) (~high)
-[ ] 3. Consistency rules (the hard-requirement part): what stays invariant across all 5 themes
-[ ] 4. Instantiate 5 concrete themes from the reference art + the theme-vs-skin model for the
-    German/Islamic/Occult cultural variants (proposed, reallocatable)
-[ ] 5. Component specs (token-driven): title bar/chrome, theme+flag pickers, the 2 input panels,
-    the 4 run buttons, progress bar, debug terminal, generation/loading screen
-[ ] 6. Accessibility + legibility system (text over cosmic backgrounds = the real hazard: scrim +
-    panel discipline, contrast floors, reduced-motion)
-[ ] 7. Write design/design-specs.md + CLAUDE.md routing entry; flag decisions; commit
+Built and committed the Electron shell over the Genesis CLI (changelog 073). Contract- and
+build-verified; the live-render + end-to-end generation are Stefan's manual `npm run dev` gate.
+
+## Done this session
+[x] Scaffold `gui/` (electron-vite + vanilla TS; electron, xterm, addon-fit)
+[x] Shared typed IPC contract (`gui/src/shared/ipc-types.ts`)
+[x] Main process: paths, settings (write-only key), dedup, footer, report, files, genesis-runner, ipc, frameless window
+[x] Preload contextBridge surface (+ `shell:openExternal/openPath`)
+[x] Renderer: NOVA styles ported, EN i18n, screens wired to IPC, xterm debug terminal, starfield
+[x] Verify: typecheck clean · build 3 targets · banner-parser tests 3/3 · real CLI flags confirmed
+
+## Remaining before phase 2 (Stefan's manual gate)
+[ ] `cd gui && npm run dev` — confirm the window renders (NOVA) and controls behave
+[ ] Run a real end-to-end generation from the GUI (needs LocalDB + a full pipeline run):
+    pick a spec + seed → Start → watch progress/terminal → completion readout with URL/creds/DB
+[ ] Fix anything the live run surfaces (esp. progress-tail timing, banner parse on real output)
+
+## Phase 2 (after MVP is confirmed live)
+[ ] Pause/Resume wired to the UI (main-side logic already present, UI-disabled)
+[ ] "Claude" seed button — main-process Anthropic call (Opus Task 3 mini-design first)
+
+## Phase 3
+[ ] The other 4 themes (IMPERATOR/VEIL/FORGE/ENCHANT) as descriptor fills
+[ ] The 5 additional languages (BG/DE/RU/Romani/SGA) + flag picker
+[ ] Per-project wallpapers + loading animation on the generation screen
+[ ] Recent-projects sheet off `logs/registry.json`
+
+## Also queued (independent of GUI)
+[ ] Task A documentation backlog (`plan/dps-nn-6.5.0-spec.md` §1)

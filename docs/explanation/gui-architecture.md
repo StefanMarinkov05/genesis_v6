@@ -89,11 +89,15 @@ both implement.
 - `build:progress` → `{ stage, phase, index, total }` (index = completed-stage count, see below)
 - `build:log` → a raw stdout/stderr line (feeds the xterm.js debug terminal)
 - `build:awaiting-llm` → `{ stage, requestPath }` (exit 3 detected)
-- `build:done` → `{ url, credentials, dbName, summaryPath }`
+- `build:done` → `{ url, credentials, dbName, startCommand, outDir, summaryPath }`
 - `build:error` → `{ stage, message }`
 
 **Window controls** (because the window is frameless — see Theming): `window:minimize`,
 `window:maximize`, `window:close`.
+
+**Shell** (main-process `shell.*`, for the report-screen actions): `shell:openExternal(url)`
+launches the generated app's URL in the OS browser; `shell:openPath(dir)` opens an output
+folder. Both run in main — the renderer never touches `shell` directly.
 
 ## Run-control state machine
 

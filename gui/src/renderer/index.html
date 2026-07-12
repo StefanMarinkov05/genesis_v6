@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Strict CSP: the renderer loads nothing external. Scripts/styles are bundled locally. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DPS-NN — Genesis</title>
+  </head>
+  <body>
+    <div class="window" data-theme="nova" id="window">
+      <div class="canvas-layer"><canvas id="stars" aria-hidden="true"></canvas></div>
+      <div class="scrim-layer"></div>
+      <div class="frame-ornament"></div>
+      <span class="corner tl">◆</span>
+      <span class="corner bl">◆</span>
+
+      <div class="content">
+        <!-- title bar -->
+        <div class="titlebar">
+          <div class="brand">
+            <span class="logo-mark" aria-hidden="true"></span>
+            <span class="title-text" id="title-text">DPS-NN — Genesis</span>
+          </div>
+          <div class="win-controls">
+            <button type="button" id="win-min" aria-label="Minimize">–</button>
+            <button type="button" id="win-max" aria-label="Maximize">▢</button>
+            <button type="button" class="close" id="win-close" aria-label="Close">✕</button>
+          </div>
+        </div>
+
+        <!-- toolbar -->
+        <div class="toolbar">
+          <div class="group">
+            <span class="chip">NOVA</span>
+          </div>
+          <div class="group">
+            <label class="debug-toggle chip"
+              ><input type="checkbox" id="debug-toggle" /> <span id="debug-label">Debug</span></label
+            >
+            <button type="button" class="chip" id="settings-open" title="Settings">⚙ <span id="settings-label">Settings</span></button>
+          </div>
+        </div>
+
+        <!-- input panels -->
+        <div class="panels">
+          <div class="panel">
+            <h3 id="spec-heading">Specification</h3>
+            <div class="well" id="spec-well">No spec selected</div>
+            <div class="select-row">
+              <select id="spec-select"></select>
+              <button type="button" class="upload-btn" id="spec-upload">Upload…</button>
+            </div>
+          </div>
+          <div class="panel">
+            <h3 id="seed-heading">Seed</h3>
+            <div class="well" id="seed-well">No seed selected (optional)</div>
+            <div class="select-row">
+              <select id="seed-select"></select>
+              <button type="button" class="upload-btn" id="seed-upload">Upload…</button>
+              <button type="button" class="claude-btn" id="seed-claude" disabled>✦ Claude</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- run controls -->
+        <div class="run-row-wrap">
+          <div class="run-caption">
+            <span class="lock">⚿</span> <span id="run-caption-text">Start / Pause / Resume / Stop</span>
+          </div>
+          <div class="run-row">
+            <button type="button" class="run-btn start" id="run-start">▶ Start</button>
+            <button type="button" class="run-btn pause" id="run-pause" disabled>❚❚ Pause</button>
+            <button type="button" class="run-btn resume" id="run-resume" disabled>▶▶ Resume</button>
+            <button type="button" class="run-btn stop" id="run-stop" disabled>■ Stop</button>
+          </div>
+        </div>
+
+        <!-- progress -->
+        <div class="progress-wrap">
+          <div class="progress-label"><span id="progress-stage">idle</span><span id="progress-count">0 / 7</span></div>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+
+        <!-- debug terminal -->
+        <div class="terminal-wrap" id="terminal-wrap" hidden>
+          <div class="terminal" id="terminal"></div>
+        </div>
+
+        <!-- footer (runtime from design/footer.md) -->
+        <div class="footer" id="footer"></div>
+
+        <!-- duplicate dialog -->
+        <div class="dialog-backdrop" id="dup-dialog" data-open="false" role="alertdialog" aria-modal="true" aria-labelledby="dup-title">
+          <div class="dialog">
+            <h4 id="dup-title">Duplicate build</h4>
+            <p class="lead" id="dup-lead">This specification + seed combination has already been generated.</p>
+            <dl>
+              <dt id="dup-l-project">Project</dt><dd id="dup-project">—</dd>
+              <dt id="dup-l-last">Last build</dt><dd id="dup-last">—</dd>
+              <dt id="dup-l-out">Output</dt><dd id="dup-out">—</dd>
+            </dl>
+            <div class="dialog-actions">
+              <button type="button" class="dialog-btn primary" id="dup-open">Open existing</button>
+              <button type="button" class="dialog-btn warning" id="dup-regen">Generate anyway</button>
+              <button type="button" class="dialog-btn plain" id="dup-cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- completion / report readout -->
+        <div class="result-screen" id="report-screen" data-open="false" role="dialog" aria-modal="true" aria-labelledby="report-title">
+          <div class="readout ok">
+            <div class="readout-head" id="report-title"><span class="badge">✓</span> <span id="report-title-text">Done</span></div>
+            <dl id="report-dl"></dl>
+            <div class="readout-actions">
+              <button type="button" class="btn primary" id="report-open-browser">Open in browser</button>
+              <button type="button" class="btn" id="report-open-folder">Open folder</button>
+              <button type="button" class="btn" id="report-new">New build</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- error / retry -->
+        <div class="result-screen" id="error-screen" data-open="false" role="dialog" aria-modal="true" aria-labelledby="error-title">
+          <div class="readout err">
+            <div class="readout-head" id="error-title"><span class="badge">!</span> <span id="error-title-text">Build failed</span></div>
+            <dl>
+              <dt id="error-l-stage">Stage</dt><dd id="error-stage" style="font-family:var(--font-technical);font-size:var(--scale-mono);color:var(--text-secondary)">—</dd>
+            </dl>
+            <p class="err-cause" id="error-cause">—</p>
+            <div class="readout-actions">
+              <button type="button" class="btn primary" id="error-retry" disabled>Retry from this stage</button>
+              <button type="button" class="btn" id="error-new">New build</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- settings sheet -->
+        <div class="sheet-backdrop" id="settings-sheet" data-open="false" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <aside class="sheet">
+            <div class="sheet-head"><h4 id="settings-title">Settings</h4><button type="button" id="settings-close" aria-label="Close">✕</button></div>
+            <div class="field">
+              <label for="s-key" id="s-key-label">Anthropic API key</label>
+              <input id="s-key" type="password" placeholder="sk-ant-…" />
+              <span class="key-state" id="s-key-state"></span>
+            </div>
+            <div class="field">
+              <label for="s-cmd" id="s-cmd-label">Genesis command</label>
+              <input id="s-cmd" type="text" />
+              <span class="hint" id="s-cmd-hint">For advanced/batch builds and debugging.</span>
+            </div>
+            <div class="field">
+              <label for="s-out" id="s-out-label">Output folder</label>
+              <input id="s-out" type="text" />
+            </div>
+            <div class="readout-actions">
+              <button type="button" class="btn primary" id="settings-save">Save</button>
+              <button type="button" class="btn" id="settings-cancel">Cancel</button>
+            </div>
+          </aside>
+        </div>
+
+        <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

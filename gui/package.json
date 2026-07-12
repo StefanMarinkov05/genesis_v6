@@ -1,0 +1,25 @@
+{
+  "name": "dps-nn-gui",
+  "version": "0.1.0",
+  "description": "ДПС-НН GUI — Electron shell over the headless Genesis CLI (spec B.0 MVP)",
+  "private": true,
+  "author": "Stefan Marinkov",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "start": "electron-vite preview",
+    "test:runner": "node --test \"test/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0"
+  }
+}

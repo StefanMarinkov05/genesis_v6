@@ -609,3 +609,32 @@ unrelated to any of this work, confirmed by isolation reruns each time it fired)
   already committed) - recovered by killing the orphans and one more clean `out/` wipe + regenerate.
 - Final: both BG and EN full regenerates green (verify PASSED on both, language gate correctly
   skipped for EN), VERSION bumped 6.3.15 -> 6.4.0.
+
+## Session 28 (Opus: GUI MVP - Electron shell over the CLI, spec B.0 phase 1) - changelog 073
+- First real GUI **app code**. Prior GUI sessions produced only the design record (arch doc +
+  ADR-010, `design/design-specs.md`, `design/preview.html`); this session built the running
+  `gui/` Electron app against those contracts. Scope held strictly to B.0 phase 1: **NOVA theme
+  only, EN only** - spec/seed input (upload + list-select), GUI-side dedup, Start/Stop, stage
+  progress, xterm debug terminal, completion/error screens. Pause/Resume + the "Claude" seed
+  button are in the IPC surface but UI-disabled (phase 2), exactly as the phasing dictates.
+- **Grounded every wire against real CLI code before building** (didn't trust the design doc
+  blind): confirmed `PipelineRunner.AppendLog` writes `{out}/{Project}/dps-nn.log.jsonl`
+  (`{ts,stage,phase,durationMs,error}`), `state.json` at `{out}/{Project}/plan/state.json`
+  with `completedStages[]`, exit-3 = LLM-pending, cwd-must-be-genesis-root, and the exact
+  `run --all --spec --out --no-interactive` flag surface (verified live via `run --help`).
+- **Stack: electron-vite + vanilla TS** (mirrors the vanilla preview, tiny dep surface).
+  Confirmed the debug terminal needs **no node-pty** - it only *displays* piped stdout/stderr,
+  so xterm.js write-only mode suffices and native compilation is avoided.
+- Runner design follows the inviolable rule: one `run --all` spawn, poll-tail the jsonl from
+  the spawn-time byte offset (log persists across runs), progress index seeded from the
+  `state.json` baseline so resumes show an accurate bar; resolve by exit code (0 → parse
+  completion banner, 3 → awaiting-LLM, other → error). Key lives only in main, injected into
+  child env, never in the renderer (contextIsolation+sandbox on, minimal typed preload).
+- Added two channels the report screen needed - `shell:openExternal`/`shell:openPath` - and
+  updated the arch doc's IPC list + `build:done` shape (`outDir`) in the same commit.
+- **Verified:** `tsc` clean · `electron-vite build` all 3 targets · banner-parser `node --test`
+  3/3 (Node 24 type-stripping runs the .ts directly since its only non-node import is a stripped
+  `import type`) · real CLI flag surface confirmed. **NOT yet verified** (needs a display +
+  LocalDB + a multi-minute pipeline run, not runnable in the build session): the on-screen
+  render and a live end-to-end generation. That is Stefan's `cd gui && npm run dev` gate before
+  phase 2 - stated plainly, not claimed as done.
