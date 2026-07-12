@@ -96,7 +96,7 @@
         <!-- duplicate dialog -->
         <div class="dialog-backdrop" id="dup-dialog" data-open="false" role="alertdialog" aria-modal="true" aria-labelledby="dup-title">
           <div class="dialog">
-            <h4 id="dup-title">Duplicate build</h4>
+            <div class="sheet-head"><h4 id="dup-title" style="margin:0">Duplicate build</h4><button type="button" id="dup-close" aria-label="Close">✕</button></div>
             <p class="lead" id="dup-lead">This specification + seed combination has already been generated.</p>
             <dl>
               <dt id="dup-l-project">Project</dt><dd id="dup-project">—</dd>
@@ -114,12 +114,12 @@
         <!-- completion / report readout -->
         <div class="result-screen" id="report-screen" data-open="false" role="dialog" aria-modal="true" aria-labelledby="report-title">
           <div class="readout ok">
-            <div class="readout-head" id="report-title"><span class="badge">✓</span> <span id="report-title-text">Done</span></div>
+            <div class="readout-head" id="report-title"><span class="badge">✓</span> <span id="report-title-text">Done</span><button type="button" id="report-close" aria-label="Close" style="margin-left:auto;border:0;background:transparent;color:inherit;cursor:pointer;font-size:14px">✕</button></div>
             <dl id="report-dl"></dl>
             <div class="readout-actions">
               <button type="button" class="btn primary" id="report-open-browser">Open in browser</button>
               <button type="button" class="btn" id="report-open-folder">Open folder</button>
-              <button type="button" class="btn" id="report-new">New build</button>
+              <button type="button" class="btn" id="report-new">Close</button>
             </div>
           </div>
         </div>
@@ -127,14 +127,14 @@
         <!-- error / retry -->
         <div class="result-screen" id="error-screen" data-open="false" role="dialog" aria-modal="true" aria-labelledby="error-title">
           <div class="readout err">
-            <div class="readout-head" id="error-title"><span class="badge">!</span> <span id="error-title-text">Build failed</span></div>
+            <div class="readout-head" id="error-title"><span class="badge">!</span> <span id="error-title-text">Build failed</span><button type="button" id="error-close" aria-label="Close" style="margin-left:auto;border:0;background:transparent;color:inherit;cursor:pointer;font-size:14px">✕</button></div>
             <dl>
               <dt id="error-l-stage">Stage</dt><dd id="error-stage" style="font-family:var(--font-technical);font-size:var(--scale-mono);color:var(--text-secondary)">—</dd>
             </dl>
             <p class="err-cause" id="error-cause">—</p>
             <div class="readout-actions">
               <button type="button" class="btn primary" id="error-retry" disabled>Retry from this stage</button>
-              <button type="button" class="btn" id="error-new">New build</button>
+              <button type="button" class="btn" id="error-new">Close</button>
             </div>
           </div>
         </div>

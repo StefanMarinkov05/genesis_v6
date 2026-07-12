@@ -210,7 +210,10 @@ function showReport(report: BuildReport): void {
   const rows: string[] = [];
   if (report.url) rows.push(`<dt>${t.report.url}</dt><dd>${copyField(report.url)}</dd>`);
   for (const c of report.credentials) {
-    rows.push(`<dt>${escapeHtml(c.role)}</dt><dd>${copyField(`${c.email} / ${c.password}`)}</dd>`);
+    // Two separate copy buttons (email, password) - a combined "email / password" field
+    // meant either value had to be copied and hand-trimmed before it was usable.
+    rows.push(`<dt>${escapeHtml(c.role)} — ${t.report.email}</dt><dd>${copyField(c.email)}</dd>`);
+    rows.push(`<dt>${escapeHtml(c.role)} — ${t.report.password}</dt><dd>${copyField(c.password)}</dd>`);
   }
   if (report.dbName) rows.push(`<dt>${t.report.db}</dt><dd>${copyField(report.dbName)}</dd>`);
   if (report.startCommand) rows.push(`<dt>${t.report.start}</dt><dd>${copyField(report.startCommand)}</dd>`);
@@ -310,10 +313,10 @@ function applyStrings(): void {
   $('dup-cancel').textContent = t.dup.cancel;
   $('report-open-browser').textContent = t.report.openBrowser;
   $('report-open-folder').textContent = t.report.openFolder;
-  $('report-new').textContent = t.report.newBuild;
+  $('report-new').textContent = t.report.close;
   $('error-l-stage').textContent = t.error.stage;
   $('error-retry').textContent = t.error.retry;
-  $('error-new').textContent = t.report.newBuild;
+  $('error-new').textContent = t.report.close;
   $('settings-title').textContent = t.settings.title;
   $('s-key-label').textContent = t.settings.apiKey;
   ($('s-key') as HTMLInputElement).placeholder = t.settings.apiKeyPlaceholder;
@@ -390,6 +393,7 @@ function wire(): void {
     void doStart();
   });
   $('dup-cancel').addEventListener('click', closeDuplicateDialog);
+  $('dup-close').addEventListener('click', closeDuplicateDialog);
 
   // report/error actions
   $('report-open-browser').addEventListener('click', () => {
@@ -398,14 +402,14 @@ function wire(): void {
   $('report-open-folder').addEventListener('click', () => {
     if (lastReport?.outDir) void gui.openPath(lastReport.outDir);
   });
-  $('report-new').addEventListener('click', () => {
+  const closeAndReset = () => {
     closeResultScreens();
     setRunState('idle');
-  });
-  $('error-new').addEventListener('click', () => {
-    closeResultScreens();
-    setRunState('idle');
-  });
+  };
+  $('report-new').addEventListener('click', closeAndReset);
+  $('report-close').addEventListener('click', closeAndReset);
+  $('error-new').addEventListener('click', closeAndReset);
+  $('error-close').addEventListener('click', closeAndReset);
 
   // settings
   $('settings-open').addEventListener('click', () => void openSettings());
