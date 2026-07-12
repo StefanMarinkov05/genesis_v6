@@ -1,3 +1,4 @@
+<!-- last-verified: 1b5fea4319805d9a0571619a0318462c896ee4ba -->
 # ADR-001: Three-file split - spec / lock / state
 
 **Status**: accepted

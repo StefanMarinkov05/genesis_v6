@@ -1,3 +1,4 @@
+<!-- last-verified: 1b5fea4319805d9a0571619a0318462c896ee4ba -->
 # ADR-002b: Core Identity page markup emitted wholesale (supersedes the map as primary)
 
 **Status**: accepted (calibrated against the TravelMap reference project)

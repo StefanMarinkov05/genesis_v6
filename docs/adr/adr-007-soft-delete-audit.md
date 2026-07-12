@@ -1,3 +1,4 @@
+<!-- last-verified: 1b5fea4319805d9a0571619a0318462c896ee4ba -->
 # ADR-007: Soft delete via global query filters + audit base entity
 
 **Status**: accepted

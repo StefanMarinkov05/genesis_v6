@@ -1,3 +1,4 @@
+<!-- last-verified: 1b5fea4319805d9a0571619a0318462c896ee4ba -->
 # ADR-008: Distinctive design as a token overlay, not per-template styling
 
 Date: 2026-07-06 | Status: Accepted

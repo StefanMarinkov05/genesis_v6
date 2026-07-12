@@ -1,3 +1,4 @@
+<!-- last-verified: 1b5fea4319805d9a0571619a0318462c896ee4ba -->
 # dps-nn (ДПС-НН)
 
 > ASCII name `dps-nn`, display name `ДПС-НН`. Internal C# assemblies/namespaces remain `Genesis.*` by design (ADR-009); the installed tool command is `dps-nn`.
