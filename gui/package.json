@@ -6,10 +6,10 @@
   "author": "Stefan Marinkov",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/dev.js dev",
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "start": "electron-vite preview",
+    "start": "node scripts/dev.js preview",
     "test:runner": "node --test \"test/**/*.test.ts\""
   },
   "devDependencies": {
