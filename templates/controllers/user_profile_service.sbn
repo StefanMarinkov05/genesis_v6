@@ -32,9 +32,11 @@ public class UserProfileService
     /// <summary>
     /// Изгражда обобщението за <paramref name="userId"/>. Когато <paramref name="publicOnly"/>
     /// е true (публична страница), каталозите се ограничават до публичните.
+    /// <paramref name="viewerUserId"/> е текущо логнатият посетител (null при анонимен достъп) -
+    /// служи само за IsOwnProfile/IsFollowedByViewer, не филтрира резултата.
     /// Връща null, ако потребителят не съществува.
     /// </summary>
-    public async Task<UserProfileViewModel?> BuildAsync(string userId, bool publicOnly)
+    public async Task<UserProfileViewModel?> BuildAsync(string userId, bool publicOnly, string? viewerUserId = null)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return null;
@@ -86,6 +88,8 @@ end
             .Where(u => followerIds.Contains(u.Id)).ToListAsync();
         vm.Following = await _userManager.Users.AsNoTracking()
             .Where(u => followingIds.Contains(u.Id)).ToListAsync();
+        vm.IsOwnProfile = viewerUserId == userId;
+        vm.IsFollowedByViewer = viewerUserId is not null && followerIds.Contains(viewerUserId);
 {{~ end ~}}
         return vm;
     }

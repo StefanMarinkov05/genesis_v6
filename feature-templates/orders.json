@@ -83,13 +83,23 @@
           "name": "ReceiverName",
           "type": "string",
           "displayName": "Получател",
-          "nullable": true
+          "validations": [
+            {
+              "attribute": "Required",
+              "errorMessage": "Името на получателя е задължително."
+            }
+          ]
         },
         {
           "name": "DeliveryAddress",
           "type": "string",
           "displayName": "Адрес за доставка",
-          "nullable": true
+          "validations": [
+            {
+              "attribute": "Required",
+              "errorMessage": "Адресът за доставка е задължителен."
+            }
+          ]
         },
         {
           "name": "Status",

@@ -20,6 +20,23 @@ end
          class="rounded-circle" style="width:96px;height:96px;object-fit:cover;" alt="Профилна снимка" />
 {{~ end ~}}
     <h1 class="mb-0">{{ if has_fn }}@(string.IsNullOrEmpty(Model.User.FirstName) ? "Потребител" : Model.User.FirstName){{ else }}Потребител{{ end }}</h1>
+{{~ if features.follows ~}}
+    @if (User.Identity?.IsAuthenticated == true && !Model.IsOwnProfile)
+    {
+        <form asp-area="Client" asp-controller="Follows" asp-action="Toggle" method="post" class="ms-auto">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="targetUserId" value="@Model.User.Id" />
+            @if (Model.IsFollowedByViewer)
+            {
+                <button type="submit" class="btn btn-outline-secondary">Спри да следваш</button>
+            }
+            else
+            {
+                <button type="submit" class="btn btn-primary">Последвай</button>
+            }
+        </form>
+    }
+{{~ end ~}}
 </div>
 
 <partial name="_UserProfileContent" model="Model" />

@@ -52,7 +52,8 @@ public class ProfilesController : Controller
         var userId = allIds.FirstOrDefault(uid => ProfileHash.Of(uid) == id);
         if (userId is null) return NotFound();
         // publicOnly: true - външните посетители виждат само публичните каталози.
-        var vm = await _profiles.BuildAsync(userId, publicOnly: true);
+        var viewerUserId = _userManager.GetUserId(User); // null при анонимен достъп
+        var vm = await _profiles.BuildAsync(userId, publicOnly: true, viewerUserId);
         if (vm is null) return NotFound();
         return View(vm);
     }

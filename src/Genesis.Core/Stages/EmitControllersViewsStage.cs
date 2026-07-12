@@ -88,6 +88,7 @@ public sealed class EmitControllersViewsStage : IStage
                     InjectOwnerAutoAssign(ctx, controller);
                     InjectQuantityDerivedStatus(ctx, controller);
                     InjectImageRemoveOption(ctx, controller);
+                    InjectImagesCreateHint(ctx, controller);
                     InjectPostCommentsIntoAdminDetails(ctx, controller);
                     InjectReviewLoadingIntoDetails(ctx, controller);
                     ApplyDeviations(ctx, controller, engine);
@@ -713,6 +714,34 @@ public sealed class EmitControllersViewsStage : IStage
                 if (vNew != vsrc) { File.WriteAllText(editViewPath, vNew); ctx.Info($"remove-image checkbox added to {c.Name}/Edit.cshtml"); }
             }
         }
+    }
+
+    /// <summary>
+    /// Gallery-style images (model.Images, e.g. Product - multiple photos, uploaded/managed via
+    /// the separate {Model}ImagesController the "Снимки" button on Index links to, Task 14) have
+    /// no upload control on the scaffolded Create form - there's no entity Id yet for the images
+    /// to attach to. Without a hint, that reads as a missing feature rather than a two-step flow.
+    /// Injects a short note above the submit button pointing at the post-save step.
+    /// </summary>
+    internal static void InjectImagesCreateHint(StageContext ctx, ControllerSpec c)
+    {
+        if (c.Model is null) return;
+        var model = ctx.Spec.Models.FirstOrDefault(m => m.Name == c.Model);
+        if (model?.Images is null) return;
+
+        var createViewPath = Path.Combine(ctx.ProjectDir, "Areas", c.Area ?? "", "Views", c.Name.Replace("Controller", ""), "Create.cshtml");
+        if (!File.Exists(createViewPath)) return;
+
+        var vsrc = File.ReadAllText(createViewPath);
+        if (vsrc.Contains("images-create-hint")) return; // idempotent re-run guard
+
+        var hint =
+            "            <div class=\"alert alert-info images-create-hint\" role=\"alert\">\n" +
+            "                Снимки се добавят след запазването, от бутон „Снимки\" в списъка.\n" +
+            "            </div>\n";
+        var beforeSubmit = new Regex(@"(\s*)(<input type=""submit""[^>]*/>)");
+        var vNew = beforeSubmit.Replace(vsrc, m => $"\n{hint}{m.Groups[1].Value}{m.Groups[2].Value}", 1);
+        if (vNew != vsrc) { File.WriteAllText(createViewPath, vNew); ctx.Info($"images-create hint added to {c.Name}/Create.cshtml"); }
     }
 
     /// <summary>

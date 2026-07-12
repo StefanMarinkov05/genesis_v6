@@ -34,6 +34,10 @@ public class UserProfileViewModel
 {{~ if features.follows ~}}
     public List<ApplicationUser> Followers { get; set; } = new();
     public List<ApplicationUser> Following { get; set; } = new();
+    // Гледната точка на текущия посетител на публичния профил - дали е самият собственик
+    // (крие бутона Follow), и дали вече следва показания потребител (Follow срещу Unfollow).
+    public bool IsOwnProfile { get; set; }
+    public bool IsFollowedByViewer { get; set; }
 {{~ end ~}}
 }
 {{ ns_close }}

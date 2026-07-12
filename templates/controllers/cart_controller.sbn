@@ -63,10 +63,19 @@ public class CartController : Controller
     }
 
     // Поръчка с доставка: количка -> Order + OrderItems, количката се изпразва.
+    // Получателят и адресът са задължителни (проверка на сървъра - формата подава
+    // само низове, моделът не се биндва директно, затова [Required] върху Order
+    // не се задейства автоматично тук).
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Checkout([FromForm] string? receiverName, [FromForm] string? deliveryAddress)
     {
+        if (string.IsNullOrWhiteSpace(receiverName) || string.IsNullOrWhiteSpace(deliveryAddress))
+        {
+            TempData["Error"] = "Моля, въведете получател и адрес за доставка.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var userId = _userManager.GetUserId(User)!;
         var items = await _context.CartItems
             .Where(i => i.UserId == userId)
@@ -79,8 +88,8 @@ public class CartController : Controller
             UserId = userId,
             Status = OrderStatus.Nova,
             Total = items.Sum(i => (i.{{ primary }}?.{{ price_property }} ?? 0) * i.Quantity),
-            ReceiverName = receiverName?.Trim(),
-            DeliveryAddress = deliveryAddress?.Trim()
+            ReceiverName = receiverName.Trim(),
+            DeliveryAddress = deliveryAddress.Trim()
         };
         _context.Orders.Add(order);
         await _context.SaveChangesAsync(); // ID за редовете по-долу

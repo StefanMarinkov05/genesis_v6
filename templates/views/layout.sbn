@@ -170,6 +170,20 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
     </nav>
 </header>
 <div class="container">
+    @if (TempData["Error"] is string tempError)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            @tempError
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затвори"></button>
+        </div>
+    }
+    @if (TempData["Success"] is string tempSuccess)
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            @tempSuccess
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затвори"></button>
+        </div>
+    }
     <main role="main" class="pb-3">
         @RenderBody()
     </main>

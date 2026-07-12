@@ -417,13 +417,15 @@ public class TemplateEmissionTests
         var (_, engine) = Arrange();
         var code = engine.RenderFile(Path.Combine("templates", "controllers", "user_profile_service.sbn"));
         Assert.Contains("class UserProfileService", code);
-        Assert.Contains("BuildAsync(string userId, bool publicOnly)", code);
+        Assert.Contains("BuildAsync(string userId, bool publicOnly, string? viewerUserId = null)", code);
         Assert.Contains("_context.Products", code);        // listed products by seller
         Assert.Contains("_context.Posts", code);
         Assert.Contains("_context.Reviews", code);
         Assert.Contains("f.FollowedUserId == userId", code); // followers query
         Assert.Contains("f.FollowerUserId == userId", code); // following query
         Assert.Contains("!publicOnly || c.IsPublic", code);  // public-only catalogue filter
+        Assert.Contains("vm.IsOwnProfile = viewerUserId == userId", code);
+        Assert.Contains("vm.IsFollowedByViewer = viewerUserId is not null && followerIds.Contains(viewerUserId)", code);
     }
 
     [Fact]
@@ -448,7 +450,8 @@ public class TemplateEmissionTests
         var (_, engine) = Arrange();
         var code = engine.RenderFile(Path.Combine("templates", "controllers", "profiles_controller.sbn"));
         Assert.Contains("UserProfileService", code);
-        Assert.Contains("BuildAsync(userId, publicOnly: true)", code);
+        Assert.Contains("BuildAsync(userId, publicOnly: true, viewerUserId)", code);
+        Assert.Contains("_userManager.GetUserId(User)", code); // current viewer, null if anonymous
         Assert.Contains("ProfileHash.Of(uid) == id", code); // item 17: route id is a hash, resolved back to the real user id
         Assert.DoesNotContain("$variation:", code);
     }
