@@ -26,6 +26,7 @@ decision and bug fix so far. Do not re-propose a fix already tried and recorded 
 | About to write a changelog entry | `changelogs/README.md` (numbering + template convention) |
 | Planning the 6.5.0 modularization + GUI | `plan/dps-nn-6.5.0-spec.md` |
 | Building the GUI (Electron shell over the CLI) | `docs/explanation/gui-architecture.md` (+ ADR-010) |
+| Styling/theming the GUI (tokens, the 5 themes) | `design/design-specs.md` |
 
 ## Critical rules (DO NOT)
 
