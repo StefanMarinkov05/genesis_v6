@@ -5,6 +5,5 @@ import { fromEn, morseFull as encode } from './encoders.ts';
 // real dot-dash Morse. Genuinely unusable as an actual interface if someone selects it and
 // tries to read the settings hint; that's the joke. Function-valued entries are wrapped so
 // their OUTPUT (e.g. `Stage 3/7 complete`) is encoded too — the interpolated numbers stay as
-// literal digits (Morse has digit codes) inside the encoded string. See `morse-lite.ts` for
-// the readable-buttons-only sibling.
+// literal digits (Morse has digit codes) inside the encoded string.
 export const morseFull: Strings = fromEn(encode, /* wrapFn */ true);

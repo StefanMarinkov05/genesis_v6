@@ -13,7 +13,6 @@ import { ru } from './ru.ts';
 import { tr } from './tr.ts';
 import { romani } from './romani.ts';
 import { sga } from './sga.ts';
-import { morseLite } from './morse-lite.ts';
 import { morseFull } from './morse-full.ts';
 import { hex } from './hex.ts';
 import { sign } from './sign.ts';
@@ -26,17 +25,16 @@ export type { Strings };
 
 /**
  * The supported GUI languages. `sga` is a font swap over English, not a translation.
- * `morseLite`/`morseFull`/`hex`/`sign`/`pirate`/`leet`/`flip` are the MECHANICALLY-GENERATED
+ * `morseFull`/`hex`/`sign`/`pirate`/`leet`/`flip` are the MECHANICALLY-GENERATED
  * joke tier (see encoders.ts) — real encodings of the EN table, not hand-written prose.
- * `morseLite` keeps long sentences in English (unreadable-sentence guard); `morseFull`/`hex`
- * commit fully; `sign` replaces every string with a placeholder glyph; `pirate` is a whole-word
+ * `morseFull`/`hex` commit fully; `sign` replaces every string with a placeholder glyph; `pirate` is a whole-word
  * dictionary swap; `leet` is character substitution; `flip` is upside-down/mirrored Unicode.
  * `yoda` is the one HAND-WRITTEN joke-tier table (see yoda.ts) — natural word-reordering isn't
  * a safe mechanical transform, same honesty boundary as the real Romani table.
  */
 export type LangCode =
   | 'en' | 'bg' | 'de' | 'ru' | 'tr' | 'romani' | 'sga'
-  | 'morseLite' | 'morseFull' | 'hex' | 'sign' | 'pirate' | 'leet' | 'flip' | 'yoda';
+  | 'morseFull' | 'hex' | 'sign' | 'pirate' | 'leet' | 'flip' | 'yoda';
 
 export interface LanguageMeta {
   code: LangCode;
@@ -60,14 +58,13 @@ export const LANGUAGES: readonly LanguageMeta[] = [
   { code: 'tr', label: 'Turkish', nativeLabel: 'Türkçe', short: 'TR' },
   { code: 'romani', label: 'Romani', nativeLabel: 'Romani ćhib', short: 'RMN' },
   { code: 'sga', label: 'Standard Galactic', nativeLabel: 'ᔑ⊣ᔑ', short: 'SGA' },
-  { code: 'morseLite', label: 'Morse (buttons only)', nativeLabel: '· − · · − ·', short: 'MOR', joke: true },
   { code: 'morseFull', label: 'Morse (everything)', nativeLabel: '− − − · · ·', short: 'MOR+', joke: true },
   { code: 'hex', label: 'Hexadecimal', nativeLabel: '0x48 0x45 0x58', short: '0x', joke: true },
   { code: 'sign', label: 'Sign language', nativeLabel: '✋', short: '✋', joke: true },
   { code: 'pirate', label: 'Pirate', nativeLabel: 'Pirate speak', short: 'ARR', joke: true },
   { code: 'leet', label: 'l33tspeak', nativeLabel: '1337sp34k', short: '1337', joke: true },
   { code: 'flip', label: 'Upside down', nativeLabel: 'uʍop-ǝpısdn', short: 'ᔭᴉꞁℲ', joke: true },
-  { code: 'yoda', label: 'Yoda', nativeLabel: 'Speak like Yoda, you will', short: 'YDA', joke: true },
+  { code: 'yoda', label: 'Yoda', nativeLabel: 'Yoda Master', short: 'YDA', joke: true },
 ] as const;
 
 /** Metadata for a language code (falls back to EN's entry for an unknown code). */
@@ -77,7 +74,8 @@ export function langMeta(code: string | undefined | null): LanguageMeta {
 }
 
 const CATALOG: Record<LangCode, Strings> = {
-  en, bg, de, ru, tr, romani, sga, morseLite, morseFull, hex, sign, pirate, leet, flip, yoda,
+  en, bg, de, ru, tr, romani, sga,
+  morseFull, hex, sign, pirate, leet, flip, yoda,
 };
 
 /** Resolve a (possibly persisted/unknown) code to a valid one; defaults to EN. */

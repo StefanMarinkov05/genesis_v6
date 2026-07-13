@@ -412,11 +412,18 @@ select {
 /* Separates the real languages from the joke tier (Morse/hex/sign) in the picker menu. */
 .lang-divider { height: 1px; margin: 4px 6px; background: var(--border-hairline); }
 
-/* SGA is a font swap over the English strings (arch doc). The enchanting glyph face itself
-   ships with the ENCHANT theme (design-specs.md §176); until then "SGA" is undefined and this
-   falls back to the normal faces — so selecting SGA renders as English in the fallback font.
-   The seam is complete and correct; only the glyph asset is deferred to the theme task. */
+/* SGA is a font swap over the English strings (arch doc): the Standard Galactic Alphabet
+   font maps Latin A-Z glyphs to enchanting-table runes, so English strings render as
+   galactic symbols with no separate translation table needed. */
+@font-face {
+  font-family: "SGA";
+  src: url("/fonts/Sga-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 .window.lang-sga {
   --font-display: "SGA", var(--font-technical);
   --font-body: "SGA", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-technical: "SGA", "Cascadia Code", "Consolas", ui-monospace, monospace;
 }

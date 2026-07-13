@@ -74,18 +74,6 @@ const sga = `
 </svg>`;
 
 // Morse: dot-dash pips on a dark technical field, echoing the terminal/mono aesthetic.
-// morseLite (buttons-only) gets 3 dots; morseFull (everything) gets a longer dash-heavy run —
-// a visual hint that "full" commits harder, without needing separate text.
-const morseLite = `
-<svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect width="60" height="40" fill="#0a0e08"/>
-  <g fill="none" stroke="#8be04a" stroke-width="3" stroke-linecap="round">
-    <circle cx="18" cy="20" r="2.6" fill="#8be04a" stroke="none"/>
-    <circle cx="30" cy="20" r="2.6" fill="#8be04a" stroke="none"/>
-    <circle cx="42" cy="20" r="2.6" fill="#8be04a" stroke="none"/>
-  </g>
-</svg>`;
-
 const morseFull = `
 <svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <rect width="60" height="40" fill="#0a0e08"/>
@@ -159,7 +147,7 @@ const yoda = `
 </svg>`;
 
 const FLAGS: Record<LangCode, string> = {
-  en: uk, bg, de, ru, tr, romani, sga, morseLite, morseFull, hex, sign, pirate, leet, flip, yoda,
+  en: uk, bg, de, ru, tr, romani, sga, morseFull, hex, sign, pirate, leet, flip, yoda,
 };
 
 /** Inline SVG markup for a language's flag/emblem (trusted static string, safe for innerHTML). */

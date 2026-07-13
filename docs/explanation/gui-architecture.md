@@ -206,9 +206,10 @@ Task 1 must leave the right seams; it does not choose colours.
   language persists through the existing `settings.language` field — **no new IPC channel**.
   **Built in phase 3b** (changelog 093): the six tables + a data-driven flag picker live under
   `gui/src/renderer/i18n/`; flags are **inline SVG**, not PNG (CSP-safe and self-contained — the
-  renderer loads no external assets). SGA's glyph font itself is owned by the ENCHANT theme
-  (`design/design-specs.md` §176); until it lands, the `.lang-sga` font-swap seam falls back to the
-  normal faces. **Hard boundary:** GUI-chrome language ≠ generated-app language — the latter stays
+  renderer loads no external assets). SGA's glyph font (`Sga-Regular.ttf`, maps Latin A-Z to
+  enchanting-table runes) is vendored at `gui/src/renderer/public/fonts/` and wired via
+  `@font-face` in `styles.css` (changelog 095) — no longer deferred to the ENCHANT theme.
+  **Hard boundary:** GUI-chrome language ≠ generated-app language — the latter stays
   Bulgarian-only (CLAUDE.md) unless the *spec's* `meta.language` says otherwise (changelog 054).
 
 ## Security model

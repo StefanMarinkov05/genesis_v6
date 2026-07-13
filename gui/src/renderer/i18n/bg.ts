@@ -3,7 +3,7 @@ import type { Strings } from './en.ts';
 // Bulgarian (български) GUI-chrome strings. This is the GUI's own interface language only —
 // it does NOT change what a generated app is in (see the scope note in en.ts).
 export const bg: Strings = {
-  title: 'ДПС-НН — Генезис',
+  title: 'ДПС-НН — Контролен център',
   win: { minimize: 'Намали', maximize: 'Уголеми', close: 'Затвори' },
   toolbar: { debug: 'Режим "Нърд"', settings: 'Настройки', reopen: 'Последен резултат' },
   spec: {

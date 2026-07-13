@@ -25,10 +25,10 @@ for (const { code } of LANGUAGES) {
   });
 }
 
-test('LANGUAGES has fifteen unique codes and short labels', () => {
-  assert.equal(LANGUAGES.length, 15);
+test('LANGUAGES has fourteen unique codes and short labels', () => {
+  assert.equal(LANGUAGES.length, 14);
   const codes = new Set(LANGUAGES.map((l) => l.code));
-  assert.equal(codes.size, 15);
+  assert.equal(codes.size, 14);
   // sign's short code is the single ✋ glyph itself — length >= 1, not >= 2, is the real bar.
   assert.ok(LANGUAGES.every((l) => l.short.length >= 1 && l.nativeLabel.length > 0));
 });
@@ -38,7 +38,7 @@ test('SGA is the English strings verbatim (font swap, not a translation)', () =>
 });
 
 test('joke tier (Morse/hex/sign/pirate/leet/flip/yoda) is flagged and sits after the real languages', () => {
-  const jokeCodes = ['morseLite', 'morseFull', 'hex', 'sign', 'pirate', 'leet', 'flip', 'yoda'];
+  const jokeCodes = ['morseFull', 'hex', 'sign', 'pirate', 'leet', 'flip', 'yoda'];
   for (const l of LANGUAGES) {
     assert.equal(Boolean(l.joke), jokeCodes.includes(l.code), `unexpected joke flag on ${l.code}`);
   }
@@ -47,17 +47,12 @@ test('joke tier (Morse/hex/sign/pirate/leet/flip/yoda) is flagged and sits after
   assert.ok(firstJokeIdx > 0 && codes.slice(0, firstJokeIdx).every((c) => !jokeCodes.includes(c)));
 });
 
-test('morseLite keeps long sentences in English, morseFull encodes everything', () => {
-  const lite = stringsFor('morseLite');
+test('morseFull encodes everything, including long sentences', () => {
   const full = stringsFor('morseFull');
-  // A long settings hint: lite must be untouched English; full must be real dot-dash Morse
-  // (no Latin letters left — punctuation/spacing chars aside).
-  assert.equal(lite.settings.genesisCmdHint, en.settings.genesisCmdHint);
   assert.notEqual(full.settings.genesisCmdHint, en.settings.genesisCmdHint);
   assert.ok(!/[A-Za-z]/.test(full.settings.genesisCmdHint), 'no stray Latin letters should survive full Morse encoding');
-  // A short button label: BOTH variants encode it (readable-length guard doesn't apply).
-  assert.notEqual(lite.win.close, en.win.close);
-  assert.ok(/[.-]/.test(lite.win.close));
+  assert.notEqual(full.win.close, en.win.close);
+  assert.ok(/[.-]/.test(full.win.close));
 });
 
 test('hex encodes every string, including function outputs, as space-separated byte pairs', () => {
