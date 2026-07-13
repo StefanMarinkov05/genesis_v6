@@ -223,7 +223,8 @@ public sealed class EmitControllersViewsStage : IStage
                 };
                 var model = ModelForPage(spec, page);
                 var owner = ControllerForPage(spec, page); // lets templates respect removedActions/sorting
-                Emit(page.File, () => engine.RenderFile(ctx.Template(template), new { page, model, owner }));
+                var has_rating = ModelHasRating(spec, model?.Name);
+                Emit(page.File, () => engine.RenderFile(ctx.Template(template), new { page, model, owner, has_rating }));
             }
         }
 
@@ -251,6 +252,10 @@ public sealed class EmitControllersViewsStage : IStage
         spec.Features.TryGetValue(feature, out var cfg)
             ? SpecExpandStage.ResolvePrimaryModel(spec, cfg)
             : spec.Models.First(x => x.Images is not null).Name;
+
+    /// <summary>Whether card/index surfaces for this model should show the bulk average-rating stars.</summary>
+    internal static bool ModelHasRating(ProjectSpec spec, string? modelName) =>
+        modelName is not null && FeatureEnabled(spec, "rating") && FeaturePrimaryModel(spec, "rating") == modelName;
 
     internal static ControllerSpec? ControllerForPage(ProjectSpec spec, PageSpec page)
     {
@@ -925,7 +930,8 @@ public sealed class EmitControllersViewsStage : IStage
             }
             else
             {
-                var snippet = engine.RenderFile(ctx.Template("controllers/sorting_index_body.sbn"), new { controller = c });
+                var snippet = engine.RenderFile(ctx.Template("controllers/sorting_index_body.sbn"),
+                    new { controller = c, has_rating = ModelHasRating(ctx.Spec, c.Model) });
                 // Anchor on ANY Index(...) action - scaffolded (no params) or a previous
                 // differently-shaped generated one - not just the parameterless scaffolded shape.
                 var rx = new Regex(

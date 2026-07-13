@@ -679,6 +679,54 @@ public class TemplateEmissionTests
         Assert.DoesNotContain("page-link", code);
     }
 
+    // Card grid: bulk average rating stars per product (Index had none before - only Details computed one).
+    [Fact]
+    public void Card_grid_shows_bulk_average_rating_stars_when_has_rating()
+    {
+        var (spec, engine) = Arrange();
+        var owner = spec.Controllers.First(c => c.Sorting is { Enabled: true });
+        var model = spec.Models.First(m => m.Name == owner.Model);
+        var page = spec.Views!.Pages.First(p => p.Kind == "cardGrid");
+        var code = engine.RenderFile(Path.Combine("templates", "views", "card_grid.sbn"),
+            new { owner, model, page, has_rating = true });
+        Assert.Contains("ViewData[\"AverageRatings\"]", code);
+        Assert.Contains("Math.Round(itemAvgDisplay)", code);
+    }
+
+    [Fact]
+    public void Card_grid_omits_rating_stars_when_has_rating_false()
+    {
+        var (spec, engine) = Arrange();
+        var owner = spec.Controllers.First(c => c.Sorting is { Enabled: true });
+        var model = spec.Models.First(m => m.Name == owner.Model);
+        var page = spec.Views!.Pages.First(p => p.Kind == "cardGrid");
+        var code = engine.RenderFile(Path.Combine("templates", "views", "card_grid.sbn"),
+            new { owner, model, page, has_rating = false });
+        Assert.DoesNotContain("AverageRatings", code);
+    }
+
+    [Fact]
+    public void Sorting_index_body_computes_bulk_average_ratings_when_has_rating()
+    {
+        var (spec, engine) = Arrange();
+        var owner = spec.Controllers.First(c => c.Sorting is { Enabled: true });
+        var code = engine.RenderFile(Path.Combine("templates", "controllers", "sorting_index_body.sbn"),
+            new { controller = owner, has_rating = true });
+        Assert.Contains("ViewData[\"AverageRatings\"]", code);
+        Assert.Contains(".Include(x => x.Reviews)", code);
+    }
+
+    [Fact]
+    public void Sorting_index_body_omits_reviews_include_when_has_rating_false()
+    {
+        var (spec, engine) = Arrange();
+        var owner = spec.Controllers.First(c => c.Sorting is { Enabled: true });
+        var code = engine.RenderFile(Path.Combine("templates", "controllers", "sorting_index_body.sbn"),
+            new { controller = owner, has_rating = false });
+        Assert.DoesNotContain("AverageRatings", code);
+        Assert.DoesNotContain(".Include(x => x.Reviews)", code);
+    }
+
     // Task 6 (v6 Package D): admin cannot delete another admin account.
     [Fact]
     public void Users_controller_blocks_deleting_admin_accounts()

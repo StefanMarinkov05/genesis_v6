@@ -74,6 +74,16 @@ first = true
                     <p class="card-text searchable">@item.{{ field }}</p>
 {{~ end ~}}
 {{~ end ~}}
+{{~ if has_rating ~}}
+                    <div class="text-warning">
+                        @{
+                            var itemAvgRatings = (IDictionary<int, double?>)(ViewData["AverageRatings"] ?? new Dictionary<int, double?>());
+                            var itemAvg = itemAvgRatings.TryGetValue(item.{{ model.properties[0].name }}, out var itemAvgVal) ? itemAvgVal : null;
+                            var itemAvgDisplay = itemAvg ?? 0;
+                        }
+                        @for (var i = 1; i <= 5; i++) { <span>@(i <= Math.Round(itemAvgDisplay) ? "★" : "☆")</span> }
+                    </div>
+{{~ end ~}}
                 </div>
                 <div class="card-footer d-flex gap-2">
 {{~ for field in page.card ~}}

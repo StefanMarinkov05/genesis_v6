@@ -13,6 +13,9 @@ public async Task<IActionResult> Index(string? search, string? sortBy, string? s
 {{~ for rel in m.relations ~}}
             .Include(x => x.{{ rel.navigation }})
 {{~ end ~}}
+{{~ if has_rating ~}}
+            .Include(x => x.Reviews)
+{{~ end ~}}
             .AsQueryable();
 
 {{~ search_fields = [] ~}}
@@ -40,5 +43,11 @@ public async Task<IActionResult> Index(string? search, string? sortBy, string? s
         var total = await query.CountAsync();
         ViewData["Page"] = page;
         ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
-        return View(await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync());
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+{{~ if has_rating ~}}
+        ViewData["AverageRatings"] = items.ToDictionary(
+            x => x.{{ m.properties[0].name }},
+            x => x.Reviews.Where(r => !r.IsDeleted).Any() ? x.Reviews.Where(r => !r.IsDeleted).Average(r => (double)r.Stars) : (double?)null);
+{{~ end ~}}
+        return View(items);
     }

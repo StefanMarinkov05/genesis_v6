@@ -638,3 +638,39 @@ unrelated to any of this work, confirmed by isolation reruns each time it fired)
   LocalDB + a multi-minute pipeline run, not runnable in the build session): the on-screen
   render and a live end-to-end generation. That is Stefan's `cd gui && npm run dev` gate before
   phase 2 - stated plainly, not claimed as done.
+
+## Session 29 (Sonnet: card-grid bulk average rating - deferred half of changelog 091) - changelog 092
+Picked up the two queued items from changelog 091. Item 2 (product_details.sbn zero-star row) was
+already fixed as an UNCOMMITTED working-tree change from a prior session - verified it matches the
+ask exactly (star row always renders, caption switches between "(X от Y отзива)" and "(няма
+отзиви)") and left it as-is, no further edit needed.
+Item 1 (card grid average rating): `sorting_index_body.sbn` gains a `has_rating`-gated
+`.Include(x => x.Reviews)` + a post-fetch `ViewData["AverageRatings"]` bulk dict (keyed by primary
+key, null when a product has no reviews); `card_grid.sbn` renders a 5-star row per card reading
+its own entry out of that dict, defaulting to 0/5 when absent. New `EmitControllersViewsStage.
+ModelHasRating(spec, modelName)` threaded into both the sorting-body snippet render and the
+page-template render as `has_rating` (no primary-model lookup was exposed to Scriban before this).
+REAL BUG caught while regenerating: my own first two `emit-controllers-views` invocations passed
+the wrong `--out` value (`out/FaceNote` instead of `out`), which - combined with
+`ScaffoldControllerAsync` having NO existing-file check (aspnet-codegenerator silently no-ops a
+non-interactive overwrite prompt) - left a stray duplicate `out/FaceNote/FaceNote/...` tree that
+broke the next `dotnet build` with CS0101/CS0111 duplicate-definition errors across half the
+project. Cleaned up (deleted the stray nested folder) and confirmed it was self-inflicted, not a
+generator bug. SEPARATE REAL FINDING (not fixed, just surfaced): `ApplyDeviations`' sorting-body
+injection is keyed off a `ViewData["TotalPages"]` idempotency marker, so re-running
+`emit-controllers-views` against an ALREADY-migrated controller silently skips re-rendering the
+Index body even when the template changed underneath it - had to manually delete
+`ProductsController.cs` to force a clean scaffold+re-inject. This generator behavior (a stale
+customized controller isn't refreshed by a stage re-run) predates this session and applies to
+every deviation-based transform, not just this one; flagging for whoever eventually wants
+re-runs to reliably pick up template edits, since it's out of scope for a one-off rating feature.
+Verified for real: regenerated `emit-controllers-views` + `verify` against FaceNote (build green,
+verify PASSED build/db/boot/http/manifest/language), then manually booted the app and curled
+`/Client/Products` - real mixed per-card star counts observed (★★★★★/☆☆☆☆☆/★★★★☆), not just a
+template-render check. 4 new render tests (has_rating true/false × card_grid/sorting_index_body).
+Suite 116 → 120 green. KNOWN GAP flagged in the changelog: only the sorting-enabled Index path
+got the bulk-rating wiring (the only path FaceNote exercises / this session could verify) - a
+card grid with sorting disabled keeps the plain scaffolded Index and would silently show 0-star
+rows even with real reviews. NEXT: if a non-sorting cardGrid+rating combination ever matters,
+extend `InjectImageInclude`'s sibling transform pattern to add the same Reviews-Include +
+AverageRatings dict to the plain scaffolded Index shape.
