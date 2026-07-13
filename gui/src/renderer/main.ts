@@ -2,16 +2,23 @@ import '@xterm/xterm/css/xterm.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { BuildReport, DuplicateMatch, FileHandle } from '@shared/ipc-types';
-import { en } from './i18n/en';
+import { LANGUAGES, langMeta, normalizeLang, stringsFor, type LangCode, type Strings } from './i18n';
+import { flagSvg } from './i18n/flags';
 import { activeButton, enablement, type RunState } from './state';
 import './styles.css';
 
-// Renderer bootstrap for the MVP (NOVA + EN). It owns screen state and talks to the
-// privileged main process only through window.gui (the typed preload surface). No fs, no
-// child_process, no key here — the renderer is fully sandboxed (security model).
+// Renderer bootstrap (NOVA theme). It owns screen state and talks to the privileged main
+// process only through window.gui (the typed preload surface). No fs, no child_process, no
+// key here — the renderer is fully sandboxed (security model).
+//
+// Language (phase 3b) is renderer-local: `t` is the active string table, swapped live by the
+// flag picker and persisted through the existing settings.language field. This is the GUI's
+// OWN chrome language only — it never changes the language a generated app is produced in
+// (that's the spec's meta.language, a separate axis). See the scope note in i18n/en.ts.
 
 const gui = window.gui;
-const t = en;
+let currentLang: LangCode = 'en';
+let t: Strings = stringsFor(currentLang);
 
 function $<T extends HTMLElement = HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -92,13 +99,19 @@ function setRunState(s: RunState): void {
   }
 }
 
-function setProgress(index: number, total: number, stage: string, cls: '' | 'running' | 'success' | 'error'): void {
+type ProgressCls = '' | 'running' | 'success' | 'error';
+// Last non-idle progress paint, so a mid-run language switch can restore the bar/count after
+// retranslate() re-applies the idle defaults. Stage names come from the CLI (not translated).
+let lastProgress: { index: number; total: number; stage: string; cls: ProgressCls } | null = null;
+
+function setProgress(index: number, total: number, stage: string, cls: ProgressCls): void {
   $('progress-stage').textContent = stage;
   $('progress-count').textContent = t.progress.of(index, total);
   const fillEl = $('progress-fill');
   fillEl.style.width = `${Math.round((index / total) * 100)}%`;
   fillEl.classList.remove('running', 'success', 'error');
   if (cls) fillEl.classList.add(cls);
+  lastProgress = { index, total, stage, cls };
 }
 
 // ---- selection UI -----------------------------------------------------------
@@ -356,6 +369,112 @@ function applyStrings(): void {
   $('settings-cancel').textContent = t.settings.cancel;
 }
 
+// ---- language picker (phase 3b) ---------------------------------------------
+// Data-driven off i18n/LANGUAGES: the picker is a collapsed flag button + a menu of all
+// languages. Selecting one swaps `t` live, applies the SGA font-swap class, persists the
+// choice, and re-renders every already-painted string via retranslate().
+function buildLangPicker(): void {
+  const picker = $('lang-picker');
+  picker.innerHTML =
+    `<button type="button" class="chip lang-toggle" id="lang-toggle" aria-haspopup="true" aria-expanded="false">` +
+    `<span class="flag" id="lang-current-flag"></span><span id="lang-current-code"></span></button>` +
+    `<div class="lang-menu" id="lang-menu" role="menu" hidden></div>`;
+  const menu = $('lang-menu');
+  let jokeDividerDrawn = false;
+  for (const l of LANGUAGES) {
+    if (l.joke && !jokeDividerDrawn) {
+      const divider = document.createElement('div');
+      divider.className = 'lang-divider';
+      divider.setAttribute('role', 'separator');
+      menu.appendChild(divider);
+      jokeDividerDrawn = true;
+    }
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'lang-item';
+    item.setAttribute('role', 'menuitemradio');
+    item.dataset.code = l.code;
+    item.title = l.label;
+    // flagSvg is a trusted static string (no user input); the name is set via textContent.
+    const flag = document.createElement('span');
+    flag.className = 'flag';
+    flag.innerHTML = flagSvg(l.code);
+    const name = document.createElement('span');
+    name.className = 'lang-name';
+    name.textContent = l.nativeLabel;
+    item.append(flag, name);
+    item.addEventListener('click', () => {
+      void setLanguage(l.code);
+      closeLangMenu();
+    });
+    menu.appendChild(item);
+  }
+  $('lang-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleLangMenu();
+  });
+  menu.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', closeLangMenu);
+}
+
+function toggleLangMenu(): void {
+  $('lang-menu').hasAttribute('hidden') ? openLangMenu() : closeLangMenu();
+}
+function openLangMenu(): void {
+  $('lang-menu').removeAttribute('hidden');
+  $('lang-toggle').setAttribute('aria-expanded', 'true');
+}
+function closeLangMenu(): void {
+  $('lang-menu').setAttribute('hidden', '');
+  $('lang-toggle').setAttribute('aria-expanded', 'false');
+}
+
+function updateLangPicker(): void {
+  const meta = langMeta(currentLang);
+  $('lang-current-flag').innerHTML = flagSvg(currentLang);
+  $('lang-current-code').textContent = meta.short;
+  ($('lang-toggle') as HTMLButtonElement).title = meta.label;
+  document.querySelectorAll<HTMLElement>('#lang-menu .lang-item').forEach((el) => {
+    const on = el.dataset.code === currentLang;
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
+    el.classList.toggle('active', on);
+  });
+}
+
+async function setLanguage(code: LangCode): Promise<void> {
+  currentLang = code;
+  t = stringsFor(code);
+  // SGA is a font swap over the English strings (arch doc) — toggle the seam class; the actual
+  // glyph font ships with the ENCHANT theme, so today this falls back to the normal faces.
+  $('window').classList.toggle('lang-sga', code === 'sga');
+  retranslate();
+  try {
+    await gui.settingsSet({ language: code });
+  } catch {
+    /* persistence is best-effort; the language still applied for this session */
+  }
+}
+
+// Re-paint every already-rendered string in the new language without losing run/selection
+// state. applyStrings() resets static labels + the idle progress/well defaults; we then
+// restore the selection-driven wells, any live progress, the select placeholders, and an open
+// result screen.
+function retranslate(): void {
+  applyStrings();
+  onSpecChosen(selectedSpec);
+  onSeedChosen(selectedSeed);
+  if (runState !== 'idle' && lastProgress) {
+    setProgress(lastProgress.index, lastProgress.total, lastProgress.stage, lastProgress.cls);
+  }
+  const specSel = $('spec-select') as HTMLSelectElement;
+  const seedSel = $('seed-select') as HTMLSelectElement;
+  if (specSel.options[0]) specSel.options[0].textContent = t.spec.pick;
+  if (seedSel.options[0]) seedSel.options[0].textContent = t.seed.pick;
+  if ($('report-screen').getAttribute('data-open') === 'true' && lastReport) showReport(lastReport);
+  if ($('error-screen').getAttribute('data-open') === 'true' && lastError) showError(lastError.stage, lastError.message);
+  updateLangPicker();
+}
+
 // ---- file upload (renderer reads bytes, main validates + stages) ------------
 async function uploadFile(kind: 'spec' | 'seed'): Promise<void> {
   const input = document.createElement('input');
@@ -468,6 +587,7 @@ function wire(): void {
     if (e.key === 'Escape') {
       closeDuplicateDialog();
       closeResultScreens();
+      closeLangMenu();
       $('settings-sheet').setAttribute('data-open', 'false');
     }
     if (e.key === 'Enter' && $('dup-dialog').getAttribute('data-open') === 'true') {
@@ -558,7 +678,19 @@ function starfield(): void {
 
 // ---- boot -------------------------------------------------------------------
 async function boot(): Promise<void> {
+  buildLangPicker();
+  // Restore the persisted GUI language (renderer-local; default EN) before first paint.
+  let language: string | undefined;
+  try {
+    language = (await gui.settingsGet()).language;
+  } catch {
+    /* settings unavailable — fall back to EN */
+  }
+  currentLang = normalizeLang(language);
+  t = stringsFor(currentLang);
+  $('window').classList.toggle('lang-sga', currentLang === 'sga');
   applyStrings();
+  updateLangPicker();
   wire();
   subscribe();
   starfield();

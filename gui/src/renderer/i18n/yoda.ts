@@ -1,0 +1,92 @@
+import type { Strings } from './en.ts';
+
+// Yoda-speak — HAND-WRITTEN, not mechanically generated. Unlike Morse/hex/pirate/leet/flip,
+// natural Yoda word-order ("Started, the build has") requires real per-sentence judgment a
+// generic leaf transform can't safely make without butchering random sentences — the same
+// honesty boundary as Romani's hand-written table (see romani.ts). Each string below was
+// individually reordered; button icons (▶ ■ ❚❚ ✦ ✓ …) are kept in their usual leading position
+// so controls stay visually consistent with every other language.
+export const yoda: Strings = {
+  title: 'DPS-NN — Genesis',
+  win: { minimize: 'Smaller, make it', maximize: 'Bigger, make it', close: 'Close, you must' },
+  spec: {
+    heading: 'Specification',
+    upload: 'Upload a spec, you must…',
+    pick: 'A spec, select…',
+    none: 'No spec selected, there is',
+  },
+  toolbar: { debug: 'Nerd mode, this is', settings: 'Settings', reopen: 'The last result' },
+  seed: {
+    heading: 'Seed',
+    upload: 'Upload a seed, you must…',
+    pick: 'A seed, select…',
+    none: 'No seed selected, there is (optional, this is)',
+    claude: '✦ Claude',
+    claudeHint: 'Claude seed generation — in phase 2, this comes',
+  },
+  run: {
+    caption: 'Start. Pause. Resume. Stop. Locked across all themes, R2 is',
+    start: '▶ Begin, you must',
+    pause: '❚❚ Pause, you must',
+    resume: '▶▶ Resume, you must',
+    stop: '■ Stop, you must',
+    phase2: 'Pause and resume — in phase 2, these come',
+  },
+  progress: { idle: 'idle, it is', of: (i: number, t: number) => `${i} of ${t}, this is` },
+  dup: {
+    title: 'A duplicate build, this is',
+    lead: 'Already generated, this specification and seed combination has been.',
+    project: 'Project',
+    lastBuild: 'The last build',
+    output: 'Output',
+    open: 'The existing one, open',
+    regen: 'Anyway, generate',
+    cancel: 'Cancel, you must',
+  },
+  report: {
+    title: 'Done. Generated, the application was.',
+    url: 'URL',
+    credentials: 'Credentials',
+    email: 'Email',
+    password: 'Password',
+    db: 'Database',
+    start: 'Start',
+    runApp: 'Run, the app must',
+    killApp: 'Kill, the app must',
+    openBrowser: 'In a browser, open it',
+    openFolder: 'The folder, open',
+    close: 'Close, you must',
+    copy: 'copy',
+    copied: 'copied, it is',
+  },
+  error: {
+    title: (stage: string) => `Failed at stage "${stage}", the build has`,
+    stage: 'Stage',
+    cause: 'The cause',
+    retry: 'From this stage, try again',
+    fullLog: 'The full log',
+    stop: 'Stop, you must',
+  },
+  settings: {
+    title: 'Settings',
+    apiKey: 'An Anthropic API key, this is',
+    apiKeySet: '✓ Set, the key is (write-only, it is)',
+    apiKeyUnset: 'No key set, there is — wait for manual input, the LLM stages will',
+    apiKeyPlaceholder: 'sk-ant-…',
+    genesisCmd: 'The Genesis command',
+    genesisCmdHint: 'For advanced builds and debugging, this is. The bundled command, it defaults to.',
+    outDir: 'The output folder',
+    save: 'Save, you must',
+    cancel: 'Cancel, you must',
+  },
+  toast: {
+    started: 'Started, the build has',
+    stageDone: (i: number, t: number) => `Complete, stage ${i} of ${t} is`,
+    done: 'Done, it is',
+    duplicate: 'A duplicate build, found we have',
+    stopped: 'Stopped, the build has',
+    failed: 'Failed, the build has',
+    awaitingLlm: 'For an LLM response, waiting we are',
+    noKey: 'No API key, set there is',
+  },
+};

@@ -12,6 +12,8 @@ seeded, Bulgarian-UI web app through a resumable 9-stage pipeline. A GUI is plan
 ## Read first, every new session
 `plan/state.md` and `plan/decisions.md` in full — the running, session-by-session history of every
 decision and bug fix so far. Do not re-propose a fix already tried and recorded as failed there.
+Older sessions (1-21) live in `plan/state-archive.md`, split out to keep the auto-read file smaller
+(changelog 094-era cleanup) — check it too if a symptom might trace back to the early v5/v6 era.
 
 ## Routing — read the right doc for the task
 

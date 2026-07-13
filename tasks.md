@@ -48,10 +48,14 @@ cancelled.
 - [ ] Pause/Resume wired to the UI (main-side logic already present, UI-disabled)
 
 **Phase 3**
-- [ ] The other 4 themes (IMPERATOR/VEIL/FORGE/ENCHANT) as descriptor fills
-- [ ] The 5 additional languages (BG/DE/RU/Romani/SGA) + flag picker
-- [ ] Per-project wallpapers + loading animation on the generation screen
-- [ ] Recent-projects sheet off `logs/registry.json`
+- [ ] The other 4 themes (IMPERATOR/VEIL/FORGE/ENCHANT) as descriptor fills · **Sonnet** ·
+      (ENCHANT owns the actual SGA glyph font — the `.lang-sga` swap seam is already wired,
+      changelog 093, and just needs the font asset)
+- [x] The 5 additional languages (BG/DE/RU/Romani/SGA) + flag picker — **DONE** (changelog 093,
+      Opus). GUI-chrome only; SGA is a font-swap seam; flags are inline SVG. Romani is best-effort,
+      flagged for a native-speaker review. NOT yet eyeballed on screen (manual `npm run dev` gate).
+- [ ] Per-project wallpapers + loading animation on the generation screen · **Sonnet**
+- [ ] Recent-projects sheet off `logs/registry.json` · **Sonnet**
 
 ---
 

@@ -1,0 +1,97 @@
+import type { Strings } from './en.ts';
+
+// Romani (Romani ćhib) GUI-chrome strings. GUI interface language only (see en.ts scope note).
+//
+// HONEST BOUNDARY — best-effort, NOT native-verified. Romani has no single standardized
+// orthography and many dialects, and no established native vocabulary for software/technical
+// terms (spec, seed, API, database, LLM, build). This table leans on well-attested common
+// Romani words where a natural equivalent exists (phandav=close, putar=open, ačh=stop,
+// alosar=choose, garav=save/keep, mudar=kill, čhavi=key, gata=ready/done, kerav=do/make,
+// zumav=try, prastar=run) and keeps technical nouns as internationally recognizable loanwords
+// (specifikacia, seme, projekto, parola, adresa, baza). It wants a native-speaker review before
+// being treated as final — flagged in changelog 093. Choosing Romani still fully exercises the
+// language-switch + flag-picker machinery, which is the point of shipping it here.
+export const romani: Strings = {
+  title: 'DPS-NN — Genesis',
+  win: { minimize: 'Cikno', maximize: 'Baro', close: 'Phandav' },
+  toolbar: { debug: 'Debug', settings: 'Lačhardimata', reopen: 'Paluno rezultato' },
+  spec: {
+    heading: 'Specifikacia',
+    upload: 'Vazde specifikacia…',
+    pick: 'Alosar specifikacia…',
+    none: 'Nai alome specifikacia',
+  },
+  seed: {
+    heading: 'Seme',
+    upload: 'Vazde seme…',
+    pick: 'Alosar seme…',
+    none: 'Nai alome seme (po alosaripe)',
+    claude: '✦ Claude',
+    claudeHint: 'Generisaripe semensa Claude — avela ande faza 2',
+  },
+  run: {
+    caption: 'Start / Pauza / Nakhav angle / Ačh — R2',
+    start: '▶ Start',
+    pause: '❚❚ Pauza',
+    resume: '▶▶ Nakhav angle',
+    stop: '■ Ačh',
+    phase2: 'Pauza/Nakhav angle — avela ande faza 2',
+  },
+  progress: { idle: 'bešel', of: (i: number, t: number) => `${i} / ${t}` },
+  dup: {
+    title: 'Duplo keriba',
+    lead: 'Kado specifikacia thaj seme sas vunzhe kerdo.',
+    project: 'Projekto',
+    lastBuild: 'Paluno keriba',
+    output: 'Iklaviba',
+    open: 'Putar o vunzhe',
+    regen: 'Ker palem',
+    cancel: 'Mukh',
+  },
+  report: {
+    title: 'Gata — o aplikacia sas kerdo',
+    url: 'Adresa',
+    credentials: 'Kredenciale',
+    email: 'Email',
+    password: 'Parola',
+    db: 'Baza',
+    start: 'Starto',
+    runApp: 'Prastar o app',
+    killApp: 'Mudar o app',
+    openBrowser: 'Putar ando brauzero',
+    openFolder: 'Putar e folderi',
+    close: 'Phandav',
+    copy: 'kopisar',
+    copied: 'kopime',
+  },
+  error: {
+    title: (stage: string) => `O keriba pelo ka faza „${stage}“`,
+    stage: 'Faza',
+    cause: 'Doš',
+    retry: 'Zumav palem katar kadi faza',
+    fullLog: 'Intrego logo',
+    stop: 'Ačh',
+  },
+  settings: {
+    title: 'Lačhardimata',
+    apiKey: 'Anthropic API čhavi',
+    apiKeySet: '✓ O čhavi si thodino (numaj ramosariba)',
+    apiKeyUnset: 'Nai čhavi thodino — LLM fazi ka azhukaren manual dativ',
+    apiKeyPlaceholder: 'sk-ant-…',
+    genesisCmd: 'Genesis komanda',
+    genesisCmdHint: 'Vaš bare/batch keriba thaj debug. Default si e vklučime komanda.',
+    outDir: 'Folderi iklavibaske',
+    save: 'Garav',
+    cancel: 'Mukh',
+  },
+  toast: {
+    started: 'O keriba startisajlo',
+    stageDone: (i: number, t: number) => `Faza ${i}/${t} gata`,
+    done: 'Gata',
+    duplicate: 'Arakhlo duplo keriba',
+    stopped: 'O keriba ačhilo',
+    failed: 'O keriba pelo',
+    awaitingLlm: 'Azhukarav LLM dativ',
+    noKey: 'Nai thodino API čhavi',
+  },
+};

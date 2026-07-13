@@ -202,7 +202,14 @@ Task 1 must leave the right seams; it does not choose colours.
   can change without a rebuild. Empty/placeholder = render nothing, never error.
 - **i18n.** String tables per language (EN, BG, DE, RU, Romani) resolved in the renderer; the
   Standard Galactic Alphabet "language" is a **font swap over the English strings**, not a
-  translation. Flag-PNG picker. All of this is renderer-local; the main process is language-agnostic.
+  translation. All of this is renderer-local; the main process is language-agnostic. The chosen
+  language persists through the existing `settings.language` field — **no new IPC channel**.
+  **Built in phase 3b** (changelog 093): the six tables + a data-driven flag picker live under
+  `gui/src/renderer/i18n/`; flags are **inline SVG**, not PNG (CSP-safe and self-contained — the
+  renderer loads no external assets). SGA's glyph font itself is owned by the ENCHANT theme
+  (`design/design-specs.md` §176); until it lands, the `.lang-sga` font-swap seam falls back to the
+  normal faces. **Hard boundary:** GUI-chrome language ≠ generated-app language — the latter stays
+  Bulgarian-only (CLAUDE.md) unless the *spec's* `meta.language` says otherwise (changelog 054).
 
 ## Security model
 
