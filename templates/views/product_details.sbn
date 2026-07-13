@@ -55,13 +55,18 @@ end
                 <a asp-area="Client" asp-controller="Profiles" asp-action="Public" asp-route-id="@ProfileHash.Of(Model.UserId)">@sellerName</a>
             </p>
         }
-        @if (avg is not null)
-        {
-            <div class="text-warning fs-5 mb-3">
-                @for (var i = 1; i <= 5; i++) { <span>@(i <= Math.Round(avg.Value) ? "★" : "☆")</span> }
-                <small class="text-muted">(@avg.Value.ToString("F1") от @reviews.Count() отзива)</small>
-            </div>
-        }
+        <div class="text-warning fs-5 mb-3">
+            @{ var avgDisplay = avg ?? 0; }
+            @for (var i = 1; i <= 5; i++) { <span>@(i <= Math.Round(avgDisplay) ? "★" : "☆")</span> }
+            @if (avg is not null)
+            {
+                <small class="text-muted">(@avgDisplay.ToString("F1") от @reviews.Count() отзива)</small>
+            }
+            else
+            {
+                <small class="text-muted">(няма отзиви)</small>
+            }
+        </div>
         <dl class="row">
 {{~ for tp in (spec.models | array.filter @(do; ret $0.name == primary; end) | array.first).properties ~}}
 {{~ if !tp.key && !tp.foreign_key && tp.name != "UserId" && tp.name != display ~}}
