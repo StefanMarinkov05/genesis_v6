@@ -15,8 +15,13 @@ logs/registry.json
 logs/registry.jsonl
 logs/*.log
 logs/gui-build-manifest.json
+logs/launched-apps.json
+# Per-project subfolders (logs/<Project>/) - actions.log.jsonl, db.json, seed-credentials.txt
+# (plaintext seed passwords - must never be committed). Only logs/README.md stays tracked.
+logs/*/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 out_facenote_run*.log
 boot_test*.log
 fixtures/*.lock.json
+.image-cache/

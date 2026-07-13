@@ -179,6 +179,9 @@
           "isLookup": {
             "type": "boolean"
           },
+          "isSpecification": {
+            "type": "boolean"
+          },
           "softDelete": {
             "type": "boolean"
           },
@@ -504,6 +507,9 @@
             "type": "string"
           },
           "isLookup": {
+            "type": "boolean"
+          },
+          "isSpecification": {
             "type": "boolean"
           },
           "generatedBy": {

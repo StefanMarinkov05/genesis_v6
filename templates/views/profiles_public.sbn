@@ -16,7 +16,7 @@ end
 
 <div class="d-flex align-items-center gap-3 mb-4">
 {{~ if has_pfp ~}}
-    <img src="@(string.IsNullOrEmpty(Model.User.ProfilePicturePath) ? "/images/avatar-default.png" : "/" + Model.User.ProfilePicturePath)"
+    <img src="@(string.IsNullOrEmpty(Model.User.ProfilePicturePath) ? "/images/avatar-default.svg" : "/" + Model.User.ProfilePicturePath)"
          class="rounded-circle" style="width:96px;height:96px;object-fit:cover;" alt="Профилна снимка" />
 {{~ end ~}}
     <h1 class="mb-0">{{ if has_fn }}@(string.IsNullOrEmpty(Model.User.FirstName) ? "Потребител" : Model.User.FirstName){{ else }}Потребител{{ end }}</h1>

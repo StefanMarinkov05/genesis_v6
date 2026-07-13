@@ -117,6 +117,20 @@ export interface GuiApi {
   openExternal(url: string): Promise<void>;
   openPath(path: string): Promise<void>;
 
+  /**
+   * Launch the generated app: spawns `dotnet run --project <dir>` directly (argv, no shell) —
+   * see changelog 083. Never builds a shell command string, so it's immune to the `&&`/quoting
+   * differences across PowerShell 5.1 / 7 / cmd.exe that broke the CLI's own banner text.
+   */
+  runApp(projectDir: string): Promise<void>;
+
+  /**
+   * Kill the app process most recently launched via runApp() for this project dir. Distinct
+   * from build:stop (which cancels the CLI PIPELINE) — this targets the generated app's own
+   * `dotnet run`, which runApp starts detached and would otherwise have no GUI-side stop control.
+   */
+  killApp(projectDir: string): Promise<void>;
+
   // ---- main → renderer (push events); each returns an unsubscribe fn ----
   onProgress(cb: (e: ProgressEvent) => void): () => void;
   onLog(cb: (line: string) => void): () => void;
@@ -146,6 +160,8 @@ export const CH = {
   windowClose: 'window:close',
   openExternal: 'shell:openExternal',
   openPath: 'shell:openPath',
+  runApp: 'shell:runApp',
+  killApp: 'shell:killApp',
   // push events (main → renderer)
   onProgress: 'build:progress',
   onLog: 'build:log',

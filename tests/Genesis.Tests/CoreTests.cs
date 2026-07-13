@@ -569,6 +569,59 @@ public class TemplateEmissionTests
             && p["kind"]!.GetValue<string>() == "adminTable");
     }
 
+    // Category-1 short-task audit: any single-property model (not just hand-authored Brand/
+    // Category) should get its Details action/view removed automatically, so an auto-injected
+    // isLookup model like CatalogueItem (only "Position") never ends up with an orphaned,
+    // dead-but-reachable Details page nobody explicitly removed. Order keeps its existing
+    // "no admin Create" removal too - both must coexist in one removedActions array.
+    [Fact]
+    public void Admin_supervisor_removes_details_for_single_property_models_and_keeps_order_rule()
+    {
+        var node = System.Text.Json.Nodes.JsonNode.Parse("""
+            {
+              "models": [
+                { "name": "CatalogueItem", "isLookup": true,
+                  "properties": [
+                    { "name": "Id", "type": "int", "key": true },
+                    { "name": "CatalogueId", "type": "int", "foreignKey": true },
+                    { "name": "ProductId", "type": "int", "foreignKey": true },
+                    { "name": "Position", "type": "int" }
+                  ] },
+                { "name": "Order",
+                  "properties": [
+                    { "name": "Id", "type": "int", "key": true },
+                    { "name": "UserId", "type": "string" },
+                    { "name": "Total", "type": "decimal" },
+                    { "name": "Status", "type": "enum" }
+                  ] },
+                { "name": "Product",
+                  "properties": [
+                    { "name": "Id", "type": "int", "key": true },
+                    { "name": "Title", "type": "string" },
+                    { "name": "Price", "type": "decimal" }
+                  ] }
+              ],
+              "controllers": [],
+              "views": { "pages": [] }
+            }
+            """)!.AsObject();
+
+        SpecExpandStage.InjectAdminSupervisorSurface(node, null);
+
+        var controllers = node["controllers"]!.AsArray();
+        var catalogueItem = controllers.First(c => c!["model"]!.GetValue<string>() == "CatalogueItem")!;
+        var removedCi = catalogueItem["removedActions"]!.AsArray().Select(x => x!.GetValue<string>()).ToList();
+        Assert.Contains("Details", removedCi); // only "Position" -> single-property rule fires
+
+        var order = controllers.First(c => c!["model"]!.GetValue<string>() == "Order")!;
+        var removedOrder = order["removedActions"]!.AsArray().Select(x => x!.GetValue<string>()).ToList();
+        Assert.Contains("Create", removedOrder);      // pre-existing rule
+        Assert.DoesNotContain("Details", removedOrder); // 3 non-key props -> rule does NOT fire
+
+        var product = controllers.First(c => c!["model"]!.GetValue<string>() == "Product")!;
+        Assert.Null(product["removedActions"]); // 2 non-key props -> no removedActions at all
+    }
+
     // Task 5 (v6 Package B): cart badge must read from the database via injected context,
     // not from ViewData["CartCount"] which was never populated.
     [Fact]
@@ -750,6 +803,146 @@ public class TemplateEmissionTests
         Assert.Contains("ProductImages", code);                    // controller name in button
         Assert.Contains("Снимки", code);                           // Bulgarian label
     }
+
+    [Fact]
+    public void Admin_table_fk_column_headers_use_target_model_display_name()
+    {
+        // Product's manyToOne relations target Brand/Category - the header used to render the
+        // raw navigation property name ("Brand"/"Category"), leaking English into an otherwise
+        // fully-Bulgarian admin table. It must render each target model's own displayName instead.
+        var (spec, engine) = Arrange();
+        var product = spec.Models.First(m => m.Name == "Product");
+        var page = spec.Views!.Pages.First(p => p.Kind == "adminTable" && p.File.Contains("Products"));
+        var owner = spec.Controllers.First(c => c.Name == "ProductsController" && c.Area == "Admin");
+        var code = engine.RenderFile(
+            Path.Combine("templates", "views", "admin_table.sbn"),
+            new { model = product, owner, page });
+        Assert.Contains("<th>Марки</th>", code);
+        Assert.Contains("<th>Категории</th>", code);
+        Assert.DoesNotContain("<th>Brand</th>", code);
+        Assert.DoesNotContain("<th>Category</th>", code);
+    }
+
+    // Category-1 short-task audit: Brand/Category had their Details action removed
+    // (removedActions:["Details"]) - the Products admin table's FK-relation link used to point
+    // at asp-action="Details" unconditionally, producing a dead 404 link from a live admin page.
+    // Must fall back to "Edit" (which always exists) instead.
+    [Fact]
+    public void Admin_table_fk_link_falls_back_to_edit_when_target_details_is_removed()
+    {
+        var (spec, engine) = Arrange();
+        var product = spec.Models.First(m => m.Name == "Product");
+        var page = spec.Views!.Pages.First(p => p.Kind == "adminTable" && p.File.Contains("Products"));
+        var owner = spec.Controllers.First(c => c.Name == "ProductsController" && c.Area == "Admin");
+        var code = engine.RenderFile(
+            Path.Combine("templates", "views", "admin_table.sbn"),
+            new { model = product, owner, page });
+        Assert.Contains("asp-controller=\"Brands\" asp-action=\"Edit\"", code);
+        Assert.Contains("asp-controller=\"Categories\" asp-action=\"Edit\"", code);
+        Assert.DoesNotContain("asp-controller=\"Brands\" asp-action=\"Details\"", code);
+        Assert.DoesNotContain("asp-controller=\"Categories\" asp-action=\"Details\"", code);
+    }
+
+    // A5: "Спецификации" consolidation - hand-built minimal spec (not the raw fixture, which has
+    // no isLookup/Review models until spec-expand injects them from feature-templates, and no
+    // dependency on the gitignored *.lock.json). Covers all three tab flavours in one render:
+    // isSpecification (Brand, CRUD tab reusing its scaffolded controller), isLookup (CartItem,
+    // read-only + relation/user filters), and Feedbacks (Review, read-only + product/user/rating
+    // filters, gated on features.rating).
+    [Fact]
+    public void Specifications_controller_and_view_render_all_three_tab_flavours_with_filters()
+    {
+        var spec = new ProjectSpec
+        {
+            Meta = new MetaSection { ProjectName = "TestProj", RootNamespace = "TestProj" },
+            Identity = new IdentitySection
+            {
+                Roles = [new RoleSpec { Name = "Admin", IsAdmin = true }],
+                ApplicationUser = new ApplicationUserSpec { ExtraProperties = [] },
+            },
+            Models =
+            [
+                new ModelSpec
+                {
+                    Name = "Brand",
+                    IsSpecification = true,
+                    DisplayName = "Марки",
+                    Properties =
+                    [
+                        new PropertySpec { Name = "Id", Type = "int", Key = true },
+                        new PropertySpec { Name = "Name", Type = "string", DisplayName = "Марка" },
+                    ],
+                },
+                new ModelSpec
+                {
+                    Name = "Product",
+                    Properties =
+                    [
+                        new PropertySpec { Name = "Id", Type = "int", Key = true },
+                        new PropertySpec { Name = "Title", Type = "string", DisplayName = "Заглавие" },
+                    ],
+                },
+                new ModelSpec
+                {
+                    Name = "CartItem",
+                    IsLookup = true,
+                    DisplayName = "Артикули в кошница",
+                    Properties =
+                    [
+                        new PropertySpec { Name = "Id", Type = "int", Key = true },
+                        new PropertySpec { Name = "UserId", Type = "string", DisplayName = "Потребител" },
+                        new PropertySpec { Name = "Quantity", Type = "int", DisplayName = "Количество" },
+                    ],
+                    Relations = [new RelationSpec { Kind = "manyToOne", Target = "Product", Navigation = "Product" }],
+                },
+                new ModelSpec
+                {
+                    Name = "Review",
+                    Properties =
+                    [
+                        new PropertySpec { Name = "Id", Type = "int", Key = true },
+                        new PropertySpec { Name = "AuthorUserId", Type = "string", DisplayName = "Автор" },
+                        new PropertySpec { Name = "Stars", Type = "int", DisplayName = "Оценка" },
+                        new PropertySpec { Name = "Text", Type = "string", DisplayName = "Отзив", Nullable = true },
+                    ],
+                    Relations = [new RelationSpec { Kind = "manyToOne", Target = "Product", Navigation = "Product" }],
+                },
+            ],
+            Controllers =
+            [
+                new ControllerSpec { Name = "BrandsController", Area = "Admin", Model = "Brand", IsSpecification = true },
+            ],
+            Features = new Dictionary<string, JsonElement>
+            {
+                ["rating"] = JsonSerializer.SerializeToElement(new { enabled = true }),
+            },
+        };
+        var engine = new TemplateEngine(spec, VariationResolver.Resolve(spec));
+
+        var controllerCode = engine.RenderFile(Path.Combine("templates", "controllers", "specifications_controller.sbn"));
+        Assert.Contains("class SpecificationsController", controllerCode);
+        Assert.Contains("vm.Brands = await _context.Brands.AsNoTracking().ToListAsync();", controllerCode);
+        // Filter param prefix is the model name fully lowercased ("cartitem", not camelCase
+        // "cartItem") - a deliberate, internally-consistent style choice (matches the local
+        // query-variable name), not a bug.
+        Assert.Contains("int? cartitemProductId = null", controllerCode);      // relation filter param
+        Assert.Contains("string? cartitemUserId = null", controllerCode);      // user filter param
+        Assert.Contains("int? reviewProductId = null", controllerCode);        // feedback relation filter
+        Assert.Contains("string? reviewAuthorUserId = null", controllerCode);  // feedback user filter
+        Assert.Contains("int? reviewStars = null", controllerCode);            // feedback rating filter
+        Assert.Contains("if (reviewStars.HasValue) reviewQuery = reviewQuery.Where(x => x.Stars == reviewStars);", controllerCode);
+
+        var viewCode = engine.RenderFile(Path.Combine("templates", "views", "specifications_index.sbn"));
+        Assert.Contains("Спецификации", viewCode);
+        Assert.Contains("id=\"tab-brand\"", viewCode);      // CRUD tab
+        Assert.Contains("id=\"tab-cartitem\"", viewCode);   // read-only lookup tab
+        Assert.Contains("id=\"tab-feedback\"", viewCode);   // feedback tab
+        Assert.Contains("name=\"cartitemProductId\"", viewCode);  // relation filter select
+        Assert.Contains("name=\"cartitemUserId\"", viewCode);     // user filter select
+        Assert.Contains("name=\"reviewStars\"", viewCode);        // rating filter select
+        Assert.Contains("@for (var s = 1; s <= 5; s++)", viewCode); // 1-5 star options loop (Razor, evaluated at ASP.NET runtime)
+        Assert.Contains("@s ★", viewCode);
+    }
 }
 
 public class DeviationTests
@@ -803,6 +996,142 @@ public class DeviationTests
             System.Text.RegularExpressions.RegexOptions.Singleline);
         var result = rx.Replace(CannedScaffold, "$1return RedirectToAction(\"Index\", \"Summary\");", 1);
         Assert.Contains("RedirectToAction(\"Index\", \"Summary\")", result);
+    }
+
+    // A5: verifies the REAL ApplyDeviations method (not a reimplemented regex) against a literal
+    // copy of the actual scaffolded BrandsController.cs shape produced by the 2026-07-12/13 A5
+    // regenerate (post Details-removal from tonight's earlier fix) - confirms Create/Edit/
+    // DeleteConfirmed's redirects can be safely retargeted to SpecificationsController.Index so
+    // Brand/Category CRUD, reused as Спецификации's write sub-controllers, lands the user back on
+    // the consolidated page instead of the orphaned (nav-hidden) Brands/Index.
+    private const string RealBrandsControllerShape = """
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.AspNetCore.Mvc;
+        using Microsoft.EntityFrameworkCore;
+        using FaceNote.Models;
+
+        namespace FaceNote.Areas_Admin_Controllers
+        {
+            [Area("Admin")]
+        public class BrandsController : Controller
+            {
+                private readonly FaceNoteContext _context;
+
+                public BrandsController(FaceNoteContext context)
+                {
+                    _context = context;
+                }
+
+                public async Task<IActionResult> Index()
+                {
+                    return View(await _context.Brands.ToListAsync());
+                }
+
+                public IActionResult Create()
+                {
+                    return View();
+                }
+
+                [HttpPost]
+                [ValidateAntiForgeryToken]
+                public async Task<IActionResult> Create([Bind("Id,Name")] Brand brand)
+                {
+                    if (ModelState.IsValid)
+                    {
+                        _context.Add(brand);
+                        await _context.SaveChangesAsync();
+                        return RedirectToAction(nameof(Index));
+                    }
+                    return View(brand);
+                }
+
+                public async Task<IActionResult> Edit(int? id)
+                {
+                    if (id == null) return NotFound();
+                    var brand = await _context.Brands.FindAsync(id);
+                    if (brand == null) return NotFound();
+                    return View(brand);
+                }
+
+                [HttpPost]
+                [ValidateAntiForgeryToken]
+                public async Task<IActionResult> Edit(int id, [Bind("Id,Name")] Brand brand)
+                {
+                    if (id != brand.Id) return NotFound();
+                    if (ModelState.IsValid)
+                    {
+                        _context.Update(brand);
+                        await _context.SaveChangesAsync();
+                        return RedirectToAction(nameof(Index));
+                    }
+                    return View(brand);
+                }
+
+                public async Task<IActionResult> Delete(int? id)
+                {
+                    if (id == null) return NotFound();
+                    var brand = await _context.Brands.FirstOrDefaultAsync(m => m.Id == id);
+                    if (brand == null) return NotFound();
+                    return View(brand);
+                }
+
+                [HttpPost, ActionName("Delete")]
+                [ValidateAntiForgeryToken]
+                public async Task<IActionResult> DeleteConfirmed(int id)
+                {
+                    var brand = await _context.Brands.FindAsync(id);
+                    if (brand != null)
+                    {
+                        brand.IsDeleted = true; brand.DeletedAt = DateTime.UtcNow;
+                    }
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+
+                private bool BrandExists(int id) => _context.Brands.Any(e => e.Id == id);
+            }
+        }
+        """;
+
+    [Fact]
+    public void Real_ApplyDeviations_redirects_brand_crud_back_to_specifications_index()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "dps-nn-tests-" + Guid.NewGuid());
+        var projectDir = Path.Combine(tempDir, "TestProj");
+        var controllerPath = Path.Combine(projectDir, "Areas", "Admin", "Controllers", "BrandsController.cs");
+        Directory.CreateDirectory(Path.GetDirectoryName(controllerPath)!);
+        File.WriteAllText(controllerPath, RealBrandsControllerShape);
+        try
+        {
+            var spec = new ProjectSpec { Meta = new MetaSection { ProjectName = "TestProj", RootNamespace = "TestProj" } };
+            var ctx = new StageContext(spec, VariationResolver.Resolve(spec), tempDir, ".",
+                new StateStore(Path.Combine(tempDir, "state.json")), TextWriter.Null);
+            var controllerSpec = new ControllerSpec
+            {
+                Name = "BrandsController",
+                File = "Areas/Admin/Controllers/BrandsController.cs",
+                Redirects =
+                [
+                    new RedirectSpec { After = "Create", To = "SpecificationsController.Index" },
+                    new RedirectSpec { After = "Edit", To = "SpecificationsController.Index" },
+                    new RedirectSpec { After = "DeleteConfirmed", To = "SpecificationsController.Index" },
+                ],
+            };
+            var engine = new TemplateEngine(spec, ctx.Variation);
+
+            EmitControllersViewsStage.ApplyDeviations(ctx, controllerSpec, engine);
+
+            var result = File.ReadAllText(controllerPath);
+            var hits = System.Text.RegularExpressions.Regex.Matches(result, @"RedirectToAction\(""Index"",\s*""Specifications""\)").Count;
+            Assert.Equal(3, hits); // Create, Edit (POST), DeleteConfirmed - all three redirect
+            Assert.Contains("public IActionResult Create()", result);           // GET Create untouched
+            Assert.Contains("public async Task<IActionResult> Edit(int? id)", result); // GET Edit untouched
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, recursive: true); } catch { /* best-effort */ }
+        }
     }
 }
 

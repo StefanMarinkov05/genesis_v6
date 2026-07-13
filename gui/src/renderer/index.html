@@ -38,6 +38,7 @@
             <span class="chip">NOVA</span>
           </div>
           <div class="group">
+            <button type="button" class="chip" id="toolbar-reopen" disabled>Last result</button>
             <label class="debug-toggle chip"
               ><input type="checkbox" id="debug-toggle" /> <span id="debug-label">Debug</span></label
             >
@@ -117,7 +118,9 @@
             <div class="readout-head" id="report-title"><span class="badge">✓</span> <span id="report-title-text">Done</span><button type="button" id="report-close" aria-label="Close" style="margin-left:auto;border:0;background:transparent;color:inherit;cursor:pointer;font-size:14px">✕</button></div>
             <dl id="report-dl"></dl>
             <div class="readout-actions">
-              <button type="button" class="btn primary" id="report-open-browser">Open in browser</button>
+              <button type="button" class="btn primary" id="report-run-app">Run app</button>
+              <button type="button" class="btn danger" id="report-kill-app" disabled>Kill app</button>
+              <button type="button" class="btn" id="report-open-browser">Open in browser</button>
               <button type="button" class="btn" id="report-open-folder">Open folder</button>
               <button type="button" class="btn" id="report-new">Close</button>
             </div>

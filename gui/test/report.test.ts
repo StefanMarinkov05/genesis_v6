@@ -17,7 +17,7 @@ const banner = [
   '║  User             user@facenote.bg / User!234          ║',
   '╚════════════════════════════════════════════════════════╝',
   'Database: FaceNote_20260712',
-  'Start: cd out/FaceNote && dotnet run',
+  'Start: dotnet run --project "out/FaceNote"',
   '',
 ].join('\n');
 
@@ -25,7 +25,7 @@ test('parses url, credentials, db and start command', () => {
   const r = parseCompletionBanner(banner);
   assert.equal(r.url, 'http://localhost:5043');
   assert.equal(r.dbName, 'FaceNote_20260712');
-  assert.equal(r.startCommand, 'cd out/FaceNote && dotnet run');
+  assert.equal(r.startCommand, 'dotnet run --project "out/FaceNote"');
   assert.equal(r.credentials.length, 2);
   assert.deepEqual(r.credentials[0], {
     role: 'Admin',

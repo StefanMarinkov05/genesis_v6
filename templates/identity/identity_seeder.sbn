@@ -18,10 +18,8 @@ public static class IdentitySeeder
 
 {{~
 has_first_name = false
-has_pfp = false
 for ep in spec.identity.application_user.extra_properties
   if ep.name == "FirstName"; has_first_name = true; end
-  if ep.name == "ProfilePicturePath"; has_pfp = true; end
 end
 seed_first_names = ["Ана", "Георги", "Мария", "Иван", "Елена", "Петър", "Виктория", "Стефан"]
 ~}}
@@ -36,10 +34,9 @@ seed_first_names = ["Ана", "Георги", "Мария", "Иван", "Еле�
 {{~ if has_first_name ~}}
                 FirstName = "{{ seed_first_names[for.index % seed_first_names.size] }}",
 {{~ end ~}}
-{{~ if has_pfp ~}}
-                // Произволна снимка от Picsum (Lorem Picsum) - различна за всеки потребител.
-                ProfilePicturePath = $"https://picsum.photos/150/150?random={{ for.index }}",
-{{~ end ~}}
+{{~ # ProfilePicturePath deliberately left unset (null) - seeded users get the shipped generic
+    # avatar-default.svg fallback (ADR-011) instead of a live external URL, which used to be
+    # both a runtime dependency on picsum.photos AND broken at most render sites ("/" + url). ~}}
             };
             var result = await userManager.CreateAsync(u, "{{ user.password }}");
             if (!result.Succeeded)

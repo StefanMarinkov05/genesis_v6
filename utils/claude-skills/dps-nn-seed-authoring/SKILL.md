@@ -1,15 +1,36 @@
 ---
 name: dps-nn-seed-authoring
-description: Generate a seed-response.json for the dps-nn (ДПС-НН / Genesis) ASP.NET MVC generator, given a project-spec.json (or its .lock.json) - the realistic demo data that seeds a generated app's database. Use whenever Stefan pastes/attaches a dps-nn spec file and asks for seed data, mock data, demo data, or "generate the seed". Faithfully reproduces the pipeline's own automatic seed-generation prompt (SeedStage), so the output is byte-shape-identical to what the tool's built-in LLM call would produce - this lets seeding happen in any Claude chat instead of running the pipeline's own LLM exchange.
+description: Generate a seed-response.json for the dps-nn (ДПС-НН / Genesis) ASP.NET MVC generator, given a project-spec.json (or its .lock.json) - the realistic demo data that seeds a generated app's database. Use whenever Stefan pastes/attaches a dps-nn spec file and asks for seed data, mock data, demo data, or "generate the seed". ALWAYS ask about seed-user admin/non-admin count before generating - never assume a default. Faithfully reproduces the pipeline's own automatic seed-generation prompt (SeedStage), so the output is byte-shape-identical to what the tool's built-in LLM call would produce - this lets seeding happen in any Claude chat instead of running the pipeline's own LLM exchange.
 ---
 
 # dps-nn seed authoring
 
 Generates `seed-response.json` for a dps-nn/Genesis project, given its `project-spec.json` (or
-`.lock.json`). This is the manual-mode path of the pipeline's own ADR-005 file contract - normally
+`.lock.json`). This is the manual-mode path of the pipeline's own ADR-005 file contract — normally
 the tool writes `prompts/out/seed-request.md` (this exact prompt) and waits for
 `prompts/in/seed-response.json` to be filled by hand or by its own API call. This skill lets any
 Claude client fill that response directly from just the spec, no pipeline run required first.
+
+**Default mode stays terse** — unlike the sister skill (`dps-nn-spec-authoring`, which discusses
+design first), seed generation is mechanical once a few required questions are answered: ask what
+you must (below), then emit the JSON directly, no extended back-and-forth.
+
+## Before generating: always ask
+
+**Seed-user admin/non-admin count — ALWAYS ask, never assume a default.** Even if the spec's
+`identity.seedUsers.users` already lists a fixed count, confirm before generating rows that
+reference `$seedUser:N` — the person may want more/fewer seed users than the spec currently
+declares. Don't silently pick a number (not even the "1 admin + 1 non-admin" shown in the CLI's
+completion banner — that's a display convention, not a seeding default).
+
+**Language exceptions — ask ONLY if `identity.roles` names look Latin-script/English.** The
+default (see Rule 1 below) is Bulgarian for everything. The one specific thing worth double-
+checking: if the spec's role names themselves are Latin (e.g. `"Admin"`, `"User"` rather than a
+Cyrillic role name), ask whether role-related seed content should stay Latin-transliterated to
+match, or go fully Cyrillic. Don't ask about anything else — don't itemize every content category
+one by one; Bulgarian-by-default already covers names/titles/descriptions/cities/comments/etc.
+unless the person's own message already said "all Bulgarian" or similar, in which case skip even
+this one check.
 
 ## Input
 
@@ -33,7 +54,10 @@ with **at least** as many rows as that model's configured count. For each model:
   using its declared `type`.
 - **If the model has `images` configured**: add **`imageKeyword`** — 1-2 ENGLISH words suitable
   for a stock-photo search (e.g. `"red sports car"`). This is the one field that's intentionally
-  English even in a Bulgarian project — it's a search query, not UI text.
+  English even in a Bulgarian project — it's a search query, not UI text. **Always include it,
+  every row, never skip or leave a model image-less** — the real pipeline's download cache
+  (persistent across regenerates, keyed by provider+keyword) needs a real, specific keyword per
+  row to actually fetch something; an empty/generic keyword just wastes the download.
 - Every property flagged as a user-reference (name ends in `UserId`, or is otherwise clearly an
   owner/author field) must use one of the seed users' placeholder strings — see below. Never
   invent a user ID or GUID.
@@ -52,7 +76,8 @@ realistically across the available users — not everything owned by `$seedUser:
    default), ALL human-readable string values are in Bulgarian (Cyrillic): names, titles,
    descriptions, categories, cities, comments. Internationally-branded proper nouns (BMW, iPhone,
    Adidas) stay in their original script. If the project is explicitly English-language, write
-   everything in English instead.
+   everything in English instead. (See "Before generating: always ask" above for the one
+   role-name exception worth double-checking.)
 2. **Real-world plausibility**: real city names, realistic prices, real category names, believable
    dates. No placeholder text ("Test 1", "Lorem ipsum"), ever.
 3. **Variety**: no two rows share the same descriptive string.

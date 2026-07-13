@@ -207,6 +207,7 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
             var plural = Pluralize(name);
             var modelDisplayName = m?["displayName"]?.GetValue<string>();
             var modelIsLookup = m?["isLookup"]?.GetValue<bool>() ?? false;
+            var modelIsSpecification = m?["isSpecification"]?.GetValue<bool>() ?? false;
 
             var controllerEntry = new JsonObject
             {
@@ -216,11 +217,22 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
                 ["model"] = name,
                 ["displayName"] = modelDisplayName,
                 ["isLookup"] = modelIsLookup,
+                ["isSpecification"] = modelIsSpecification,
                 ["generatedBy"] = "scaffold",
             };
+            var removed = new JsonArray();
             // Orders originate only from client checkout - admin should not hand-create them.
-            if (name == "Order")
-                controllerEntry["removedActions"] = new JsonArray("Create");
+            if (name == "Order") removed.Add("Create");
+            // A single non-key/non-FK/non-computed property means Details would show nothing
+            // beyond what the list/table already does (same rule Brand/Category needed by hand -
+            // applied here generically so any future single-property model, hand-authored or
+            // auto-injected like the isLookup join models, never gets an orphaned dead page).
+            var nonKeyCount = m?["properties"]?.AsArray()
+                .Count(p => p?["key"]?.GetValue<bool>() != true
+                         && p?["foreignKey"]?.GetValue<bool>() != true
+                         && p?["computed"] is null) ?? 0;
+            if (nonKeyCount <= 1) removed.Add("Details");
+            if (removed.Count > 0) controllerEntry["removedActions"] = removed;
             controllers.Add(controllerEntry);
             pages?.Add(new JsonObject
             {

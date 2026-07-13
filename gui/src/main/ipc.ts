@@ -4,7 +4,7 @@ import { listSeeds, listSpecs, uploadSeed, uploadSpec } from './files';
 import { checkDuplicate } from './dedup';
 import { getSettings, setSettings } from './settings';
 import { getFooter } from './footer';
-import { GenesisRunner } from './genesis-runner';
+import { GenesisRunner, killGeneratedApp, runGeneratedApp } from './genesis-runner';
 
 // Registers the entire IPC surface named in docs/explanation/gui-architecture.md. The
 // preload exposes exactly these channels and nothing else — this is the whole attack
@@ -56,4 +56,6 @@ export function registerIpc(win: BrowserWindow): void {
   // ---- shell: open the generated app's URL / output folder in the OS ----
   ipcMain.handle(CH.openExternal, (_e, url: string) => shell.openExternal(url));
   ipcMain.handle(CH.openPath, (_e, path: string) => shell.openPath(path));
+  ipcMain.handle(CH.runApp, (_e, projectDir: string) => runGeneratedApp(projectDir));
+  ipcMain.handle(CH.killApp, (_e, projectDir: string) => killGeneratedApp(projectDir));
 }

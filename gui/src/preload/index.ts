@@ -43,6 +43,8 @@ const api: GuiApi = {
 
   openExternal: (url) => ipcRenderer.invoke(CH.openExternal, url),
   openPath: (path) => ipcRenderer.invoke(CH.openPath, path),
+  runApp: (projectDir) => ipcRenderer.invoke(CH.runApp, projectDir),
+  killApp: (projectDir) => ipcRenderer.invoke(CH.killApp, projectDir),
 
   onProgress: (cb) => subscribe<ProgressEvent>(CH.onProgress, cb),
   onLog: (cb) => subscribe<string>(CH.onLog, cb),

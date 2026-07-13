@@ -128,9 +128,27 @@ public sealed class ScaffoldStage : IStage
                 launchSettings.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }), ct);
         }
 
+        CopyStaticAssets(ctx);
+
         (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, timeout: TimeSpan.FromMinutes(5)))
             .ThrowIfFailed("initial dotnet build");
         ctx.Info("scaffold complete, connection string set, initial build green");
+    }
+
+    // Ships the generic image fallbacks (ADR-011): avatar-default.svg / product-default.svg,
+    // authored once in the repo's images/ drop folder, copied into every generated project's
+    // wwwroot/images/ so the fallback <img> sources the views already reference actually
+    // resolve instead of 404ing. Overwrite-safe (File.Copy overwrite:true) so a re-run after
+    // an asset update always picks up the latest version.
+    private static void CopyStaticAssets(StageContext ctx)
+    {
+        var srcDir = Path.Combine(ctx.GenesisRoot, "images");
+        if (!Directory.Exists(srcDir)) return;
+        var destDir = Path.Combine(ctx.ProjectDir, "wwwroot", "images");
+        Directory.CreateDirectory(destDir);
+        foreach (var svg in Directory.EnumerateFiles(srcDir, "*.svg"))
+            File.Copy(svg, Path.Combine(destDir, Path.GetFileName(svg)), overwrite: true);
+        ctx.Info("copied static image fallbacks to wwwroot/images/");
     }
 
     // Deterministic hash of the spec parts that drive the DB schema and seed shape.

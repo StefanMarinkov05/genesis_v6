@@ -99,6 +99,16 @@ both implement.
 launches the generated app's URL in the OS browser; `shell:openPath(dir)` opens an output
 folder. Both run in main — the renderer never touches `shell` directly.
 
+**Run app** (`shell:runApp(dir)`): spawns `dotnet run --project <dir>` as argv, `shell: false`
+— never a shell command string, so it can't hit the PowerShell-5.1 `&&`-parses-as-invalid
+class of bug the CLI's own completion banner used to (changelog 083). Detached + unref'd so
+the dev server outlives the GUI.
+
+**Kill app** (`shell:killApp(dir)`): kills the process most recently launched by `shell:runApp`
+for that project dir (tracked in a small main-process side-map keyed by dir, since `runApp`
+detaches/unrefs it and it isn't part of the tracked pipeline `RunState`). Distinct from
+`build:stop`, which cancels the CLI pipeline itself, not the generated app.
+
 ## Run-control state machine
 
 ```mermaid

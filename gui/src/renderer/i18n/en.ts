@@ -4,7 +4,7 @@
 export const en = {
   title: 'DPS-NN — Genesis',
   win: { minimize: 'Minimize', maximize: 'Maximize', close: 'Close' },
-  toolbar: { debug: 'Debug', settings: 'Settings' },
+  toolbar: { debug: 'Debug', settings: 'Settings', reopen: 'Last result' },
   spec: { heading: 'Specification', upload: 'Upload spec…', pick: 'Select a spec…', none: 'No spec selected' },
   seed: {
     heading: 'Seed',
@@ -41,6 +41,8 @@ export const en = {
     password: 'Password',
     db: 'Database',
     start: 'Start',
+    runApp: 'Run app',
+    killApp: 'Kill app',
     openBrowser: 'Open in browser',
     openFolder: 'Open folder',
     close: 'Close',

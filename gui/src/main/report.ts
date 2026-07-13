@@ -19,7 +19,7 @@ import type { BuildReport } from '@shared/ipc-types';
  *   ║  {Role}          {email} / {pwd}  ║   (one per seeded user)
  *   ╚══════════════════════════════════╝
  *   Database: {dbName}
- *   Start: cd {path} && dotnet run
+ *   Start: dotnet run --project "{path}"
  */
 export function parseCompletionBanner(stdout: string, projectDir?: string): BuildReport {
   const lines = stdout.split(/\r?\n/);

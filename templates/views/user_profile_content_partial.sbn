@@ -42,7 +42,7 @@ end
             {
                 <li class="list-group-item d-flex align-items-center gap-2">
 {{~ if has_pfp ~}}
-                    <img src="@(string.IsNullOrEmpty(u.ProfilePicturePath) ? "/images/avatar-default.png" : "/" + u.ProfilePicturePath)"
+                    <img src="@(string.IsNullOrEmpty(u.ProfilePicturePath) ? "/images/avatar-default.svg" : "/" + u.ProfilePicturePath)"
                          class="rounded-circle" style="width:32px;height:32px;object-fit:cover;" alt="аватар" />
 {{~ end ~}}
                     @if (adminLinks)
@@ -61,7 +61,7 @@ end
             {
                 <li class="list-group-item d-flex align-items-center gap-2">
 {{~ if has_pfp ~}}
-                    <img src="@(string.IsNullOrEmpty(u.ProfilePicturePath) ? "/images/avatar-default.png" : "/" + u.ProfilePicturePath)"
+                    <img src="@(string.IsNullOrEmpty(u.ProfilePicturePath) ? "/images/avatar-default.svg" : "/" + u.ProfilePicturePath)"
                          class="rounded-circle" style="width:32px;height:32px;object-fit:cover;" alt="аватар" />
 {{~ end ~}}
                     @if (adminLinks)

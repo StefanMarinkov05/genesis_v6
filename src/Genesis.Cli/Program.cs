@@ -424,6 +424,19 @@ static void PrintCompletionBanner(StageContext ctx)
     }
 
     var users = ctx.Spec.Identity?.SeedUsers?.Users ?? [];
+    var adminRoleNames = (ctx.Spec.Identity?.Roles ?? []).Where(r => r.IsAdmin).Select(r => r.Name).ToHashSet();
+
+    // Every seed user's full credentials are recorded to a file (Stefan can always look them up);
+    // the console banner and GUI only ever surface ONE admin + ONE non-admin, not all N seed users,
+    // to keep the readout short and avoid splashing every password on screen.
+    var credsPath = Path.Combine(Directory.GetCurrentDirectory(), "logs", ctx.Spec.Meta.ProjectName, "seed-credentials.txt");
+    Directory.CreateDirectory(Path.GetDirectoryName(credsPath)!);
+    File.WriteAllLines(credsPath, users.Select(u => $"{u.Role,-16} {u.Email} / {u.Password}"));
+
+    var admin = users.FirstOrDefault(u => adminRoleNames.Contains(u.Role));
+    var nonAdmin = users.FirstOrDefault(u => !adminRoleNames.Contains(u.Role));
+    var shown = new[] { admin, nonAdmin }.Where(u => u is not null).Cast<SeedUserSpec>().ToList();
+
     Console.WriteLine();
     Console.WriteLine("╔════════════════════════════════════════════════════════╗");
     Console.WriteLine($"║  {ctx.Spec.Meta.ProjectName,-52} ║");
@@ -432,15 +445,20 @@ static void PrintCompletionBanner(StageContext ctx)
     else
         Console.WriteLine($"║  (Configure launchSettings.json for application URL)  ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════╣");
-    foreach (var u in users)
+    foreach (var u in shown)
     {
         var credential = $"{u.Email} / {u.Password}";
         Console.WriteLine($"║  {u.Role,-16} {credential,-35} ║");
     }
     Console.WriteLine("╚════════════════════════════════════════════════════════╝");
+    if (users.Count > shown.Count)
+        Console.WriteLine($"({users.Count - shown.Count} more seed user(s) — full list: {credsPath})");
     if (dbName is not null)
         Console.WriteLine($"Database: {dbName}");
-    Console.WriteLine($"Start: cd {Path.Combine(ctx.WorkDir, ctx.Spec.Meta.ProjectName)} && dotnet run");
+    // `dotnet run --project "<dir>"` avoids `cd <dir> && dotnet run`: the `&&` chain operator
+    // does NOT exist in Windows PowerShell 5.1 (added in PS 7) and hard-fails at parse time.
+    // This single form works identically in PS 5.1, PS 7, and cmd.exe. See changelog 083.
+    Console.WriteLine($"Start: dotnet run --project \"{ctx.ProjectDir}\"");
     Console.WriteLine();
 }
 

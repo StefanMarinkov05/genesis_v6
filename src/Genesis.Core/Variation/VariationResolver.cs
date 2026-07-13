@@ -24,7 +24,7 @@ public sealed class VariationResolver
     {
         ["collectionInit"] = ["targetTyped", "explicitGeneric", "collectionExpression"],
         ["adminRoleName"] = ["Administrator", "Admin", "Owner"],
-        ["userRoleName"] = ["Potrebitel", "User", "Client"],
+        ["userRoleName"] = ["Потребител", "User", "Client"],
         ["seedPasswordPattern"] = ["Word+Year+Symbol", "Symbol+Word+Digits", "CamelWords+Digit"],
         ["namespaceStyle"] = ["fileScoped", "blockScoped"],
         ["diRegistrationStyle"] = ["chained", "separateStatements"],

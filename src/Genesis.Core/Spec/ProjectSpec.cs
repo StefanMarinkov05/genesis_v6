@@ -118,7 +118,8 @@ public sealed class ModelSpec
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("file")] public string File { get; set; } = "";
     [JsonPropertyName("displayName")] public string? DisplayName { get; set; } // Bulgarian plural noun, used for nav/admin-dropdown labels
-    [JsonPropertyName("isLookup")] public bool IsLookup { get; set; } // small join/lookup model: no own admin nav entry, shown on the combined Характеристики page instead
+    [JsonPropertyName("isLookup")] public bool IsLookup { get; set; } // small join/lookup model: no own admin nav entry, shown on the combined Спецификации page instead (read-only tab)
+    [JsonPropertyName("isSpecification")] public bool IsSpecification { get; set; } // atomic no-FK reference model (Brand, Category): no own admin nav entry, CRUD tab on Спецификации instead
     [JsonPropertyName("softDelete")] public bool SoftDelete { get; set; }
     [JsonPropertyName("properties")] public List<PropertySpec> Properties { get; set; } = [];
     [JsonPropertyName("relations")] public List<RelationSpec> Relations { get; set; } = [];
@@ -265,7 +266,8 @@ public sealed class ControllerSpec
     [JsonPropertyName("model")] public string? Model { get; set; }
     [JsonPropertyName("dto")] public string? Dto { get; set; }
     [JsonPropertyName("displayName")] public string? DisplayName { get; set; } // Bulgarian nav label; falls back to the raw model/controller name
-    [JsonPropertyName("isLookup")] public bool IsLookup { get; set; } // small join/lookup model: no own admin nav entry, shown on the combined Характеристики page instead
+    [JsonPropertyName("isLookup")] public bool IsLookup { get; set; } // small join/lookup model: no own admin nav entry, shown on the combined Спецификации page instead (read-only tab)
+    [JsonPropertyName("isSpecification")] public bool IsSpecification { get; set; } // atomic no-FK reference model (Brand, Category): no own admin nav entry, CRUD tab on Спецификации instead
     [JsonPropertyName("generatedBy")] public string GeneratedBy { get; set; } = "template"; // scaffold | template | writtenFromScratch
     [JsonPropertyName("actions")] public List<string> Actions { get; set; } = [];
     [JsonPropertyName("removedActions")] public List<string> RemovedActions { get; set; } = [];

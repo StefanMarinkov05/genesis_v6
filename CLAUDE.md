@@ -19,7 +19,7 @@ decision and bug fix so far. Do not re-propose a fix already tried and recorded 
 |---|---|
 | Orienting for the first time | `README.md` → `docs/01-tutorial-genesis.md` for the full walkthrough |
 | Working on pipeline order / stages | `docs/reference/control-flow.md` (Mermaid diagram + stage table + verify-gate ordering) |
-| Asking *why* it is built this way | `docs/explanation/architecture-decisions.md` (synthesis, links each of the 11 `docs/adr/adr-*.md`) |
+| Asking *why* it is built this way | `docs/explanation/architecture-decisions.md` (synthesis, links each of the 13 `docs/adr/adr-*.md`) |
 | Touching `project-spec.json` shape | `spec.schema.json` (authoritative) + `docs/reference/spec-format.md` (concepts) |
 | Looking for the current priority / work queue | `plan/v6-task-breakdown.md` |
 | Tracking a specific bug/decision's history | `plan/decisions.md` |
@@ -31,6 +31,8 @@ decision and bug fix so far. Do not re-propose a fix already tried and recorded 
 | Restructuring the docs (Task A) | `plan/task-a-doc-architecture.md` (target tree + per-doc contract; `docs/reference/`, `docs/how-to/` are stubs until filled) |
 | Building the GUI (Electron shell over the CLI) | `docs/explanation/gui-architecture.md` (+ ADR-010) |
 | Styling/theming the GUI (tokens, the 5 themes) | `design/design-specs.md` |
+| Reworking image handling (cache, fallbacks, PFP) | `docs/explanation/image-pipeline.md` (+ ADR-011) |
+| Consolidating small admin models / adding filters | `docs/explanation/specifications-consolidation.md` (+ ADR-012) |
 
 ## Critical rules (DO NOT)
 
@@ -76,7 +78,7 @@ ordering: `docs/reference/control-flow.md`. Stage implementations live in `src/G
 - `changelogs/` — one file per change, see `changelogs/README.md` for the convention
 - `plan/` — `state.md` (session log), `decisions.md` (bug/decision history), `v6-task-breakdown.md`
   (current priority), `dps-nn-6.5.0-spec.md` (modularization + GUI plan, not yet started)
-- `docs/` — `architecture.md`, `adr/` (11 ADRs), `explanation/gui-architecture.md`
+- `docs/` — `architecture.md`, `adr/` (13 ADRs), `explanation/gui-architecture.md`
 - `logs/` — `registry.json` + per-project `actions.log.jsonl`, tracks every generation run
 - `prompts/out/schemas/` + `prompts/out/seeds/` — permanent archive of every completed
   generation's spec+seed (gitignored, local-only)

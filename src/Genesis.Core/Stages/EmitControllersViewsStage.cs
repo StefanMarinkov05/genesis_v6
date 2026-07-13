@@ -128,12 +128,16 @@ public sealed class EmitControllersViewsStage : IStage
                 Emit("Areas/Admin/Views/Users/Details.cshtml", () => engine.RenderFile(ctx.Template("views/users_details.sbn")));
         }
 
-        // Item 6/7: consolidated read-only page for small lookup/join models (isLookup: true) -
-        // one nav entry instead of cluttering the admin dropdown with every join table.
-        if (spec.Models.Any(m => m.IsLookup))
+        // A5: "Спецификации" - the evolved/renamed Характеристики (item 6/7). One consolidated
+        // page: full-CRUD tabs for atomic reference models (isSpecification, e.g. Brand/Category -
+        // reuses their scaffolded sub-controllers, no scaffolded-controller surgery), read-only
+        // tabs for join/lookup models (isLookup, as Характеристики always did), and a read-only
+        // Feedbacks tab (Review) when rating is enabled - each read-only/feedback tab carries a
+        // generic auto-derived filter bar (FK relation / user / rating selects).
+        if (spec.Models.Any(m => m.IsLookup || m.IsSpecification) || FeatureEnabled(spec, "rating"))
         {
-            Emit("Areas/Admin/Controllers/CharacteristicsController.cs", () => engine.RenderFile(ctx.Template("controllers/characteristics_controller.sbn")));
-            Emit("Areas/Admin/Views/Characteristics/Index.cshtml", () => engine.RenderFile(ctx.Template("views/characteristics_index.sbn")));
+            Emit("Areas/Admin/Controllers/SpecificationsController.cs", () => engine.RenderFile(ctx.Template("controllers/specifications_controller.sbn")));
+            Emit("Areas/Admin/Views/Specifications/Index.cshtml", () => engine.RenderFile(ctx.Template("views/specifications_index.sbn")));
         }
 
         // Feature controller/view pairs - each enabled feature emits its full stack.

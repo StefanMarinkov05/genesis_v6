@@ -281,16 +281,37 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
             .AdditionalProperties(false).Build();
     }
 
+    // Persistent cross-run image cache (ADR-011): lives OUTSIDE out/, which since changelog 019
+    // is a fresh out/run_<timestamp>/ folder per run - a cache keyed under ctx.ProjectDir would
+    // never survive a regenerate. Keyed by provider+keyword since Picsum/Pexels/Pixabay results
+    // for the same keyword can differ; local-pack hits are cached too (cheap, and consistent
+    // with "download once" even though a local copy is already fast).
     private async Task DownloadImageAsync(string keyword, string targetPath, StageContext ctx, CancellationToken ct)
     {
-        if (File.Exists(targetPath)) return; // idempotent re-run + cross-run cache
+        if (File.Exists(targetPath)) return; // idempotent within a single run
+
+        var cacheDir = Path.Combine(ctx.GenesisRoot, ".image-cache");
+        Directory.CreateDirectory(cacheDir);
+        var cacheKey = $"{(imagePackDir is not null ? "pack" : imageProvider)}-{SlugifyKeyword(keyword)}.jpg";
+        var cachePath = Path.Combine(cacheDir, cacheKey);
+
+        if (File.Exists(cachePath))
+        {
+            File.Copy(cachePath, targetPath);
+            return;
+        }
 
         // Local pack override wins over any network provider.
         if (imagePackDir is not null)
         {
             var candidate = Directory.EnumerateFiles(imagePackDir, $"{keyword}*.*").FirstOrDefault()
                             ?? Directory.EnumerateFiles(imagePackDir).FirstOrDefault();
-            if (candidate is not null) { File.Copy(candidate, targetPath); return; }
+            if (candidate is not null)
+            {
+                File.Copy(candidate, cachePath);
+                File.Copy(cachePath, targetPath);
+                return;
+            }
         }
 
         using var http = new HttpClient();
@@ -318,18 +339,19 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
             imageUrl ??= $"https://picsum.photos/seed/{Uri.EscapeDataString(keyword)}/800/600";
 
             var bytes = await http.GetByteArrayAsync(imageUrl, ct);
-            await File.WriteAllBytesAsync(targetPath, bytes, ct);
+            await File.WriteAllBytesAsync(cachePath, bytes, ct);
+            File.Copy(cachePath, targetPath);
         }
         catch (HttpRequestException ex)
         {
-            ctx.Info($"WARNING: image download for '{keyword}' failed ({ex.Message}) - writing 1x1 placeholder");
-            await File.WriteAllBytesAsync(targetPath, PlaceholderJpeg, ct);
+            // Leave targetPath absent on failure - the render layer falls back to
+            // product-default.svg (ADR-011) rather than a hardcoded 1x1 placeholder.
+            ctx.Info($"WARNING: image download for '{keyword}' failed ({ex.Message}) - no image written, falling back to the shipped default at render time");
         }
     }
 
-    // Minimal valid 1x1 grey JPEG so builds/pages never break on a missing file.
-    private static readonly byte[] PlaceholderJpeg = Convert.FromBase64String(
-        "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2Q==");
+    private static string SlugifyKeyword(string keyword) =>
+        new string(keyword.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
 
     /// <summary>
     /// Runs a `dotnet ef ...` command; if it fails with the exact "deps.json does not exist"

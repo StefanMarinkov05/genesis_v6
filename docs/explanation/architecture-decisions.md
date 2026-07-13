@@ -105,6 +105,28 @@ drives stages one-by-one or reimplements stage behavior in Node.
 → **[ADR-010](../adr/adr-010-gui-electron-cli-child.md)** (full design:
 `docs/explanation/gui-architecture.md`)
 
+## Why images are cached persistently and served locally, never as URLs
+
+The generated apps used a per-run "cache" that never survived a regenerate, seeded profile
+pictures as raw `picsum.photos` URLs (broken at 4 of 5 render sites), and referenced a fallback
+image that was never emitted. The redesign moves the download cache to a repo-root
+`.image-cache/` outside `out/`, ships generic SVG fallbacks copied into each `wwwroot/`, and makes
+every `ProfilePicturePath` a local relative path — so no rendered page depends on an external
+image host and the five avatar-render sites collapse to one code path.
+→ **[ADR-011](../adr/adr-011-image-pipeline-cache-and-fallbacks.md)** (full design:
+`docs/explanation/image-pipeline.md`)
+
+## Why small models consolidate onto one "Спецификации" page, and filters are auto-derived
+
+Two inconsistent handlings of small models (read-only `isLookup` join tables vs. full-CRUD
+atomic reference models with their own nav clutter) unify onto a single tabbed admin page whose
+tabs are read-only or CRUD by a declared flavour (`isLookup` vs. the new `isSpecification`), with
+CRUD reusing the scaffolded controllers as hidden sub-controllers. Filtering is one generic
+auto-derived convention (FK→select, user→select, enum→select, rating→select) applied across every
+admin listing rather than bespoke per page — the rename from "Характеристики" happens last.
+→ **[ADR-012](../adr/adr-012-specifications-consolidation-and-filters.md)** (full design:
+`docs/explanation/specifications-consolidation.md`)
+
 ## Reading further
 
 For the pipeline's mechanics (not the why) see `docs/reference/control-flow.md`. For hard-won

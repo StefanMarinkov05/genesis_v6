@@ -43,9 +43,7 @@ end
         }
         else
         {
-            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 380px;">
-                <span class="text-muted">Няма снимки</span>
-            </div>
+            <img src="/images/product-default.svg" class="d-block w-100 rounded shadow-sm" style="height: 380px; object-fit: cover;" alt="няма снимка" />
         }
     </div>
     <div class="col-md-6">

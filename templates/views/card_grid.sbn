@@ -54,6 +54,10 @@
                 {
                     <img src="/@item.Images[0].RelativePath" class="card-img-top" alt="изображение" style="height: 200px; object-fit: cover;" />
                 }
+                else
+                {
+                    <img src="/images/product-default.svg" class="card-img-top" alt="няма снимка" style="height: 200px; object-fit: cover;" />
+                }
                 <div class="card-body">
 {{~
 # page.card mixes real model properties (Title, Price...) with UI pseudo-fields

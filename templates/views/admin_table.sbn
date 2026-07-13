@@ -52,7 +52,13 @@ sorting_on = owner && owner.sorting && owner.sorting.enabled
 {{~ end ~}}
 {{~ for rel in model.relations ~}}
 {{~ if rel.kind == "manyToOne" ~}}
-            <th>{{ rel.navigation }}</th>
+{{~
+rel_header = rel.navigation
+for tm in spec.models
+  if tm.name == rel.target && tm.display_name; rel_header = tm.display_name; end
+end
+~}}
+            <th>{{ rel_header }}</th>
 {{~ end ~}}
 {{~ end ~}}
             <th></th>
@@ -69,11 +75,11 @@ sorting_on = owner && owner.sorting && owner.sorting.enabled
                 <td>
                     @if (!string.IsNullOrEmpty(item.{{ p.name }}))
                     {
-                        <img src="/@item.{{ p.name }}" alt="Image" style="max-width: 100px; max-height: 100px; object-fit: cover;" />
+                        <img src="/@item.{{ p.name }}" alt="изображение" style="max-width: 100px; max-height: 100px; object-fit: cover;" />
                     }
                     else
                     {
-                        <span class="text-muted">—</span>
+                        <img src="/images/product-default.svg" alt="няма снимка" style="max-width: 100px; max-height: 100px; object-fit: cover;" />
                     }
                 </td>
 {{~ else ~}}
@@ -93,15 +99,24 @@ for tm in spec.models
 end
 # Реалният контролер за целевия модел в Admin (не гадаем множествено число).
 target_controller = null
+target_controller_spec = null
 for tc in spec.controllers
-  if tc.area == "Admin" && tc.model == rel.target; target_controller = tc.name | string.replace "Controller" ""; end
+  if tc.area == "Admin" && tc.model == rel.target; target_controller = tc.name | string.replace "Controller" ""; target_controller_spec = tc; end
 end
+# Details може да е премахнат (напр. модел с едно свойство - виж admin supervisor правилото) -
+# линкваме към Edit вместо това, вместо да сочим към несъществуващ маршрут (мъртва връзка).
+target_details_removed = false
+if target_controller_spec
+  for ra in target_controller_spec.removed_actions; if ra == "Details"; target_details_removed = true; end; end
+end
+target_action = "Details"
+if target_details_removed; target_action = "Edit"; end
 ~}}
                 <td>
 {{~ if target_controller ~}}
                     @if (item.{{ rel.navigation }} != null)
                     {
-                        <a asp-area="Admin" asp-controller="{{ target_controller }}" asp-action="Details" asp-route-id="@item.{{ rel.navigation }}.Id">@item.{{ rel.navigation }}.{{ target_display }}</a>
+                        <a asp-area="Admin" asp-controller="{{ target_controller }}" asp-action="{{ target_action }}" asp-route-id="@item.{{ rel.navigation }}.Id">@item.{{ rel.navigation }}.{{ target_display }}</a>
                     }
 {{~ else ~}}
                     @item.{{ rel.navigation }}?.{{ target_display }}

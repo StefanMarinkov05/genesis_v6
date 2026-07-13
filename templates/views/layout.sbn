@@ -101,15 +101,16 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Администрация</a>
                             <ul class="dropdown-menu">
-{{~ any_lookup = false ~}}
-{{~ for c in spec.controllers; if c.area == "Admin" && !c.is_lookup ~}}
+{{~ any_specifications = false ~}}
+{{~ for c in spec.controllers; if c.area == "Admin" && !c.is_lookup && !c.is_specification && c.name != "SpecificationsController" ~}}
 {{~ short = c.name | string.replace "Controller" "" ~}}
 {{~ if c.display_name; label = c.display_name; else; label = short; end ~}}
                                 <li><a class="dropdown-item" asp-area="Admin" asp-controller="{{ short }}" asp-action="Index">{{ label }}</a></li>
 {{~ end; end ~}}
-{{~ for c in spec.controllers; if c.area == "Admin" && c.is_lookup; any_lookup = true; end; end ~}}
-{{~ if any_lookup ~}}
-                                <li><a class="dropdown-item" asp-area="Admin" asp-controller="Characteristics" asp-action="Index">Характеристики</a></li>
+{{~ for c in spec.controllers; if c.area == "Admin" && (c.is_lookup || c.is_specification); any_specifications = true; end; end ~}}
+{{~ if !any_specifications && features.rating; any_specifications = true; end ~}}
+{{~ if any_specifications ~}}
+                                <li><a class="dropdown-item" asp-area="Admin" asp-controller="Specifications" asp-action="Index">Спецификации</a></li>
 {{~ end ~}}
 {{~ if spec.identity.application_user.controller ~}}
                                 <li><a class="dropdown-item" asp-area="Admin" asp-controller="Users" asp-action="Index">Потребители</a></li>
@@ -134,7 +135,7 @@ f_posts = false; f_orders = false; f_follows = false; f_rating = false; f_catalo
 {{~ if has_pfp ~}}
                         <li class="nav-item">
                             <a class="nav-link" asp-area="Identity" asp-page="/Account/Manage/Index" title="Профил">
-                                <img src="@(string.IsNullOrEmpty(navUser?.ProfilePicturePath) ? "/images/avatar-default.png" : "/" + navUser!.ProfilePicturePath)"
+                                <img src="@(string.IsNullOrEmpty(navUser?.ProfilePicturePath) ? "/images/avatar-default.svg" : "/" + navUser!.ProfilePicturePath)"
                                      alt="профил" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;" />
                             </a>
                         </li>

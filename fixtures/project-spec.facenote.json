@@ -68,7 +68,8 @@
           "seedHint": "реални марки, разпознаваеми в България"
         }
       ],
-      "displayName": "Марки"
+      "displayName": "Марки",
+      "isSpecification": true
     },
     {
       "name": "Category",
@@ -92,7 +93,8 @@
           "seedHint": "типични категории продукти на български"
         }
       ],
-      "displayName": "Категории"
+      "displayName": "Категории",
+      "isSpecification": true
     },
     {
       "name": "Product",
@@ -391,7 +393,14 @@
       "area": "Admin",
       "model": "Brand",
       "generatedBy": "scaffold",
-      "displayName": "Марки"
+      "displayName": "Марки",
+      "isSpecification": true,
+      "removedActions": ["Details"],
+      "redirects": [
+        { "after": "Create", "to": "SpecificationsController.Index" },
+        { "after": "Edit", "to": "SpecificationsController.Index" },
+        { "after": "DeleteConfirmed", "to": "SpecificationsController.Index" }
+      ]
     },
     {
       "name": "CategoriesController",
@@ -399,7 +408,21 @@
       "area": "Admin",
       "model": "Category",
       "generatedBy": "scaffold",
-      "displayName": "Категории"
+      "displayName": "Категории",
+      "isSpecification": true,
+      "removedActions": ["Details"],
+      "redirects": [
+        { "after": "Create", "to": "SpecificationsController.Index" },
+        { "after": "Edit", "to": "SpecificationsController.Index" },
+        { "after": "DeleteConfirmed", "to": "SpecificationsController.Index" }
+      ]
+    },
+    {
+      "name": "SpecificationsController",
+      "file": "Areas/Admin/Controllers/SpecificationsController.cs",
+      "area": "Admin",
+      "generatedBy": "writtenFromScratch",
+      "displayName": "Спецификации"
     }
   ],
   "views": {

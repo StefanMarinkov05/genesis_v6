@@ -168,6 +168,8 @@ async function doStart(): Promise<void> {
   const specPart = `${selectedSpec.name} (${formatBytes(selectedSpec.size)})`;
   const seedPart = selectedSeed ? ` · ${selectedSeed.name} (${formatBytes(selectedSeed.size)})` : '';
   toast('info', t.toast.started, specPart + seedPart);
+  // A fresh run makes the previous result stale - hide the reopen control until this run finishes.
+  ($('toolbar-reopen') as HTMLButtonElement).disabled = true;
 }
 
 async function doStop(): Promise<void> {
@@ -192,11 +194,16 @@ function closeDuplicateDialog(): void {
 
 // ---- report / error screens -------------------------------------------------
 let lastReport: BuildReport | null = null;
+// Tracks whether "Run app" was clicked for the CURRENT lastReport, so reopening the popup
+// (the "Last result" toolbar control) restores the correct Kill-app enabled state instead of
+// always resetting it - otherwise reopening after Run app would silently strand a live process
+// with no GUI-side way to kill it short of re-clicking Run app and spawning a second instance.
+let appLaunchedForLastReport = false;
 
-function copyField(value: string): string {
+function copyField(value: string, displayText?: string): string {
   const safe = value.replace(/"/g, '&quot;');
   return (
-    `<div class="copyfield"><code>${escapeHtml(value)}</code>` +
+    `<div class="copyfield"><code>${escapeHtml(displayText ?? value)}</code>` +
     `<button type="button" data-copy="${safe}">${t.report.copy}</button></div>`
   );
 }
@@ -205,6 +212,8 @@ function escapeHtml(s: string): string {
 }
 
 function showReport(report: BuildReport): void {
+  const isNewReport = report !== lastReport;
+  if (isNewReport) appLaunchedForLastReport = false;
   lastReport = report;
   const dl = $('report-dl');
   const rows: string[] = [];
@@ -216,7 +225,10 @@ function showReport(report: BuildReport): void {
     rows.push(`<dt>${escapeHtml(c.role)} — ${t.report.password}</dt><dd>${copyField(c.password)}</dd>`);
   }
   if (report.dbName) rows.push(`<dt>${t.report.db}</dt><dd>${copyField(report.dbName)}</dd>`);
-  if (report.startCommand) rows.push(`<dt>${t.report.start}</dt><dd>${copyField(report.startCommand)}</dd>`);
+  // The real Start command (a full quoted path) is what gets copied, but displaying the whole
+  // thing makes the box overflow — show a short literal instead, copy still carries the real value.
+  if (report.startCommand)
+    rows.push(`<dt>${t.report.start}</dt><dd>${copyField(report.startCommand, 'dotnet run')}</dd>`);
   dl.innerHTML = rows.join('');
   dl.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -226,11 +238,17 @@ function showReport(report: BuildReport): void {
     }),
   );
   ($('report-open-browser') as HTMLButtonElement).disabled = !report.url;
+  ($('report-run-app') as HTMLButtonElement).disabled = !report.outDir;
+  ($('report-kill-app') as HTMLButtonElement).disabled = !appLaunchedForLastReport;
   $('report-title-text').textContent = t.report.title;
   $('report-screen').setAttribute('data-open', 'true');
+  ($('toolbar-reopen') as HTMLButtonElement).disabled = false;
 }
 
+let lastError: { stage: string | null; message: string } | null = null;
+
 function showError(stage: string | null, message: string): void {
+  lastError = { stage, message };
   $('error-title-text').textContent = t.error.title(stage ?? '—');
   $('error-stage').textContent = stage ?? '—';
   $('error-cause').textContent = message;
@@ -240,11 +258,19 @@ function showError(stage: string | null, message: string): void {
     ($('debug-toggle') as HTMLInputElement).checked = true;
     toggleDebug(true);
   }
+  ($('toolbar-reopen') as HTMLButtonElement).disabled = false;
 }
 
 function closeResultScreens(): void {
   $('report-screen').setAttribute('data-open', 'false');
   $('error-screen').setAttribute('data-open', 'false');
+}
+
+// Re-shows whichever result screen (done or error) was last produced, without re-running
+// anything - lets Stefan get back to the credential copy buttons after closing the popup.
+function reopenLastResult(): void {
+  if (lastReport) showReport(lastReport);
+  else if (lastError) showError(lastError.stage, lastError.message);
 }
 
 // ---- settings ---------------------------------------------------------------
@@ -286,6 +312,7 @@ function applyStrings(): void {
   $('title-text').textContent = t.title;
   $('debug-label').textContent = t.toolbar.debug;
   $('settings-label').textContent = t.toolbar.settings;
+  $('toolbar-reopen').textContent = t.toolbar.reopen;
   $('spec-heading').textContent = t.spec.heading;
   $('seed-heading').textContent = t.seed.heading;
   $('spec-well').textContent = t.spec.none;
@@ -311,6 +338,8 @@ function applyStrings(): void {
   $('dup-open').textContent = t.dup.open;
   $('dup-regen').textContent = t.dup.regen;
   $('dup-cancel').textContent = t.dup.cancel;
+  $('report-run-app').textContent = t.report.runApp;
+  $('report-kill-app').textContent = t.report.killApp;
   $('report-open-browser').textContent = t.report.openBrowser;
   $('report-open-folder').textContent = t.report.openFolder;
   $('report-new').textContent = t.report.close;
@@ -396,6 +425,22 @@ function wire(): void {
   $('dup-close').addEventListener('click', closeDuplicateDialog);
 
   // report/error actions
+  $('report-run-app').addEventListener('click', () => {
+    if (!lastReport?.outDir) return;
+    gui
+      .runApp(lastReport.outDir)
+      .then(() => {
+        appLaunchedForLastReport = true;
+        ($('report-kill-app') as HTMLButtonElement).disabled = false;
+      })
+      .catch((e: Error) => toast('danger', 'Could not start the app', e.message));
+  });
+  $('report-kill-app').addEventListener('click', () => {
+    if (!lastReport?.outDir) return;
+    void gui.killApp(lastReport.outDir);
+    appLaunchedForLastReport = false;
+    ($('report-kill-app') as HTMLButtonElement).disabled = true;
+  });
   $('report-open-browser').addEventListener('click', () => {
     if (lastReport?.url) void gui.openExternal(lastReport.url);
   });
@@ -410,6 +455,7 @@ function wire(): void {
   $('report-close').addEventListener('click', closeAndReset);
   $('error-new').addEventListener('click', closeAndReset);
   $('error-close').addEventListener('click', closeAndReset);
+  $('toolbar-reopen').addEventListener('click', reopenLastResult);
 
   // settings
   $('settings-open').addEventListener('click', () => void openSettings());

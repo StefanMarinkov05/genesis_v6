@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type {
@@ -343,4 +343,75 @@ function countBaselineDone(projectDir: string): number {
 function summaryPathIfExists(projectDir: string): string | null {
   const p = join(projectDir, 'wwwroot', 'output', 'project-summary.json');
   return existsSync(p) ? p : null;
+}
+
+/**
+ * Launch the generated app: `dotnet run --project <dir>`, spawned as argv (shell: false) —
+ * never a shell command string. See changelog 083: the CLI's own banner text used to read
+ * `cd {dir} && dotnet run`, which hard-fails to parse in Windows PowerShell 5.1 (`&&` is a
+ * PS7-only operator). Spawning argv directly sidesteps that whole class of bug regardless of
+ * the user's shell. Detached + unref'd so the dev server outlives the GUI if the GUI closes.
+ */
+// Tracks the most recently launched generated-app process per project dir, so killGeneratedApp
+// can find it later. runApp/killApp are independent, ad-hoc actions from the report screen (not
+// part of the tracked pipeline run in `runs`). Persisted to logs/launched-apps.json (not just an
+// in-memory Map) so Kill app still works after a GUI restart while the generated app is still
+// running — an in-memory-only map would silently strand the process with no GUI-side kill path
+// short of re-launching a second instance via Run app.
+function launchedAppsPath(): string {
+  return join(genesisRoot(), 'logs', 'launched-apps.json');
+}
+
+function readLaunchedApps(): Record<string, number> {
+  try {
+    return JSON.parse(readFileSync(launchedAppsPath(), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeLaunchedApps(apps: Record<string, number>): void {
+  try {
+    mkdirSync(join(genesisRoot(), 'logs'), { recursive: true });
+    writeFileSync(launchedAppsPath(), JSON.stringify(apps));
+  } catch {
+    /* best-effort — worst case Kill app just won't find the PID */
+  }
+}
+
+export function runGeneratedApp(projectDir: string): void {
+  if (!existsSync(projectDir)) {
+    throw new Error(`Project folder no longer exists: ${projectDir}`);
+  }
+  const child = spawn('dotnet', ['run', '--project', projectDir], {
+    cwd: projectDir,
+    shell: false,
+    detached: true,
+    stdio: 'ignore',
+  });
+  if (child.pid) {
+    const apps = readLaunchedApps();
+    apps[projectDir] = child.pid;
+    writeLaunchedApps(apps);
+  }
+  child.unref();
+}
+
+/** Kill the app process runApp() most recently launched for this project dir, if still tracked. */
+export function killGeneratedApp(projectDir: string): void {
+  const apps = readLaunchedApps();
+  const pid = apps[projectDir];
+  if (!pid) return;
+  delete apps[projectDir];
+  writeLaunchedApps(apps);
+  try {
+    // Kill the whole tree — `dotnet run` spawns the actual ASP.NET app as a grandchild.
+    if (process.platform === 'win32') {
+      spawn('taskkill', ['/pid', String(pid), '/T', '/F']);
+    } else {
+      process.kill(pid, 'SIGTERM');
+    }
+  } catch {
+    /* already gone */
+  }
 }

@@ -6,11 +6,17 @@ LLM exchange). Each is a self-contained folder with one `SKILL.md` — the same 
 skill under `~/.claude/skills/`, so they can be copied there (or into any other Claude client's
 skills folder) with no changes.
 
-- **`dps-nn-spec-authoring/`** — drafts/extends a `project-spec.json` from raw notes, mirroring
-  the pipeline's own `spec-build` stage and `docs/reference/spec-format.md`.
+- **`dps-nn-spec-authoring/`** — designs/extends a `project-spec.json` from raw notes, mirroring
+  the pipeline's own `spec-build` stage, `docs/reference/spec-format.md`, and real generator
+  conventions (isSpecification/isLookup admin-page consolidation, removedActions/ownership/
+  redirects, images-block vs plain ImagePath, the DTO-is-untested caveat). **Conversational by
+  default** — discusses the domain and flags judgment calls before emitting the JSON; terse
+  one-shot output is an explicit opt-in ("just give me the spec").
 - **`dps-nn-seed-authoring/`** — generates a `seed-response.json` from a given spec, faithfully
   reproducing the pipeline's own `seed` stage prompt (ADR-005's manual-mode file contract) so the
-  output matches what the automatic LLM path would have produced.
+  output matches what the automatic LLM path would have produced. **Stays terse by default** —
+  always asks the admin/non-admin seed-user count first (never assumes), asks about role-name
+  language only if the spec's roles look Latin-script, then emits JSON directly.
 
 ## To use them elsewhere
 
