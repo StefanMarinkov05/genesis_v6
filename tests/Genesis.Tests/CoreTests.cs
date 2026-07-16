@@ -838,6 +838,28 @@ public class TemplateEmissionTests
         Assert.Contains("Добави снимки", code);                    // Bulgarian label
     }
 
+    // Category-3 backlog: images.mode:"single" was previously indistinguishable from "multiple"
+    // in the admin UI (always a multi-upload gallery, even for a model that can only ever have
+    // one photo). Real Product is always "multiple" in the shipping fixture, so this uses a
+    // hand-built single-image model to exercise the other branch.
+    [Fact]
+    public void Single_mode_image_view_shows_replace_ui_not_gallery()
+    {
+        var (_, engine) = Arrange();
+        var singleModel = new ModelSpec
+        {
+            Name = "Avatar",
+            Images = new ImagesSpec { Mode = "single", StoredIn = "wwwroot/images/avatars" },
+        };
+        var code = engine.RenderFile(
+            Path.Combine("templates", "views", "admin_product_images.sbn"),
+            new { model = singleModel });
+        Assert.DoesNotContain("multiple", code);                   // no multi-file input
+        Assert.Contains("Премахни снимката", code);                // single-photo remove action
+        Assert.Contains("Качването на нова снимка заменя текущата.", code); // replace-semantics hint
+        Assert.DoesNotContain("row-cols-md-4", code);               // no gallery grid markup
+    }
+
     [Fact]
     public void Admin_table_has_images_button_for_models_with_images()
     {

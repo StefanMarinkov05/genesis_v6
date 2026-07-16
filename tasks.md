@@ -7,31 +7,24 @@ file only tracks what's still open.
 
 ## Now working
 
-**Idle.** No task currently in progress. Also completed since the last cleanup: changelog 091
-(product_details.sbn always shows the star row) + changelog 092 (card grid bulk average rating).
+**Idle.** No task currently in progress. Last completed: Category 3 batch (changelog 097) —
+`images.mode:"single"` UI gap + Group A2 (Identity/Manage English leaks), both DONE and verified
+via real regenerates. See "Done" below for summary; full detail in changelog 097.
 
 ---
 
 ## Open — Category 3 backlog
 
-**Group A2 — Identity/Manage English leaks** · **Sonnet** · effort: high · thinking: on
-- [ ] Validation messages, watermarks, link buttons still English on `Identity/Account/Manage`
-      (confirmed: the Manage pages DO exist in real generated output — ChangePassword, Email,
-      Index, ManageNavPages, etc.). This area broke twice before (BG residue-map identifier
-      corruption, dual `_ViewImports` layers) — `docs/explanation/techniques.md` has the traps.
-      Do NOT attempt as a short task; do NOT reuse the blind residue-map approach on this subtree.
-
-**Group (new) — `images.mode: "single"` UI is unexercised** · effort: medium · thinking: on
-- [ ] `ImageService`'s `Save{Model}ImageAsync` correctly implements single-mode semantics
-      server-side (delete existing before saving new), but `admin_product_images.sbn` — the only
-      admin image-mgmt view, emitted for every image-bearing model regardless of `mode` — is
-      hardcoded to a multi-file-upload gallery UI even for `mode: "single"` models. The
-      client-facing carousel (`product_details.sbn`) is similarly hardcoded to slideshow style,
-      never branching on mode. In practice only `Product` uses the `images` block today, always
-      `mode: "multiple"` — so `"single"` mode is exactly as untested end-to-end as DTOs. Fix:
-      branch `admin_product_images.sbn` on `model.images.mode` (single mode → simple "current
-      photo, replace it" UI, no gallery grid) and branch the client display similarly. Verify with
-      a real regenerate using a test model pinned to `mode: "single"`.
+**Group (new) — outgoing Identity email body/subject still English** · effort: low · thinking: on
+- [ ] Found while verifying A2 (changelog 097): `Email.cshtml.cs`'s `OnPostChangeEmailAsync`/
+      `OnPostSendVerificationEmailAsync` send real outgoing emails via `_emailSender.SendEmailAsync`
+      with English subject ("Confirm your email") and body ("Please confirm your account by
+      clicking here.") — genuinely different from the on-screen Manage pages (mail content, not a
+      rendered browser page), so deliberately NOT folded into A2's fix. Small, contained: 2 subject
+      strings + 2 body strings in one file, same "exact known literal" replacement discipline as
+      `InjectBgStatusMessages` already uses. Confirm scope with Stefan before starting (is a
+      Bulgarian-language project expected to send Bulgarian confirmation emails? — very likely
+      yes, but wasn't explicitly asked for).
 
 **Manual gate (Stefan, whenever convenient — not blocking anything else)**
 - [ ] Eyeball `npm run dev` — confirm the NOVA theme renders correctly and window controls behave
@@ -61,6 +54,10 @@ cancelled.
 
 ## Done (see changelogs/ + plan/state.md for full detail)
 
+- Category 3 batch: `images.mode:"single"` UI gap + Group A2 (Identity/Manage English leaks) —
+  changelog 097. Also fixed a real pre-existing bug found along the way: a too-narrow lookahead
+  window in `InjectBgValidationMessages` produced a blank display name in `Register.cshtml.cs`
+  (shipping bug, not introduced this session) and would have in `ChangePassword.cshtml.cs` too.
 - Category 1 short-task batch (5 items) — changelog 089
 - Group A4 — image pipeline implementation — changelog 087
 - Group A5 — Спецификации consolidation implementation — changelog 088

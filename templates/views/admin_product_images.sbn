@@ -6,6 +6,40 @@
 
 <h2>Снимки за: <em>@ViewData["ParentName"]</em></h2>
 
+{{~ if model.images.mode == "single" ~}}
+{{~ # Режим single: една текуща снимка, качването я замества (ImageService го прави и служебно). ~}}
+@if (Model.Any())
+{
+    var current = Model[0];
+    <div class="mb-3" style="max-width: 260px;">
+        <img src="/@current.RelativePath" class="img-fluid rounded shadow-sm mb-2" alt="снимка" />
+        <form asp-area="Admin" asp-controller="{{ model.name }}Images"
+              asp-action="DeleteImage" method="post"
+              onsubmit="return confirm('Премахване на снимката?');">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@parentId" />
+            <input type="hidden" name="imageId" value="@current.Id" />
+            <button type="submit" class="btn btn-sm btn-outline-danger w-100">Премахни снимката</button>
+        </form>
+    </div>
+}
+else
+{
+    <p class="text-muted">Все още няма качена снимка.</p>
+}
+
+<h5 class="mb-2">Качи снимка</h5>
+<form asp-area="Admin" asp-controller="{{ model.name }}Images"
+      asp-action="Upload" asp-route-id="@parentId"
+      method="post" enctype="multipart/form-data" class="mb-4">
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <input class="form-control" name="files" type="file" accept="image/*" />
+        <div class="form-text">JPG, PNG до 5 MB. Качването на нова снимка заменя текущата.</div>
+    </div>
+    <button type="submit" class="btn btn-primary">Качи</button>
+</form>
+{{~ else ~}}
 @if (!Model.Any())
 {
     <p class="text-muted">Все още няма качени снимки.</p>
@@ -46,6 +80,7 @@ else
     </div>
     <button type="submit" class="btn btn-primary">Качи</button>
 </form>
+{{~ end ~}}
 
 <a class="btn btn-outline-secondary"
    asp-area="Admin" asp-controller="{{ model.name }}s" asp-action="Index">Назад към списъка</a>

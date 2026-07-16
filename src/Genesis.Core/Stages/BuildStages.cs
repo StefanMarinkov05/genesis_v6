@@ -351,24 +351,23 @@ public sealed class IdentityStage : IStage
                     iviText.TrimEnd('\n') + $"\n@using {spec.Meta.RootNamespace}.Infrastructure\n", ct);
         }
 
-        // Item 17: remove the 2FA/Personal-data nav links (their pages were never scaffolded -
-        // id.Modules above doesn't include them - so the stock nav's links to them would 404),
-        // and add a link to the current user's own public profile.
-        RestructureManageNav(ctx);
-        // Item 21: let the user change/delete their own profile picture from the Manage page.
-        InjectPfpFormIntoManageIndex(ctx);
-
         // Bulgarian page markup, two layers (ADR-002b) - BOTH are retrofit overrides of the
         // scaffolder's own (English) output, so both are skipped for a non-Bulgarian project:
         // the scaffolded pages are left exactly as aspnet-codegenerator produced them, which is
         // already correct English - there is nothing to translate away from.
         if (spec.Meta.IsBulgarian)
         {
-            //  a) replacement map over ALL scaffolded pages (fallback for untemplated pages)
+            //  a) replacement map over ALL scaffolded pages (fallback for untemplated pages) -
+            //     Manage/ is excluded inside ApplyReplacementMapAsync itself (the BG residue-map
+            //     trap: it would corrupt ManageNavPages.Email/EmailModel-style identifiers).
             if (id.Localization is { Strategy: "staticReplacementMap" } loc)
                 await ApplyReplacementMapAsync(ctx, Path.Combine(ctx.GenesisRoot, "templates/identity", loc.MapFile), ct);
-            //  b) wholesale template emission of the three core page MARKUPS - the scaffolded
-            //     .cshtml.cs code-behind (the logic) is kept untouched. Matches the reference style.
+            //  b) wholesale template emission of core page MARKUPS - the scaffolded .cshtml.cs
+            //     code-behind (the logic) is kept untouched. Matches ADR-002b (Login/Register/
+            //     Logout); Group A2 extends the same technique to Account/Manage/*, which the
+            //     residue map above can never safely reach. The old RestructureManageNav /
+            //     InjectPfpFormIntoManageIndex surgical transforms are folded directly into the
+            //     new manage_nav_partial.sbn / manage_index_page.sbn templates below and removed.
             foreach (var (page, tpl) in new (string, string)[]
             {
                 ("Login", "identity/login_page.sbn"),
@@ -377,6 +376,20 @@ public sealed class IdentityStage : IStage
             })
             {
                 var target = Path.Combine("Areas", "Identity", "Pages", "Account", page + ".cshtml");
+                if (File.Exists(Path.Combine(ctx.ProjectDir, target)))
+                    await EmitModelsStage.WriteAsync(ctx, target,
+                        engine.RenderFile(ctx.Template(tpl)), ct);
+            }
+            foreach (var (page, tpl) in new (string, string)[]
+            {
+                ("Index", "identity/manage_index_page.sbn"),
+                ("Email", "identity/manage_email_page.sbn"),
+                ("ChangePassword", "identity/manage_change_password_page.sbn"),
+                ("_ManageNav", "identity/manage_nav_partial.sbn"),
+                ("_Layout", "identity/manage_layout_partial.sbn"),
+            })
+            {
+                var target = Path.Combine("Areas", "Identity", "Pages", "Account", "Manage", page + ".cshtml");
                 if (File.Exists(Path.Combine(ctx.ProjectDir, target)))
                     await EmitModelsStage.WriteAsync(ctx, target,
                         engine.RenderFile(ctx.Template(tpl)), ct);
@@ -405,11 +418,18 @@ public sealed class IdentityStage : IStage
         }
 
         // Bulgarian DataAnnotations messages on the scaffolded code-behind InputModels
-        // (Login/Register/etc .cshtml.cs) - ADR-002b leaves this code untouched otherwise,
+        // (Login/Register/Manage/* .cshtml.cs) - ADR-002b leaves this code untouched otherwise,
         // so [Required]/[EmailAddress]/[Compare] fall back to English defaults without this.
         // Skipped for a non-Bulgarian project: the English defaults ARE the correct messages.
         if (spec.Meta.IsBulgarian)
+        {
             InjectBgValidationMessages(ctx);
+            // Group A2: the scaffolded Manage/*.cshtml.cs TempData StatusMessage assignments
+            // ("Your profile has been updated", etc.) are plain C# string-literal assignments,
+            // not DataAnnotations - a different, narrower mechanism than the attribute injector
+            // above, but the same discipline (exact known literal, never a fragment/blind map).
+            InjectBgStatusMessages(ctx);
+        }
 
         (await Proc.RunAsync("dotnet", "build", ctx.ProjectDir, ct, timeout: TimeSpan.FromMinutes(5)))
             .ThrowIfFailed("build after identity");
@@ -442,30 +462,57 @@ public sealed class IdentityStage : IStage
             ["Email"] = "Имейл", ["Password"] = "Парола", ["ConfirmPassword"] = "Потвърдете паролата",
             ["OldPassword"] = "Старата парола", ["NewPassword"] = "Новата парола", ["PhoneNumber"] = "Телефон",
             ["Code"] = "Код", ["TwoFactorCode"] = "Код за двуфакторна автентикация", ["RecoveryCode"] = "Код за възстановяване",
+            ["NewEmail"] = "Нов имейл",
+        };
+        // Group A2: some scaffolded attributes already carry an explicit (English) ErrorMessage
+        // rather than a bare attribute - the "fill in the blank" logic below only ADDS a missing
+        // message, so these known-literal scaffolder defaults need a direct, exact replacement
+        // instead. {0}/{1}/{2} are the DataAnnotations validator's own runtime-filled tokens
+        // (field name / max / min) - preserved as tokens, not resolved here.
+        var knownEnglishMessages = new Dictionary<string, string>
+        {
+            ["The {0} must be at least {2} and at max {1} characters long."] = "{0} трябва да е между {2} и {1} символа.",
+            ["The new password and confirmation password do not match."] = "Новата парола и потвърждението не съвпадат.",
         };
 
-        foreach (var file in Directory.EnumerateFiles(pagesDir, "*.cshtml.cs", SearchOption.TopDirectoryOnly))
+        // AllDirectories: covers Account/*.cshtml.cs (Login/Register/...) AND Account/Manage/
+        // (Group A2) in one pass - the scaffolder only ever creates subdirectories for modules
+        // actually requested, so there's nothing else under here to accidentally sweep in.
+        foreach (var file in Directory.EnumerateFiles(pagesDir, "*.cshtml.cs", SearchOption.AllDirectories))
         {
             var source = File.ReadAllText(file);
             var changed = false;
 
+            foreach (var (from, to) in knownEnglishMessages)
+            {
+                if (!source.Contains(from)) continue;
+                source = source.Replace(from, to);
+                changed = true;
+            }
+
             // Attributes without any parentheses at all: [Required] -> [Required(ErrorMessage = "...")]
-            // We look one line ahead for "public ... PropName { get; set; }" to know which property
-            // the attribute decorates (for the display-name substitution) and whether it already
-            // carries ErrorMessage (in which case we leave it alone - idempotent rerun).
+            // We look ahead for "public ... PropName { get; set; }" to know which property the
+            // attribute decorates (for the display-name substitution) and whether it already
+            // carries ErrorMessage (in which case we leave it alone - idempotent rerun). Window
+            // widened from a hardcoded 3 lines to 10: Group A2 surfaced a real bug against
+            // ChangePasswordModel.NewPassword, which stacks Required+StringLength+DataType+
+            // Display before its own property line - 4 lines away, one past the old window -
+            // producing "Полето  е задължително." (blank display name). propMatch only matches
+            // an actual `public ... {` declaration, so a wider window can't grab the wrong
+            // property; it still stops at the first one found.
             var lines = source.Split('\n');
             for (var i = 0; i < lines.Length; i++)
             {
                 foreach (var (attr, template) in messages)
                 {
-                    var bareMatch = System.Text.RegularExpressions.Regex.Match(lines[i], $@"^(\s*)\[{attr}\]\s*$");
-                    var withArgsNoMsg = System.Text.RegularExpressions.Regex.Match(lines[i],
+                    var bareMatch = Regex.Match(lines[i], $@"^(\s*)\[{attr}\]\s*$");
+                    var withArgsNoMsg = Regex.Match(lines[i],
                         $@"^(\s*)\[{attr}\(([^)]*)\)\]\s*$");
 
                     string? propName = null;
-                    for (var j = i + 1; j < Math.Min(i + 4, lines.Length); j++)
+                    for (var j = i + 1; j < Math.Min(i + 10, lines.Length); j++)
                     {
-                        var propMatch = System.Text.RegularExpressions.Regex.Match(lines[j], @"public\s+\S+\s+(\w+)\s*\{");
+                        var propMatch = Regex.Match(lines[j], @"public\s+\S+\s+(\w+)\s*\{");
                         if (propMatch.Success) { propName = propMatch.Groups[1].Value; break; }
                     }
                     var display = propName is not null && displayNames.TryGetValue(propName, out var dn) ? dn : propName ?? "";
@@ -488,6 +535,47 @@ public sealed class IdentityStage : IStage
             {
                 File.WriteAllText(file, string.Join('\n', lines));
                 ctx.Info($"injected BG validation messages into {Path.GetFileName(file)}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Group A2: replaces the scaffolded Manage/*.cshtml.cs TempData StatusMessage string
+    /// literals (success/error banners shown after a post) with Bulgarian equivalents. Exact
+    /// known-literal replacement only - never a fragment/blind map - so it can never touch a
+    /// C# identifier the way the residue-map trap does. _StatusMessage.cshtml's own
+    /// `Model.StartsWith("Error")` styling check is unaffected: none of these messages start
+    /// with the literal "Error", in either language.
+    /// </summary>
+    internal static void InjectBgStatusMessages(StageContext ctx)
+    {
+        var manageDir = Path.Combine(ctx.ProjectDir, "Areas", "Identity", "Pages", "Account", "Manage");
+        if (!Directory.Exists(manageDir)) return;
+
+        var known = new Dictionary<string, string>
+        {
+            ["Unexpected error when trying to set phone number."] = "Възникна грешка при задаване на телефонния номер.",
+            ["Your profile has been updated"] = "Профилът е обновен.",
+            ["Confirmation link to change email sent. Please check your email."] = "Изпратен е линк за потвърждение на новия имейл. Проверете пощата си.",
+            ["Your email is unchanged."] = "Имейлът не е променен.",
+            ["Verification email sent. Please check your email."] = "Изпратен е имейл за потвърждение. Проверете пощата си.",
+            ["Your password has been changed."] = "Паролата е променена.",
+        };
+
+        foreach (var file in Directory.EnumerateFiles(manageDir, "*.cshtml.cs", SearchOption.TopDirectoryOnly))
+        {
+            var source = File.ReadAllText(file);
+            var changed = false;
+            foreach (var (from, to) in known)
+            {
+                if (!source.Contains($"\"{from}\"")) continue;
+                source = source.Replace($"\"{from}\"", $"\"{to}\"");
+                changed = true;
+            }
+            if (changed)
+            {
+                File.WriteAllText(file, source);
+                ctx.Info($"injected BG status messages into {Path.GetFileName(file)}");
             }
         }
     }
@@ -530,78 +618,4 @@ public sealed class IdentityStage : IStage
         ctx.Info($"identity BG map applied ({pairs.Count} replacements)");
     }
 
-    /// <summary>
-    /// Item 17: removes the scaffolded _ManageNav's dead 2FA/Personal-data links (their pages
-    /// were deliberately never scaffolded) and adds a link to the current user's own public
-    /// profile, hashed via ProfileHash (item 17's other half) so it matches every other public-
-    /// profile link in the app. No-op if the Manage nav wasn't scaffolded (module not requested).
-    /// </summary>
-    internal static void RestructureManageNav(StageContext ctx)
-    {
-        var path = Path.Combine(ctx.ProjectDir, "Areas", "Identity", "Pages", "Account", "Manage", "_ManageNav.cshtml");
-        if (!File.Exists(path)) return;
-        var src = File.ReadAllText(path);
-        if (src.Contains("ProfileHash.Of")) return; // idempotent rerun
-
-        // Inject UserManager (only SignInManager is scaffolded by default) to resolve the
-        // current user's id for the public-profile link.
-        if (!src.Contains("UserManager<"))
-            src = src.Replace(
-                "@inject SignInManager<ApplicationUser> SignInManager",
-                "@inject SignInManager<ApplicationUser> SignInManager\n@inject UserManager<ApplicationUser> UserManager");
-
-        src = new Regex(@"\s*<li[^>]*>\s*<a[^>]*TwoFactorAuthenticationNavClass[\s\S]*?</a></li>").Replace(src, "");
-        src = new Regex(@"\s*<li[^>]*>\s*<a[^>]*PersonalDataNavClass[\s\S]*?</a></li>").Replace(src, "");
-
-        var publicProfileLink =
-            "\n    <li class=\"nav-item\"><a class=\"nav-link\" id=\"public-profile\" asp-area=\"Client\" asp-controller=\"Profiles\" " +
-            "asp-action=\"Public\" asp-route-id=\"@ProfileHash.Of(UserManager.GetUserId(User)!)\">Публичен акаунт</a></li>";
-        src = src.Replace("</ul>", $"{publicProfileLink}\n</ul>");
-
-        File.WriteAllText(path, src);
-        ctx.Info("Manage nav restructured: 2FA/Personal data removed, Публичен акаунт link added");
-    }
-
-    /// <summary>
-    /// Item 21: adds a self-contained profile-picture upload/remove form to the scaffolded
-    /// Manage/Index.cshtml MARKUP - posts to ProfilesController.ChangePicture/RemovePicture
-    /// (a separate MVC controller, coexists fine alongside the page's own scaffolded Razor Page
-    /// form/model) rather than touching the scaffolded PageModel code-behind, which would need a
-    /// much riskier C# injection into generated Razor Page logic for a small, self-contained
-    /// feature that doesn't need to share state with the rest of the page.
-    /// </summary>
-    internal static void InjectPfpFormIntoManageIndex(StageContext ctx)
-    {
-        var hasPfp = ctx.Spec.Identity?.ApplicationUser.ExtraProperties.Any(p => p.Name == "ProfilePicturePath") ?? false;
-        if (!hasPfp) return;
-        var path = Path.Combine(ctx.ProjectDir, "Areas", "Identity", "Pages", "Account", "Manage", "Index.cshtml");
-        if (!File.Exists(path)) return;
-        var src = File.ReadAllText(path);
-        if (src.Contains("ChangePicture")) return; // idempotent rerun
-
-        var pfpBlock =
-            "\n<div class=\"row mt-4\">\n" +
-            "    <div class=\"col-md-6\">\n" +
-            "        <h5>Профилна снимка</h5>\n" +
-            "        <form asp-area=\"Client\" asp-controller=\"Profiles\" asp-action=\"ChangePicture\" method=\"post\" enctype=\"multipart/form-data\" class=\"mb-2\">\n" +
-            "            <div class=\"mb-2\">\n" +
-            "                <input class=\"form-control\" type=\"file\" name=\"picture\" accept=\"image/*\" />\n" +
-            "            </div>\n" +
-            "            <button type=\"submit\" class=\"btn btn-primary btn-sm\">Качи нова снимка</button>\n" +
-            "        </form>\n" +
-            "        <form asp-area=\"Client\" asp-controller=\"Profiles\" asp-action=\"RemovePicture\" method=\"post\">\n" +
-            "            <button type=\"submit\" class=\"btn btn-outline-danger btn-sm\">Изтрий текущата снимка</button>\n" +
-            "        </form>\n" +
-            "    </div>\n" +
-            "</div>\n";
-
-        // Append right before the closing </div> that wraps the scaffolded row, or at end of file if not found.
-        if (src.Contains("</div>\n\n@section Scripts"))
-            src = src.Replace("</div>\n\n@section Scripts", $"</div>\n{pfpBlock}\n@section Scripts");
-        else
-            src += pfpBlock;
-
-        File.WriteAllText(path, src);
-        ctx.Info("profile-picture upload/remove form added to Manage/Index.cshtml");
-    }
 }
