@@ -625,11 +625,20 @@ async function setWallpaper(w: WallpaperMeta): Promise<void> {
   else win.removeAttribute('data-skin');
   updateThemePicker();
   updateMusicPickerVisibility();
+  applyFooterVisibility();
   try {
     await gui.settingsSet({ wallpaper: w.id });
   } catch {
     /* persistence is best-effort; the wallpaper still applied for this session */
   }
+}
+
+// Footer text is emptied on IMPERATOR (Stefan: he wants to see the bottom of the Veselin Marinov
+// art, not have it covered by footer text) — but the .footer ELEMENT and its reserved space stay
+// on every theme, so the content area's total height never shifts when switching wallpapers.
+let lastFooterText = '';
+function applyFooterVisibility(): void {
+  $('footer').textContent = currentWallpaper.theme === 'imperator' ? '' : lastFooterText;
 }
 
 // ---- "Play Veselin Marinov" (IMPERATOR only) ---------------------------------
@@ -973,8 +982,8 @@ async function boot(): Promise<void> {
   starfield();
   setRunState('idle');
   await reloadLists();
-  const footer = await gui.footerGet();
-  $('footer').textContent = footer;
+  lastFooterText = await gui.footerGet();
+  applyFooterVisibility();
 }
 
 void boot();

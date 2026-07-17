@@ -33,10 +33,10 @@
           </div>
         </div>
 
-        <!-- toolbar -->
+        <!-- toolbar — order per Stefan's screenshot: Music, Flag, Last result, Recent, Debug,
+             Settings, Theme (far right). -->
         <div class="toolbar">
           <div class="group">
-            <div class="theme-picker" id="theme-picker"></div>
             <!-- IMPERATOR-only: shown/hidden by main.ts based on the active wallpaper's theme. -->
             <div class="music-picker" id="music-picker" hidden>
               <button type="button" class="chip" id="music-toggle" aria-haspopup="true" aria-expanded="false">
@@ -57,8 +57,6 @@
                 </button>
               </div>
             </div>
-          </div>
-          <div class="group">
             <div class="lang-picker" id="lang-picker"></div>
             <button type="button" class="chip" id="toolbar-reopen" disabled>Last result</button>
             <button type="button" class="chip" id="recent-open"><span id="recent-label">Recent projects</span></button>
@@ -67,12 +65,21 @@
             >
             <button type="button" class="chip" id="settings-open" title="Settings">⚙ <span id="settings-label">Settings</span></button>
           </div>
+          <div class="group">
+            <div class="theme-picker" id="theme-picker"></div>
+          </div>
         </div>
 
         <!-- reserved band: keeps the logo watermark / IMPERATOR's Veselin Marinov face clear of
              every real control below it. Same height on every theme (R1 — one layout, themes
              recolor, they never restructure). -->
         <div class="hero-space" aria-hidden="true"></div>
+
+        <!-- debug terminal (moved above the input panels per Stefan's request — swapped
+             positions with .panels) -->
+        <div class="terminal-wrap" id="terminal-wrap" hidden>
+          <div class="terminal" id="terminal"></div>
+        </div>
 
         <!-- input panels -->
         <div class="panels">
@@ -114,12 +121,9 @@
           <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
         </div>
 
-        <!-- debug terminal -->
-        <div class="terminal-wrap" id="terminal-wrap" hidden>
-          <div class="terminal" id="terminal"></div>
-        </div>
-
-        <!-- footer (runtime from design/footer.md) -->
+        <!-- footer (runtime from design/footer.md; emptied on IMPERATOR — see main.ts
+             applyFooterVisibility — but the element/space stays so the bottom of the VM art
+             is still visible, not covered by a taller content area) -->
         <div class="footer" id="footer"></div>
 
         <!-- duplicate dialog -->
