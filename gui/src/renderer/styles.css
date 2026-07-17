@@ -311,9 +311,13 @@ button.chip:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--acce
 /* ---- input panels ---- */
 /* Stacked vertically (Specification above Seed) instead of side by side — Stefan's redesign,
    also uses the reserved hero-space area more efficiently than two side-by-side panels did. */
+/* Shrunk to the SAME narrow width as .run-row-wrap (Stefan's sketch: match those box
+   dimensions), keeping the existing position (right after .hero-space, left-aligned) —
+   only the size changes, not where the block sits. */
 .panels {
   position: relative; z-index: 4;
   display: grid; grid-template-columns: 1fr; gap: 12px; padding: 4px 12px;
+  width: min(34%, 420px);
 }
 .panel {
   background: var(--panel); border: 1px solid var(--border-hairline);
