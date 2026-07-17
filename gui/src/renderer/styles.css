@@ -297,6 +297,11 @@ button.chip:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--acce
    the centered .logo-watermark sits too). Height is a vh-based band so it scales with the
    window instead of a fixed px value that would feel wrong on a resized window. */
 .hero-space { position: relative; z-index: 4; height: 26vh; min-height: 140px; max-height: 260px; }
+/* IMPERATOR's VM poster art has content (the "1337" mark) lower in the frame than every other
+   wallpaper's art — the shared 26vh band wasn't tall enough to keep it clear, so the panels/run
+   row sat right on top of it (Stefan's screenshot). Taller band on this theme only; every other
+   theme keeps the shared height per R1. */
+[data-theme="imperator"] .hero-space { height: 40vh; min-height: 220px; max-height: 380px; }
 
 /* ---- input panels ---- */
 .panels {
