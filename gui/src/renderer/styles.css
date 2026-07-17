@@ -189,11 +189,12 @@ button { font: inherit; color: inherit; }
      guessed fixed px box either. ~76px covers the real titlebar+toolbar height across themes. */
   position: absolute; top: calc(76px + 2vh); height: 26vh; min-height: 140px; max-height: 260px;
   left: 0; right: 0; z-index: 1.5; pointer-events: none;
-  /* Bigger + lighter (Stefan's screenshot: readable but wants more presence) — 42%/320px cap
-     raised to 56%/420px, opacity dialed back to 0.8 so it reads as a watermark, not a solid
-     sticker, over a busy wallpaper. */
-  background: url("/logo/logo.png") center center / min(56%, 420px) auto no-repeat;
-  opacity: 0.8;
+  /* Bigger + brighter again (Stefan: still wants more presence) — 56%/420px cap raised to
+     68%/520px; opacity back to 1 plus a soft accent-tinted brightness lift so it reads as a
+     glowing centerpiece rather than a subtle watermark. */
+  background: url("/logo/logo.png") center center / min(68%, 520px) auto no-repeat;
+  opacity: 1;
+  filter: brightness(1.25) drop-shadow(0 0 18px var(--glow));
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
@@ -394,8 +395,26 @@ select {
 @keyframes shimmer { from { background-position: 0% 0; } to { background-position: -200% 0; } }
 
 /* ---- debug terminal (xterm host) ---- */
-.terminal-wrap { position: relative; z-index: 4; padding: 8px 12px 12px; flex: 1; display: flex; min-height: 0; }
+.terminal-wrap {
+  position: relative; z-index: 4; padding: 8px 12px 12px;
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
+}
 .terminal-wrap[hidden] { display: none; }
+/* Resizable: JS (main.ts) sets an inline height on .terminal-wrap when dragging the handle,
+   which overrides the flex:1 default — flex-basis lets an explicit height win over the flex
+   grow/shrink calc instead of being fought by it. */
+.terminal-wrap.resized { flex: 0 0 auto; }
+.terminal-resize-handle {
+  flex: none; height: 10px; margin: -8px auto 4px; width: 64px;
+  cursor: ns-resize; border-radius: var(--radius-pill);
+  display: flex; align-items: center; justify-content: center;
+}
+.terminal-resize-handle::before {
+  content: ""; width: 100%; height: 3px; border-radius: inherit;
+  background: var(--border-hairline);
+}
+.terminal-resize-handle:hover::before,
+.terminal-resize-handle.dragging::before { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
 .terminal {
   flex: 1; min-height: 0; background: var(--inset);
   border: 1px solid var(--border-hairline); border-radius: 6px; padding: 6px 8px;
@@ -404,9 +423,18 @@ select {
 
 /* ---- footer ---- */
 .footer {
-  position: relative; z-index: 4; padding: 4px 12px 8px;
-  font-size: var(--scale-caption); color: var(--text-muted); font-family: var(--font-technical);
-  white-space: pre-wrap; text-align: center;
+  position: relative; z-index: 4; padding: 6px 20px 10px;
+  width: 100%; box-sizing: border-box;
+  /* A distinctive display face (matches the theme's OWN display font, so it stays in-family
+     across NOVA/VEIL/FORGE/ENCHANT rather than one fixed font clashing with every theme) instead
+     of the plain technical-mono body copy used everywhere else — makes the footer read as its
+     own designed element, not leftover debug text. */
+  font-family: var(--font-display); text-transform: var(--display-transform);
+  letter-spacing: var(--display-tracking); font-weight: var(--display-weight);
+  font-size: var(--scale-body); color: var(--text-secondary);
+  text-shadow: 0 0 10px var(--glow);
+  white-space: pre-wrap; text-align: center; line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
 /* ---- duplicate dialog (overlay) ---- */
