@@ -33,13 +33,16 @@
           </div>
         </div>
 
-        <!-- toolbar — two vertical stacks per Stefan's layout: LEFT = theme picker over the
-             language picker, with the (IMPERATOR-only) music button below both; RIGHT = settings,
-             debug, recent projects, last result stacked top-to-bottom. -->
+        <!-- toolbar — two vertical stacks per Stefan's layout: LEFT = theme picker + language
+             picker SIDE BY SIDE on one row, with the (IMPERATOR-only) music button in its own row
+             below them; RIGHT = settings, debug, recent projects, last result stacked
+             top-to-bottom. -->
         <div class="toolbar">
           <div class="group group-vertical">
-            <div class="theme-picker" id="theme-picker"></div>
-            <div class="lang-picker" id="lang-picker"></div>
+            <div class="picker-row">
+              <div class="theme-picker" id="theme-picker"></div>
+              <div class="lang-picker" id="lang-picker"></div>
+            </div>
             <!-- IMPERATOR-only: shown/hidden by main.ts based on the active wallpaper's theme. -->
             <div class="music-picker" id="music-picker" hidden>
               <button type="button" class="chip" id="music-toggle" aria-haspopup="true" aria-expanded="false">

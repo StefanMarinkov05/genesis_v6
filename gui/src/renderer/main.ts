@@ -957,8 +957,10 @@ function starfield(): void {
 async function boot(): Promise<void> {
   buildLangPicker();
   buildThemePicker();
-  buildMusicMenu();
-  // Restore the persisted GUI language + wallpaper before first paint.
+  // Restore the persisted GUI language + wallpaper BEFORE building the music menu — it was
+  // previously built first, so updateMusicPickerVisibility() ran against the default NOVA
+  // wallpaper and hid the button even when the persisted choice was IMPERATOR (real bug: the
+  // button never showed on a restored VM wallpaper, only after manually re-picking it).
   let language: string | undefined;
   let wallpaper: string | undefined;
   try {
@@ -974,6 +976,7 @@ async function boot(): Promise<void> {
   $('window').classList.toggle('lang-sga', currentLang === 'sga');
   $('window').setAttribute('data-theme', currentWallpaper.theme);
   if (currentWallpaper.skin) $('window').setAttribute('data-skin', currentWallpaper.skin);
+  buildMusicMenu();
   applyStrings();
   updateLangPicker();
   updateThemePicker();

@@ -268,14 +268,17 @@ button { font: inherit; color: inherit; }
 .toolbar .group-vertical {
   flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px;
 }
-.group-vertical .theme-picker,
-.group-vertical .lang-picker,
 .group-vertical .music-picker { width: 100%; }
-.group-vertical .theme-toggle,
-.group-vertical .lang-toggle,
 .group-vertical .music-toggle,
 .group-vertical .chip,
 .group-vertical .debug-toggle { width: 100%; justify-content: center; }
+/* Theme + language pickers side by side on one row (Stefan: "language button next to
+   wallpaper"), each taking half the row; the music button stays its own full-width row below. */
+.picker-row { display: flex; gap: 6px; width: 100%; }
+.picker-row .theme-picker,
+.picker-row .lang-picker { flex: 1; min-width: 0; }
+.picker-row .theme-toggle,
+.picker-row .lang-toggle { width: 100%; justify-content: center; }
 .chip {
   border: 1px solid var(--border-hairline); background: var(--panel);
   border-radius: var(--radius-pill); padding: 4px 10px;
