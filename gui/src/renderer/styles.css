@@ -306,7 +306,7 @@ button.chip:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--acce
    wallpaper's art — the shared 26vh band wasn't tall enough to keep it clear, so the panels/run
    row sat right on top of it (Stefan's screenshot). Taller band on this theme only; every other
    theme keeps the shared height per R1. */
-[data-theme="imperator"] .hero-space { height: 40vh; min-height: 220px; max-height: 380px; }
+[data-theme="imperator"] .hero-space { height: 28vh; min-height: 160px; max-height: 260px; }
 
 /* ---- input panels ---- */
 .panels {
