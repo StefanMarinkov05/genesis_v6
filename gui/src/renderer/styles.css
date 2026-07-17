@@ -262,23 +262,21 @@ button { font: inherit; color: inherit; }
   display: flex; align-items: center; gap: 8px; color: var(--text-secondary);
   flex-wrap: wrap; row-gap: 6px;
 }
-/* Two vertical stacks (theme+language+music on the left; settings/debug/recent/last-result on
-   the right) instead of the previous single-row toolbar — each control keeps its own full width
-   so the stack reads as a clean column rather than wrapped chips. */
+/* Single vertical column (Stefan: the earlier 2-column split covered Veselin Marinov's face on
+   posters I/III) — every toolbar control stacks top-to-bottom on the right, deliberately NOT
+   symmetric with anything on the left, so the whole width above the hero-space band stays clear. */
 .toolbar .group-vertical {
   flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px;
 }
-.group-vertical .music-picker { width: 100%; }
-.group-vertical .music-toggle,
-.group-vertical .chip,
-.group-vertical .debug-toggle { width: 100%; justify-content: center; }
-/* Theme + language pickers side by side on one row (Stefan: "language button next to
-   wallpaper"), each taking half the row; the music button stays its own full-width row below. */
-.picker-row { display: flex; gap: 6px; width: 100%; }
-.picker-row .theme-picker,
-.picker-row .lang-picker { flex: 1; min-width: 0; }
-.picker-row .theme-toggle,
-.picker-row .lang-toggle { width: 100%; justify-content: center; }
+.toolbar-right { margin-left: auto; width: min(220px, 60vw); }
+.toolbar-right .theme-picker,
+.toolbar-right .lang-picker,
+.toolbar-right .music-picker { width: 100%; }
+.toolbar-right .theme-toggle,
+.toolbar-right .lang-toggle,
+.toolbar-right .music-toggle,
+.toolbar-right .chip,
+.toolbar-right .debug-toggle { width: 100%; justify-content: center; }
 .chip {
   border: 1px solid var(--border-hairline); background: var(--panel);
   border-radius: var(--radius-pill); padding: 4px 10px;
