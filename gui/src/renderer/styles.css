@@ -630,7 +630,13 @@ select {
 .theme-picker { position: relative; }
 .theme-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .theme-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  /* Anchored by its RIGHT edge (not left:0) — the theme picker sits inside the far-right
+     .toolbar-right column, so a left-anchored menu wider than that narrow column would overflow
+     past the window's right edge; Chromium's own overflow avoidance then repositions it away
+     from the button entirely (Stefan's screenshot: menu floating near the window corner, clearly
+     detached from its own toggle). right:0 keeps the whole menu inside the visible window,
+     directly below the button, regardless of how narrow .toolbar-right is. */
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
   /* Wide enough that every wallpaper label (incl. "ИСЛЯМСКИ СУФИ ПЪТ"/"DAS DEUTSCHE HERZ", the
      longest real-language strings) fits on one line at the item font-size below — the previous
      260px cap wrapped these to 2 lines (Stefan's screenshot). */
@@ -665,7 +671,8 @@ select {
 /* ---- IMPERATOR "Play Veselin Marinov" (mirrors .theme-picker's exact structure) ---- */
 .music-picker { position: relative; }
 .music-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  /* right:0 (matches .theme-menu/.lang-menu's fix, same narrow-column overflow reasoning). */
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
   min-width: 220px; max-width: min(280px, 92vw);
   padding: 4px;
   background: var(--panel-raised); border: 1px solid var(--border-hairline);
