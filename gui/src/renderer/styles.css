@@ -205,7 +205,12 @@ button { font: inherit; color: inherit; }
    other theme still shows it at full visibility per the earlier "do not hide it" instruction —
    that was about not suppressing the logo everywhere, not an exception for VM specifically. */
 [data-theme="imperator"] .logo-watermark { display: none; }
-.content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
+/* min-height: 0 is REQUIRED on a flex column whose children include a flex:1 item (the
+   terminal) — without it, a flex container's default min-height:auto refuses to shrink below its
+   content's natural height, so an expanded/resized terminal pushed the footer straight past the
+   window's own overflow:hidden boundary instead of the terminal compressing (Stefan's
+   screenshot: toggling Debug shoved the footer below the visible window). */
+.content { position: relative; z-index: 2; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .frame-ornament {
   position: absolute; inset: 0; z-index: 3; pointer-events: none;
   box-shadow: inset 0 0 0 1px var(--border-hairline), inset 0 0 40px -10px var(--glow);
@@ -296,7 +301,7 @@ button.chip:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--acce
    between the toolbar and the input panels kept clear everywhere, since that's exactly where
    the centered .logo-watermark sits too). Height is a vh-based band so it scales with the
    window instead of a fixed px value that would feel wrong on a resized window. */
-.hero-space { position: relative; z-index: 4; height: 26vh; min-height: 140px; max-height: 260px; }
+.hero-space { position: relative; z-index: 4; height: 22vh; min-height: 120px; max-height: 220px; }
 /* IMPERATOR's VM poster art has content (the "1337" mark) lower in the frame than every other
    wallpaper's art — the shared 26vh band wasn't tall enough to keep it clear, so the panels/run
    row sat right on top of it (Stefan's screenshot). Taller band on this theme only; every other
@@ -410,7 +415,7 @@ select {
 /* Resizable: JS (main.ts) sets an inline height on .terminal-wrap when dragging the handle,
    which overrides the flex:1 default — flex-basis lets an explicit height win over the flex
    grow/shrink calc instead of being fought by it. */
-.terminal-wrap.resized { flex: 0 0 auto; }
+.terminal-wrap.resized { flex: 0 0 auto; max-height: calc(100vh - 220px); }
 .terminal-resize-handle {
   flex: none; height: 10px; margin: -8px auto 4px; width: 64px;
   cursor: ns-resize; border-radius: var(--radius-pill);
