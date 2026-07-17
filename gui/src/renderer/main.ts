@@ -532,8 +532,20 @@ function buildLangPicker(): void {
   document.addEventListener('click', closeLangMenu);
 }
 
+// Each picker's own toggle button calls e.stopPropagation(), so clicking picker B's toggle never
+// bubbles to picker A's `document.addEventListener('click', closeA)` — A stayed open when B
+// opened (Stefan's screenshot: theme menu still visible after clicking the music button). Every
+// toggle now closes the other two explicitly before opening its own.
+function closeAllPickerMenus(except?: 'lang' | 'theme' | 'music'): void {
+  if (except !== 'lang') closeLangMenu();
+  if (except !== 'theme') closeThemeMenu();
+  if (except !== 'music') closeMusicMenu();
+}
+
 function toggleLangMenu(): void {
-  $('lang-menu').hasAttribute('hidden') ? openLangMenu() : closeLangMenu();
+  const wasOpen = !$('lang-menu').hasAttribute('hidden');
+  closeAllPickerMenus();
+  if (!wasOpen) openLangMenu();
 }
 function openLangMenu(): void {
   $('lang-menu').removeAttribute('hidden');
@@ -628,7 +640,9 @@ function buildThemePicker(): void {
 }
 
 function toggleThemeMenu(): void {
-  $('theme-menu').hasAttribute('hidden') ? openThemeMenu() : closeThemeMenu();
+  const wasOpen = !$('theme-menu').hasAttribute('hidden');
+  closeAllPickerMenus();
+  if (!wasOpen) openThemeMenu();
 }
 function openThemeMenu(): void {
   $('theme-menu').removeAttribute('hidden');
@@ -685,7 +699,9 @@ function updateMusicPickerVisibility(): void {
 }
 
 function toggleMusicMenu(): void {
-  $('music-menu').hasAttribute('hidden') ? openMusicMenu() : closeMusicMenu();
+  const wasOpen = !$('music-menu').hasAttribute('hidden');
+  closeAllPickerMenus();
+  if (!wasOpen) openMusicMenu();
 }
 function openMusicMenu(): void {
   $('music-menu').removeAttribute('hidden');

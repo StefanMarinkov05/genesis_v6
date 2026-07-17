@@ -189,10 +189,12 @@ button { font: inherit; color: inherit; }
      guessed fixed px box either. ~76px covers the real titlebar+toolbar height across themes. */
   position: absolute; top: calc(76px + 2vh); height: 26vh; min-height: 140px; max-height: 260px;
   left: 0; right: 0; z-index: 1.5; pointer-events: none;
-  /* Bigger + brighter again (Stefan: still wants more presence) — 56%/420px cap raised to
-     68%/520px; opacity back to 1 plus a soft accent-tinted brightness lift so it reads as a
-     glowing centerpiece rather than a subtle watermark. */
-  background: url("/logo/logo.png") center center / min(68%, 520px) auto no-repeat;
+  /* `contain` (not a fixed-width value) guarantees the WHOLE logo always fits inside this box's
+     own height regardless of the PNG's aspect ratio — a bare width value (the previous
+     min(68%, 520px) auto) let the auto-computed height exceed the 26vh box, so the bottom of the
+     logo was clipped right where .hero-space ends and .panels' opaque background begins
+     (Stefan's screenshot: "logo seems to be behind some box and appear cut"). */
+  background: url("/logo/logo.png") center center / contain no-repeat;
   opacity: 1;
   filter: brightness(1.25) drop-shadow(0 0 18px var(--glow));
   image-rendering: -webkit-optimize-contrast;
@@ -280,8 +282,8 @@ button { font: inherit; color: inherit; }
 .toolbar-right .debug-toggle { width: 100%; justify-content: center; }
 .chip {
   border: 1px solid var(--border-hairline); background: var(--panel);
-  border-radius: var(--radius-pill); padding: 4px 10px;
-  text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; color: var(--text-secondary);
+  border-radius: var(--radius-pill); padding: 8px 16px;
+  text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--text-secondary);
 }
 button.chip { cursor: pointer; }
 button.chip:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--accent); }
