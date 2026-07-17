@@ -64,41 +64,6 @@ function refitTerminal(): void {
   }
 }
 
-// Vertical drag-resize on the terminal (grip above the xterm host). Sets an explicit pixel
-// height directly on .terminal-wrap (overriding its default flex:1) and adds .resized so CSS
-// stops fighting that height with flex-grow. Clamped to a sane range so the terminal can't be
-// dragged to zero or past the visible window.
-function wireTerminalResize(): void {
-  const handle = $('terminal-resize-handle');
-  const wrap = $('terminal-wrap');
-  let dragging = false;
-  let startY = 0;
-  let startHeight = 0;
-
-  handle.addEventListener('mousedown', (e) => {
-    dragging = true;
-    startY = e.clientY;
-    startHeight = wrap.getBoundingClientRect().height;
-    handle.classList.add('dragging');
-    document.body.style.cursor = 'ns-resize';
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    const delta = e.clientY - startY;
-    const next = Math.min(Math.max(startHeight + delta, 80), window.innerHeight - 220);
-    wrap.classList.add('resized');
-    wrap.style.height = `${next}px`;
-    refitTerminal();
-  });
-  window.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
-    handle.classList.remove('dragging');
-    document.body.style.cursor = '';
-  });
-}
-
 // ---- toasts -----------------------------------------------------------------
 type ToastKind = 'info' | 'success' | 'warning' | 'danger';
 function toast(kind: ToastKind, msg: string, sub = ''): void {
@@ -829,8 +794,6 @@ function wire(): void {
   $('win-min').addEventListener('click', () => gui.windowMinimize());
   $('win-max').addEventListener('click', () => gui.windowMaximize());
   $('win-close').addEventListener('click', () => gui.windowClose());
-
-  wireTerminalResize();
 
   // selection
   ($('spec-select') as HTMLSelectElement).addEventListener('change', (e) => {

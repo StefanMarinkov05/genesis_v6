@@ -409,24 +409,11 @@ select {
 /* ---- debug terminal (xterm host) ---- */
 .terminal-wrap {
   position: relative; z-index: 4; padding: 8px 12px 12px;
-  flex: 1; display: flex; flex-direction: column; min-height: 0;
+  /* Bigger default (was flex:1 sharing whatever space happened to be left over — often cramped;
+     flex-basis 320px gives it real starting room, still flexes with the window via flex-grow). */
+  flex: 1 1 320px; min-height: 220px; display: flex; flex-direction: column;
 }
 .terminal-wrap[hidden] { display: none; }
-/* Resizable: JS (main.ts) sets an inline height on .terminal-wrap when dragging the handle,
-   which overrides the flex:1 default — flex-basis lets an explicit height win over the flex
-   grow/shrink calc instead of being fought by it. */
-.terminal-wrap.resized { flex: 0 0 auto; max-height: calc(100vh - 220px); }
-.terminal-resize-handle {
-  flex: none; height: 10px; margin: -8px auto 4px; width: 64px;
-  cursor: ns-resize; border-radius: var(--radius-pill);
-  display: flex; align-items: center; justify-content: center;
-}
-.terminal-resize-handle::before {
-  content: ""; width: 100%; height: 3px; border-radius: inherit;
-  background: var(--border-hairline);
-}
-.terminal-resize-handle:hover::before,
-.terminal-resize-handle.dragging::before { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
 .terminal {
   flex: 1; min-height: 0; background: var(--inset);
   border: 1px solid var(--border-hairline); border-radius: 6px; padding: 6px 8px;
