@@ -205,12 +205,21 @@ button { font: inherit; color: inherit; }
    other theme still shows it at full visibility per the earlier "do not hide it" instruction —
    that was about not suppressing the logo everywhere, not an exception for VM specifically. */
 [data-theme="imperator"] .logo-watermark { display: none; }
-/* min-height: 0 is REQUIRED on a flex column whose children include a flex:1 item (the
-   terminal) — without it, a flex container's default min-height:auto refuses to shrink below its
-   content's natural height, so an expanded/resized terminal pushed the footer straight past the
-   window's own overflow:hidden boundary instead of the terminal compressing (Stefan's
-   screenshot: toggling Debug shoved the footer below the visible window). */
-.content { position: relative; z-index: 2; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* Grid layout, confirmed against a live layout simulation before porting here (see changelog):
+   titlebar spans the top, footer spans the bottom, and the middle row is TWO columns — a left
+   column (debug terminal; empty/background shows through when Debug is off — this IS the
+   reserved space the old .hero-space band used to carve out, now structural instead of a
+   guessed vh value) and a right column (toolbar + panels + run controls + progress, packed
+   top-aligned, `overflow: hidden` — it must always fit in view, never scroll). Grid rows/columns
+   guarantee non-overlap by construction, unlike the earlier hand-placed absolute positioning. */
+.content {
+  position: relative; z-index: 2; height: 100%; min-height: 0; overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr min(34%, 420px);
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "titlebar titlebar" "leftcol rightcol" "footer footer";
+  gap: 8px;
+}
 .frame-ornament {
   position: absolute; inset: 0; z-index: 3; pointer-events: none;
   box-shadow: inset 0 0 0 1px var(--border-hairline), inset 0 0 40px -10px var(--glow);
@@ -225,7 +234,7 @@ button { font: inherit; color: inherit; }
 
 /* ---- title bar (real DOM chrome — R6) ---- */
 .titlebar {
-  position: relative; z-index: 4;
+  grid-area: titlebar; position: relative; z-index: 4;
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 10px 8px 12px;
   -webkit-app-region: drag;
@@ -253,38 +262,28 @@ button { font: inherit; color: inherit; }
 .win-controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .win-controls .close:hover { color: #fff; box-shadow: 0 0 0 1px var(--state-stop), 0 0 10px var(--state-stop); }
 
-/* ---- toolbar ---- */
+/* ---- left column: debug terminal (fills the space the old .hero-space band reserved) ---- */
+.leftcol {
+  grid-area: leftcol; min-height: 0; min-width: 0;
+  display: flex; flex-direction: column;
+}
+
+/* ---- right column: toolbar + panels + run controls + progress, packed top, NEVER scrolls ---- */
+.rightcol {
+  grid-area: rightcol; min-height: 0; min-width: 0;
+  display: flex; flex-direction: column; gap: 8px; justify-content: flex-start;
+  padding: 8px 12px 0; overflow: hidden;
+  /* Confirmed by simulation: this column must always fit in view. If content ever doesn't fit,
+     that's a sizing bug to fix here — not something to hide behind a scrollbar (only the
+     terminal's own log area, in .leftcol, is allowed to scroll). */
+}
 .toolbar {
-  /* Above .panels (z-index 4, later in DOM) so the language dropdown — an absolutely
-     positioned child several levels down — isn't trapped under .panels in paint order.
-     Equal-z-index siblings stack by DOM order, and a descendant's z-index can never escape
-     its own ancestor's stacking context, so the picker's own z-index:20 was powerless while
-     .toolbar sat at the same z-index as .panels. */
-  position: relative; z-index: 5;
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; row-gap: 6px;
-  padding: 0 12px 8px; font-size: var(--scale-label);
-  -webkit-app-region: no-drag;
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  font-size: var(--scale-label);
 }
-.toolbar .group {
-  display: flex; align-items: center; gap: 8px; color: var(--text-secondary);
-  flex-wrap: wrap; row-gap: 6px;
-}
-/* Single vertical column (Stefan: the earlier 2-column split covered Veselin Marinov's face on
-   posters I/III) — every toolbar control stacks top-to-bottom on the right, deliberately NOT
-   symmetric with anything on the left, so the whole width above the hero-space band stays clear. */
-.toolbar .group-vertical {
-  flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px;
-}
-.toolbar-right { margin-left: auto; width: min(220px, 60vw); }
-.toolbar-right .theme-picker,
-.toolbar-right .lang-picker,
-.toolbar-right .music-picker { width: 100%; }
-.toolbar-right .theme-toggle,
-.toolbar-right .lang-toggle,
-.toolbar-right .music-toggle,
-.toolbar-right .chip,
-.toolbar-right .debug-toggle { width: 100%; justify-content: center; }
+.toolbar .theme-picker, .toolbar .lang-picker, .toolbar .music-picker { width: 100%; }
+.toolbar .theme-toggle, .toolbar .lang-toggle, .toolbar .music-toggle,
+.toolbar .chip, .toolbar .debug-toggle { width: 100%; justify-content: center; }
 .chip {
   border: 1px solid var(--border-hairline); background: var(--panel);
   border-radius: var(--radius-pill); padding: 8px 16px;
@@ -295,29 +294,12 @@ button.chip:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--acce
 .debug-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
 .debug-toggle input { accent-color: var(--accent); }
 
-/* ---- reserved hero band (logo watermark / IMPERATOR's Veselin Marinov face) ----
-   A real dedicated gap, same height on every theme (R1) — NOT a per-theme margin hack (the
-   prior approach only nudged the run row on IMPERATOR alone; Stefan wants the whole area
-   between the toolbar and the input panels kept clear everywhere, since that's exactly where
-   the centered .logo-watermark sits too). Height is a vh-based band so it scales with the
-   window instead of a fixed px value that would feel wrong on a resized window. */
-.hero-space { position: relative; z-index: 4; height: 22vh; min-height: 120px; max-height: 220px; }
-/* IMPERATOR's VM poster art has content (the "1337" mark) lower in the frame than every other
-   wallpaper's art — the shared 26vh band wasn't tall enough to keep it clear, so the panels/run
-   row sat right on top of it (Stefan's screenshot). Taller band on this theme only; every other
-   theme keeps the shared height per R1. */
-[data-theme="imperator"] .hero-space { height: 28vh; min-height: 160px; max-height: 260px; }
+/* ---- (removed) reserved hero band — .leftcol's own grid area now reserves that space
+   structurally (the terminal's column), instead of a guessed vh value on a separate element. */
 
-/* ---- input panels ---- */
-/* Stacked vertically (Specification above Seed) instead of side by side — Stefan's redesign,
-   also uses the reserved hero-space area more efficiently than two side-by-side panels did. */
-/* Shrunk to the SAME narrow width as .run-row-wrap (Stefan's sketch: match those box
-   dimensions), keeping the existing position (right after .hero-space, left-aligned) —
-   only the size changes, not where the block sits. */
+/* ---- input panels (Specification above Seed) ---- */
 .panels {
-  position: relative; z-index: 4;
-  display: grid; grid-template-columns: 1fr; gap: 12px; padding: 4px 12px;
-  width: min(34%, 420px);
+  display: grid; grid-template-columns: 1fr; gap: 10px;
 }
 .panel {
   background: var(--panel); border: 1px solid var(--border-hairline);
@@ -362,10 +344,9 @@ select {
 [disabled] { opacity: 0.4; cursor: not-allowed; }
 
 /* ---- run controls (R2 — colors NEVER from theme tokens) ---- */
-/* Shrunk to ~1/3 the page width (was full-width) and the 4 buttons stacked 2x2 (Start/Pause
-   above Resume/Stop) instead of one row of 4 — matches the same "stack, don't span the whole
-   window" redesign as the input panels (changelog 124). */
-.run-row-wrap { position: relative; z-index: 4; padding: 10px 12px 4px; width: min(34%, 420px); }
+/* 4 buttons stacked 2x2 (Start/Pause above Resume/Stop) instead of one row of 4 (changelog 125);
+   width/position now come from the parent .rightcol grid cell, not this element directly. */
+.run-row-wrap { flex: none; }
 .run-caption {
   font-size: var(--scale-caption); color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
@@ -394,7 +375,7 @@ select {
 }
 
 /* ---- progress ---- */
-.progress-wrap { position: relative; z-index: 4; padding: 10px 12px; }
+.progress-wrap { flex: none; }
 .progress-label {
   display: flex; justify-content: space-between; font-size: var(--scale-caption);
   color: var(--text-secondary); margin-bottom: 5px; font-family: var(--font-technical);
@@ -416,11 +397,10 @@ select {
 @keyframes shimmer { from { background-position: 0% 0; } to { background-position: -200% 0; } }
 
 /* ---- debug terminal (xterm host) ---- */
+/* Fills .leftcol fully now (that column's own grid area IS the reserved space — see .content) —
+   when hidden, .leftcol is simply an empty box the background wallpaper shows through. */
 .terminal-wrap {
-  position: relative; z-index: 4; padding: 8px 12px 12px;
-  /* Bigger default (was flex:1 sharing whatever space happened to be left over — often cramped;
-     flex-basis 320px gives it real starting room, still flexes with the window via flex-grow). */
-  flex: 1 1 320px; min-height: 220px; display: flex; flex-direction: column;
+  flex: 1; min-height: 0; padding: 8px 12px 12px; display: flex; flex-direction: column;
 }
 .terminal-wrap[hidden] { display: none; }
 .terminal {

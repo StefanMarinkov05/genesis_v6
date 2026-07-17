@@ -33,12 +33,23 @@
           </div>
         </div>
 
-        <!-- toolbar — ONE right-hand vertical column (Stefan: the prior 2-column split covered
-             Veselin Marinov's face on posters I/III). Deliberately not symmetric — order is
-             Language, Settings, Debug, Recent projects, Last result, Wallpaper (theme picker),
-             Music (IMPERATOR-only, last so it visually reads as a bonus/extra action). -->
-        <div class="toolbar">
-          <div class="group group-vertical toolbar-right">
+        <!-- main grid: LEFT column = debug terminal (fills the space the old .hero-space band
+             reserved; empty/background shows through when Debug is off); RIGHT column =
+             toolbar + panels + run controls + progress, packed top-aligned, never scrolling.
+             Confirmed against a live layout simulation before porting (see changelog). -->
+        <div class="leftcol">
+          <!-- debug terminal (xterm has its own scrollback/scrollbar — no manual resize handle) -->
+          <div class="terminal-wrap" id="terminal-wrap" hidden>
+            <div class="terminal" id="terminal"></div>
+          </div>
+        </div>
+
+        <div class="rightcol">
+          <!-- toolbar — ONE vertical column (Stefan: a 2-column split covered Veselin Marinov's
+               face on posters I/III). Deliberately not symmetric — order is Language, Settings,
+               Debug, Recent projects, Last result, Wallpaper (theme picker), Music (IMPERATOR-only,
+               last so it visually reads as a bonus/extra action). -->
+          <div class="toolbar">
             <div class="lang-picker" id="lang-picker"></div>
             <button type="button" class="chip" id="settings-open" title="Settings">⚙ <span id="settings-label">Settings</span></button>
             <label class="debug-toggle chip"
@@ -68,56 +79,46 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- reserved band: keeps the logo watermark / IMPERATOR's Veselin Marinov face clear of
-             every real control below it. Same height on every theme (R1 — one layout, themes
-             recolor, they never restructure). -->
-        <div class="hero-space" aria-hidden="true"></div>
-
-        <!-- input panels (swapped back above the terminal per Stefan's latest request) -->
-        <div class="panels">
-          <div class="panel">
-            <h3 id="spec-heading">Specification</h3>
-            <div class="well" id="spec-well">No spec selected</div>
-            <div class="select-row">
-              <select id="spec-select"></select>
-              <button type="button" class="upload-btn" id="spec-upload">Upload…</button>
+          <!-- input panels (Specification above Seed) -->
+          <div class="panels">
+            <div class="panel">
+              <h3 id="spec-heading">Specification</h3>
+              <div class="well" id="spec-well">No spec selected</div>
+              <div class="select-row">
+                <select id="spec-select"></select>
+                <button type="button" class="upload-btn" id="spec-upload">Upload…</button>
+              </div>
+            </div>
+            <div class="panel">
+              <h3 id="seed-heading">Seed</h3>
+              <div class="well" id="seed-well">No seed selected (optional)</div>
+              <div class="select-row">
+                <select id="seed-select"></select>
+                <button type="button" class="upload-btn" id="seed-upload">Upload…</button>
+                <button type="button" class="claude-btn" id="seed-claude" disabled>✦ Claude</button>
+              </div>
             </div>
           </div>
-          <div class="panel">
-            <h3 id="seed-heading">Seed</h3>
-            <div class="well" id="seed-well">No seed selected (optional)</div>
-            <div class="select-row">
-              <select id="seed-select"></select>
-              <button type="button" class="upload-btn" id="seed-upload">Upload…</button>
-              <button type="button" class="claude-btn" id="seed-claude" disabled>✦ Claude</button>
+
+          <!-- run controls -->
+          <div class="run-row-wrap">
+            <div class="run-caption">
+              <span class="lock">⚿</span> <span id="run-caption-text">Start / Pause / Resume / Stop</span>
+            </div>
+            <div class="run-row">
+              <button type="button" class="run-btn start" id="run-start">▶ Start</button>
+              <button type="button" class="run-btn pause" id="run-pause" disabled>❚❚ Pause</button>
+              <button type="button" class="run-btn resume" id="run-resume" disabled>▶▶ Resume</button>
+              <button type="button" class="run-btn stop" id="run-stop" disabled>■ Stop</button>
             </div>
           </div>
-        </div>
 
-        <!-- debug terminal (xterm has its own scrollback/scrollbar — no manual resize handle) -->
-        <div class="terminal-wrap" id="terminal-wrap" hidden>
-          <div class="terminal" id="terminal"></div>
-        </div>
-
-        <!-- run controls -->
-        <div class="run-row-wrap">
-          <div class="run-caption">
-            <span class="lock">⚿</span> <span id="run-caption-text">Start / Pause / Resume / Stop</span>
+          <!-- progress -->
+          <div class="progress-wrap">
+            <div class="progress-label"><span id="progress-stage">idle</span><span id="progress-count">0 / 7</span></div>
+            <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
           </div>
-          <div class="run-row">
-            <button type="button" class="run-btn start" id="run-start">▶ Start</button>
-            <button type="button" class="run-btn pause" id="run-pause" disabled>❚❚ Pause</button>
-            <button type="button" class="run-btn resume" id="run-resume" disabled>▶▶ Resume</button>
-            <button type="button" class="run-btn stop" id="run-stop" disabled>■ Stop</button>
-          </div>
-        </div>
-
-        <!-- progress -->
-        <div class="progress-wrap">
-          <div class="progress-label"><span id="progress-stage">idle</span><span id="progress-count">0 / 7</span></div>
-          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
         </div>
 
         <!-- footer (runtime from design/footer.md; emptied on IMPERATOR — see main.ts
