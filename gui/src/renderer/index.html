@@ -5,7 +5,7 @@
     <!-- Strict CSP: the renderer loads nothing external. Scripts/styles are bundled locally. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; media-src 'self' file:"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DPS-NN — Genesis</title>
@@ -14,6 +14,7 @@
     <div class="window" data-theme="nova" id="window">
       <div class="canvas-layer"><canvas id="stars" aria-hidden="true"></canvas></div>
       <div class="scrim-layer"></div>
+      <div class="logo-watermark" aria-hidden="true"></div>
       <div class="frame-ornament"></div>
       <span class="corner tl">◆</span>
       <span class="corner bl">◆</span>
@@ -35,17 +36,43 @@
         <!-- toolbar -->
         <div class="toolbar">
           <div class="group">
-            <span class="chip">NOVA</span>
+            <div class="theme-picker" id="theme-picker"></div>
+            <!-- IMPERATOR-only: shown/hidden by main.ts based on the active wallpaper's theme. -->
+            <div class="music-picker" id="music-picker" hidden>
+              <button type="button" class="chip" id="music-toggle" aria-haspopup="true" aria-expanded="false">
+                ♪ <span id="music-label">Play Veselin Marinov</span>
+              </button>
+              <div class="music-menu" id="music-menu" role="menu" hidden>
+                <button type="button" class="music-item" id="music-youtube" role="menuitem">
+                  <span id="music-youtube-label">Open on YouTube</span>
+                </button>
+                <button type="button" class="music-item" id="music-random" role="menuitem">
+                  <span id="music-random-label">Play a random local track</span>
+                </button>
+                <button type="button" class="music-item" id="music-pick" role="menuitem">
+                  <span id="music-pick-label">Choose a track…</span>
+                </button>
+                <button type="button" class="music-item" id="music-stop" role="menuitem" hidden>
+                  <span id="music-stop-label">Stop</span>
+                </button>
+              </div>
+            </div>
           </div>
           <div class="group">
             <div class="lang-picker" id="lang-picker"></div>
             <button type="button" class="chip" id="toolbar-reopen" disabled>Last result</button>
+            <button type="button" class="chip" id="recent-open"><span id="recent-label">Recent projects</span></button>
             <label class="debug-toggle chip"
               ><input type="checkbox" id="debug-toggle" /> <span id="debug-label">Debug</span></label
             >
             <button type="button" class="chip" id="settings-open" title="Settings">⚙ <span id="settings-label">Settings</span></button>
           </div>
         </div>
+
+        <!-- reserved band: keeps the logo watermark / IMPERATOR's Veselin Marinov face clear of
+             every real control below it. Same height on every theme (R1 — one layout, themes
+             recolor, they never restructure). -->
+        <div class="hero-space" aria-hidden="true"></div>
 
         <!-- input panels -->
         <div class="panels">
@@ -113,6 +140,18 @@
           </div>
         </div>
 
+        <!-- loading screen (design-specs.md §5 "Generation / loading screen") — full-bleed over
+             the active theme's wallpaper while a build runs; resolves into the report/error
+             screen below on completion. -->
+        <div class="result-screen loading-screen" id="loading-screen" data-open="false" role="status" aria-live="polite">
+          <div class="loading-card">
+            <div class="loading-spinner" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="loading-stage" id="loading-stage-text">idle</div>
+            <div class="loading-count" id="loading-count-text">0 / 7</div>
+            <div class="progress-track loading-track"><div class="progress-fill" id="loading-progress-fill"></div></div>
+          </div>
+        </div>
+
         <!-- completion / report readout -->
         <div class="result-screen" id="report-screen" data-open="false" role="dialog" aria-modal="true" aria-labelledby="report-title">
           <div class="readout ok">
@@ -167,6 +206,18 @@
             </div>
           </aside>
         </div>
+
+        <!-- recent projects sheet -->
+        <div class="sheet-backdrop" id="recent-sheet" data-open="false" role="dialog" aria-modal="true" aria-labelledby="recent-title">
+          <aside class="sheet">
+            <div class="sheet-head"><h4 id="recent-title">Recent projects</h4><button type="button" id="recent-close" aria-label="Close">✕</button></div>
+            <div class="recent-list" id="recent-list"></div>
+          </aside>
+        </div>
+
+        <!-- IMPERATOR "Play Veselin Marinov" — plays a local file Stefan supplies himself
+             (design/music/*.mp3); this app never bundles or streams any audio content. -->
+        <audio id="music-player" hidden></audio>
 
         <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
       </div>

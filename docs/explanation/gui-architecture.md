@@ -84,6 +84,9 @@ both implement.
   (**write-only** from the renderer's view — the key is never returned)
 - `footer:get()` → contents of `design/footer.md`, read at runtime
 - `report:get(runId)` → parsed `project-summary.json` + parsed completion banner
+- `recentProjects:list()` → every project the CLI's `logs/registry.json` has recorded a
+  completed run for, newest first (read-only — the GUI never writes this file; the CLI's own
+  `RecordProjectRegistry` in `Program.cs` owns it)
 
 **Main → Renderer (push events, `webContents.send`):**
 - `build:progress` → `{ stage, phase, index, total }` (index = completed-stage count, see below)
@@ -115,7 +118,7 @@ detaches/unrefs it and it isn't part of the tracked pipeline `RunState`). Distin
 stateDiagram-v2
   [*] --> Idle
   Idle --> Running: Start (spawn run --all)
-  Running --> Paused: Pause (kill child after/at checkpoint)
+  Running --> Paused: Pause (kill child immediately)
   Paused --> Running: Resume (respawn run --all; skips done stages)
   Running --> AwaitingLLM: exit 3
   AwaitingLLM --> Running: seed/response filled + --resume
@@ -133,9 +136,15 @@ stage un-done in `state.json`; the next `run --all` re-runs only that stage (and
 idempotency detects any partial work). Combined with checkpoints, this gives correct pause/resume
 with **zero** mid-stage-freeze machinery — exactly decision #6 in the 6.5.0 spec.
 
-**Pause waits for the checkpoint (resolved).** On `Pause`, main lets the current stage finish —
-waits for its `"end"` line in `dps-nn.log.jsonl` — then kills the child. No wasted re-run. An
-immediate kill is kept only as a fallback for a stage that appears hung (a manual "force stop").
+**Pause kills immediately (not checkpoint-aware — corrected in changelog 102).** An earlier
+version of this doc claimed Pause waits for the current stage's `"end"` line before killing; the
+actual implementation (`GenesisRunner.pause`, unchanged since changelog 073) always kills
+immediately, same as Stop. This is still CORRECT, not a bug: every stage is idempotent and
+`MarkDone` only fires after a stage completes, so an immediate kill mid-stage just means that
+one stage's partial work is discarded and re-run from scratch on Resume — never corrupted state,
+only a small amount of wasted work confined to a single stage. A true checkpoint-aware pause
+(wait for the in-flight stage's `"end"` line, then kill) is a possible future refinement, not
+implemented.
 
 **Stop keeps state (resolved).** On `Stop`, main kills the child but **preserves `state.json`**, so
 the same (spec, out dir) can be resumed later via a fresh `run --all`. A separate explicit
@@ -211,6 +220,31 @@ Task 1 must leave the right seams; it does not choose colours.
   `@font-face` in `styles.css` (changelog 095) — no longer deferred to the ENCHANT theme.
   **Hard boundary:** GUI-chrome language ≠ generated-app language — the latter stays
   Bulgarian-only (CLAUDE.md) unless the *spec's* `meta.language` says otherwise (changelog 054).
+- **All 5 themes implemented** (changelog 101; `design/design-specs.md` §4 lineup, ported from
+  the vetted `design/preview.html` token reference): NOVA (default), IMPERATOR (Veselin
+  Marinov-exclusive, logo suppressed), VEIL, FORGE, ENCHANT. A top-left `theme-picker` (data-driven
+  off `gui/src/renderer/themes.ts`'s `THEMES` registry, mirroring the language picker's pattern)
+  swaps `.window`'s `data-theme` attribute; every component reads only CSS custom properties off
+  that attribute (design-specs.md §2), so no other renderer code changed. Persists through the
+  existing `settings.theme` field — no new IPC channel.
+- **Real background images + skins (changelog 104)**: `design-specs.md` §8 decision 4's deferral
+  is resolved — real art Stefan supplied (`design/backgrounds/*`) is vendored to
+  `gui/src/renderer/public/backgrounds/` and wired as `--canvas-image` per `[data-theme]` block,
+  layered UNDER the same gradient stack every theme already used (the gradients now function as a
+  color-matched wash for legibility, not the whole background — R8/§6 contrast unaffected). Also
+  added the 3 documented skins (`design-specs.md` §4 "Skins documented from the art"): NOVA hosts
+  a German (Das Deutsche Herz) skin, VEIL hosts Islamic/Sufi and Occult/Veil-of-Isis — applied as
+  a `data-skin` attribute alongside `data-theme` (`gui/src/renderer/themes.ts`'s `THEMES[].skins`),
+  persisted through a new `settings.skin` field. IMPERATOR is VM-exclusive per decision #1 and
+  never gains a skin. **Known cost, not addressed**: the 11 vendored PNGs total ~25MB, unoptimized
+  — a compression/format pass (WebP, resizing) is a reasonable follow-up, not done here.
+- **Loading screen (changelog 104)**: the full-bleed generation screen `design-specs.md` §5
+  describes (wallpaper + animation + progress, replacing the setup screen while a build runs) is
+  now built — previously progress only showed inline on the setup screen. Reuses the existing
+  `.result-screen` full-bleed/scrim pattern (same as report/error); shows over the ACTIVE theme's
+  wallpaper. **Per-project wallpapers (image link from that project's spec) are explicitly NOT
+  implemented** — Stefan confirmed this scope: no `project-spec.json` schema change, the loading
+  screen always shows the current GUI theme's wallpaper regardless of which project is generating.
 
 ## Security model
 

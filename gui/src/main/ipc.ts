@@ -5,6 +5,8 @@ import { checkDuplicate } from './dedup';
 import { getSettings, setSettings } from './settings';
 import { getFooter } from './footer';
 import { GenesisRunner, killGeneratedApp, runGeneratedApp } from './genesis-runner';
+import { listRecentProjects } from './recent-projects';
+import { listMusicFiles, pickRandomTrack } from './music';
 
 // Registers the entire IPC surface named in docs/explanation/gui-architecture.md. The
 // preload exposes exactly these channels and nothing else — this is the whole attack
@@ -47,6 +49,9 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(CH.settingsSet, (_e, patch: SettingsPatch) => setSettings(patch));
   ipcMain.handle(CH.footerGet, () => getFooter());
   ipcMain.handle(CH.reportGet, (_e, runId: string) => runner.getReport(runId));
+  ipcMain.handle(CH.recentProjectsList, () => listRecentProjects());
+  ipcMain.handle(CH.musicRandomTrack, () => pickRandomTrack());
+  ipcMain.handle(CH.musicList, () => listMusicFiles());
 
   // ---- window chrome (frameless window; controls are real DOM per R6) ----
   ipcMain.on(CH.windowMinimize, () => win.minimize());

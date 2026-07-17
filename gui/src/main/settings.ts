@@ -11,7 +11,7 @@ import { genesisRoot } from './paths';
 // docs/explanation/gui-architecture.md.
 
 interface StoredSettings {
-  theme: string;
+  wallpaper: string;
   language: string;
   genesisCommand: string;
   outDir: string;
@@ -21,7 +21,7 @@ interface StoredSettings {
 
 function defaults(): StoredSettings {
   return {
-    theme: 'nova',
+    wallpaper: 'nova-astro-hud',
     language: 'en',
     // ADR-010 decision #1: default to the dev CLI form the batch scripts use; overridable.
     genesisCommand: 'dotnet run --project src/Genesis.Cli --',
@@ -58,7 +58,7 @@ function keyIsSet(stored: StoredSettings): boolean {
 /** The renderer-facing view: never includes the key value. */
 function toPublic(stored: StoredSettings): Settings {
   return {
-    theme: stored.theme,
+    wallpaper: stored.wallpaper,
     language: stored.language,
     genesisCommand: stored.genesisCommand,
     outDir: stored.outDir,
@@ -72,7 +72,7 @@ export function getSettings(): Settings {
 
 export function setSettings(patch: SettingsPatch): Settings {
   const stored = loadStored();
-  if (patch.theme !== undefined) stored.theme = patch.theme;
+  if (patch.wallpaper !== undefined) stored.wallpaper = patch.wallpaper;
   if (patch.language !== undefined) stored.language = patch.language;
   if (patch.genesisCommand !== undefined) stored.genesisCommand = patch.genesisCommand;
   if (patch.outDir !== undefined) stored.outDir = patch.outDir;

@@ -28,6 +28,15 @@ export interface DuplicateMatch {
   outDir: string;
 }
 
+/** One entry from the CLI's logs/registry.json (read-only — the GUI never writes this file). */
+export interface RecentProject {
+  project: string;
+  /** ISO timestamp of that project's last run. */
+  ts: string;
+  specPath: string;
+  outDir: string;
+}
+
 /** The canonical stage order the progress feed emits (see PipelineRunner.CanonicalOrder). */
 export type StageName =
   | 'spec-build'
@@ -68,7 +77,8 @@ export interface BuildError {
 
 /** Renderer-visible settings. The API key is WRITE-ONLY: settings:get never returns it. */
 export interface Settings {
-  theme: string;
+  /** Selected wallpaper id (themes.ts WALLPAPERS) — carries its own theme colors + fonts. */
+  wallpaper: string;
   language: string;
   /** CLI invocation override (ADR-010 "CLI stays first-class"). */
   genesisCommand: string;
@@ -107,6 +117,15 @@ export interface GuiApi {
   settingsSet(patch: SettingsPatch): Promise<Settings>;
   footerGet(): Promise<string>;
   reportGet(runId: RunId): Promise<BuildReport | null>;
+
+  /** Every project the CLI has ever recorded a completed run for (logs/registry.json), newest first. */
+  recentProjectsList(): Promise<RecentProject[]>;
+
+  // ---- IMPERATOR "Play Veselin Marinov" (design/music/*.mp3) ----
+  /** Absolute path to a randomly-picked track in design/music/, or null if none exist. */
+  musicRandomTrack(): Promise<string | null>;
+  /** Every .mp3 filename in design/music/ (for a "pick a specific track" list), sorted. */
+  musicList(): Promise<string[]>;
 
   // ---- window chrome ----
   windowMinimize(): void;
@@ -155,6 +174,9 @@ export const CH = {
   settingsSet: 'settings:set',
   footerGet: 'footer:get',
   reportGet: 'report:get',
+  recentProjectsList: 'recentProjects:list',
+  musicRandomTrack: 'music:randomTrack',
+  musicList: 'music:list',
   windowMinimize: 'window:minimize',
   windowMaximize: 'window:maximize',
   windowClose: 'window:close',

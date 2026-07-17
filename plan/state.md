@@ -1,15 +1,17 @@
 # genesis - state
 
-## Current status (accurate as of Session 31 / changelog 094)
+## Current status (accurate as of changelog 101, 2026-07-16)
 DPS-NN v6.4.0. The 9-stage CLI pipeline is fully working end-to-end against LocalDB (real
 compiling/migrating/booting/BG-localized FaceNote generations, multiple times over) - all v6
 task-breakdown items are DONE (`plan/v6-task-breakdown.md`), plus a round-2 23-item live-usage
 fix batch (changelogs 057-071), async parallel emission (changelog 051), and `meta.language`
 EN-generation support alongside the default BG-only path (changelog 054). A real Electron GUI
-(`gui/`) exists over the CLI: phase-1 MVP built (changelog 073, NOVA theme, spec/seed input,
-dedup, Start/Stop, progress, debug terminal, report/error screens - build/test-verified, **not
-yet eyeballed on screen** - that's Stefan's `cd gui && npm run dev` gate) and phase 3b's full
-15-language chrome picker (changelogs 093-094). Test suite: 120 (.NET) + 32 (GUI `node --test`).
+(`gui/`) exists over the CLI: phase-1 MVP (changelog 073), phase 3b's full 15-language chrome
+picker (changelogs 093-094), a recent-projects sheet (changelog 100), and all 5 themes incl. a
+real theme picker (changelog 101). **The manual `npm run dev` gate is CLEARED (2026-07-16)** -
+Stefan confirmed the GUI renders correctly across themes and is responsive; a real end-to-end
+generation from the GUI also succeeded. This unblocks Phase 2 (Pause/Resume UI wiring). Test
+suite: 120 (.NET) + 37 (GUI `node --test`).
 
 **Older session history (Sessions 1-21) archived to `plan/state-archive.md`** (Session 32
 cleanup, at Stefan's request - `state.md` is read in full nearly every session per CLAUDE.md's

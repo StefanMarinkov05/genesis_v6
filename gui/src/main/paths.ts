@@ -65,3 +65,8 @@ export function seedSearchDirs(): { dir: string; source: 'seeds' | 'archive' }[]
 export function uploadsDir(): string {
   return join(genesisRoot(), 'gui', '.uploads');
 }
+
+/** Where the IMPERATOR theme's "Play Veselin Marinov" MP3s live (Stefan drops files in here). */
+export function musicDir(): string {
+  return join(genesisRoot(), 'design', 'music');
+}

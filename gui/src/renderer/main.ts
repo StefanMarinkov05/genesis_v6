@@ -1,10 +1,11 @@
 import '@xterm/xterm/css/xterm.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import type { BuildReport, DuplicateMatch, FileHandle } from '@shared/ipc-types';
+import type { BuildReport, DuplicateMatch, FileHandle, RecentProject } from '@shared/ipc-types';
 import { LANGUAGES, langMeta, normalizeLang, stringsFor, type LangCode, type Strings } from './i18n';
 import { flagSvg } from './i18n/flags';
 import { activeButton, enablement, type RunState } from './state';
+import { WALLPAPERS, normalizeWallpaper, type WallpaperMeta } from './themes';
 import './styles.css';
 
 // Renderer bootstrap (NOVA theme). It owns screen state and talks to the privileged main
@@ -19,6 +20,7 @@ import './styles.css';
 const gui = window.gui;
 let currentLang: LangCode = 'en';
 let t: Strings = stringsFor(currentLang);
+let currentWallpaper: WallpaperMeta = WALLPAPERS[0]!;
 
 function $<T extends HTMLElement = HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -97,6 +99,7 @@ function setRunState(s: RunState): void {
   if ((s === 'idle' || s === 'done' || s === 'error' || s === 'stopped') && !selectedSpec) {
     ($('run-start') as HTMLButtonElement).disabled = true;
   }
+  setLoadingScreen(s === 'running' || s === 'awaiting-llm');
 }
 
 type ProgressCls = '' | 'running' | 'success' | 'error';
@@ -112,6 +115,21 @@ function setProgress(index: number, total: number, stage: string, cls: ProgressC
   fillEl.classList.remove('running', 'success', 'error');
   if (cls) fillEl.classList.add(cls);
   lastProgress = { index, total, stage, cls };
+  // Mirror the same reading onto the full-bleed loading screen (design-specs.md §5) — one
+  // source of truth for the numbers, two places they're painted.
+  $('loading-stage-text').textContent = stage;
+  $('loading-count-text').textContent = t.progress.of(index, total);
+  const loadingFill = $('loading-progress-fill');
+  loadingFill.style.width = `${Math.round((index / total) * 100)}%`;
+  loadingFill.classList.remove('running', 'success', 'error');
+  if (cls) loadingFill.classList.add(cls);
+}
+
+/** Show/hide the full-bleed loading screen — open only while a build is actively running or
+ *  waiting on an LLM response; every other state (idle/paused/done/error/stopped) hides it, since
+ *  done/error already show their OWN full-bleed screen and the rest return to the setup screen. */
+function setLoadingScreen(open: boolean): void {
+  $('loading-screen').setAttribute('data-open', open ? 'true' : 'false');
 }
 
 // ---- selection UI -----------------------------------------------------------
@@ -191,6 +209,25 @@ async function doStop(): Promise<void> {
   setRunState('stopped');
   setProgress(Number($('progress-count').textContent!.split('/')[0]) || 0, TOTAL_STAGES, 'stopped', '');
   toast('warning', t.toast.stopped);
+}
+
+// Pause/resume (phase 2 — unblocked now that the manual npm-run-dev gate is cleared, changelog
+// 102). Main-process pause() kills after the current stage's checkpoint (genesis-runner.ts); the
+// same runId addresses resume(), which re-spawns run --all and skips completed stages via
+// state.json. 'paused' is its own RunState (see state.ts) so Resume never appears after a plain Stop.
+async function doPause(): Promise<void> {
+  if (!runId) return;
+  await gui.buildPause(runId);
+  setRunState('paused');
+  setProgress(Number($('progress-count').textContent!.split('/')[0]) || 0, TOTAL_STAGES, 'paused', '');
+  toast('warning', t.toast.paused);
+}
+
+async function doResume(): Promise<void> {
+  if (!runId) return;
+  await gui.buildResume(runId);
+  setRunState('running');
+  toast('info', t.toast.resumed);
 }
 
 // ---- duplicate dialog -------------------------------------------------------
@@ -308,6 +345,47 @@ async function saveSettings(): Promise<void> {
   toast('success', 'Settings saved');
 }
 
+// ---- recent projects sheet ---------------------------------------------------
+// Reads logs/registry.json (CLI-owned, GUI never writes it) via recentProjectsList().
+// Every entry's "Open folder" reuses the existing shell:openPath channel — no new
+// shell-access surface, same as the duplicate-build dialog's "Open existing".
+function renderRecentList(projects: RecentProject[]): void {
+  const list = $('recent-list');
+  list.innerHTML = '';
+  if (projects.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'recent-empty';
+    empty.textContent = t.recent.empty;
+    list.appendChild(empty);
+    return;
+  }
+  for (const p of projects) {
+    const item = document.createElement('div');
+    item.className = 'recent-item';
+    const name = document.createElement('div');
+    name.className = 'rp-name';
+    name.textContent = p.project;
+    const meta = document.createElement('div');
+    meta.className = 'rp-meta';
+    meta.textContent = t.recent.lastBuilt(new Date(p.ts).toLocaleString());
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'rp-open';
+    open.textContent = t.recent.open;
+    open.addEventListener('click', () => void gui.openPath(p.outDir));
+    item.append(name, meta, open);
+    list.appendChild(item);
+  }
+}
+
+let lastRecentProjects: RecentProject[] = [];
+
+async function openRecentSheet(): Promise<void> {
+  lastRecentProjects = await gui.recentProjectsList();
+  renderRecentList(lastRecentProjects);
+  $('recent-sheet').setAttribute('data-open', 'true');
+}
+
 // ---- debug toggle -----------------------------------------------------------
 function toggleDebug(on: boolean): void {
   const wrap = $('terminal-wrap');
@@ -326,6 +404,8 @@ function applyStrings(): void {
   $('debug-label').textContent = t.toolbar.debug;
   $('settings-label').textContent = t.toolbar.settings;
   $('toolbar-reopen').textContent = t.toolbar.reopen;
+  $('recent-label').textContent = t.toolbar.recent;
+  $('recent-title').textContent = t.recent.title;
   $('spec-heading').textContent = t.spec.heading;
   $('seed-heading').textContent = t.seed.heading;
   $('spec-well').textContent = t.spec.none;
@@ -338,8 +418,8 @@ function applyStrings(): void {
   $('run-pause').textContent = t.run.pause;
   $('run-resume').textContent = t.run.resume;
   $('run-stop').textContent = t.run.stop;
-  ($('run-pause') as HTMLButtonElement).title = t.run.phase2;
-  ($('run-resume') as HTMLButtonElement).title = t.run.phase2;
+  ($('run-pause') as HTMLButtonElement).title = t.run.pauseHint;
+  ($('run-resume') as HTMLButtonElement).title = t.run.resumeHint;
   $('progress-stage').textContent = t.progress.idle;
   $('progress-count').textContent = t.progress.of(0, TOTAL_STAGES);
   // dialog labels
@@ -472,7 +552,187 @@ function retranslate(): void {
   if (seedSel.options[0]) seedSel.options[0].textContent = t.seed.pick;
   if ($('report-screen').getAttribute('data-open') === 'true' && lastReport) showReport(lastReport);
   if ($('error-screen').getAttribute('data-open') === 'true' && lastError) showError(lastError.stage, lastError.message);
+  if ($('recent-sheet').getAttribute('data-open') === 'true') renderRecentList(lastRecentProjects);
   updateLangPicker();
+  updateThemePicker();
+  buildMusicMenu(); // rebuilds with the new language's labels; also re-applies visibility
+}
+
+// ---- theme picker (design-specs.md §5 "Theme switcher") ---------------------
+// Mirrors the language picker's data-driven build/toggle pattern exactly (WALLPAPERS registry,
+// same menu/backdrop-click-closes behavior). Selecting a wallpaper swaps [data-theme]/[data-skin]
+// on .window — every component reads only CSS custom properties off those attributes
+// (design-specs.md §2), so no other renderer code needs to know a wallpaper changed. Flat list of
+// 10 clickable options (one per image) per Stefan's request — no in-menu descriptions, labels
+// come from t.wallpaper so the picker translates like every other chrome string.
+function buildThemePicker(): void {
+  const picker = $('theme-picker');
+  picker.innerHTML =
+    `<button type="button" class="chip theme-toggle" id="theme-toggle" aria-haspopup="true" aria-expanded="false">` +
+    `<span id="theme-current-label"></span></button>` +
+    `<div class="theme-menu" id="theme-menu" role="menu" hidden></div>`;
+  const menu = $('theme-menu');
+  for (const w of WALLPAPERS) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'theme-item';
+    item.setAttribute('role', 'menuitemradio');
+    item.dataset.id = w.id;
+    item.addEventListener('click', () => {
+      void setWallpaper(w);
+      closeThemeMenu();
+    });
+    menu.appendChild(item);
+  }
+  $('theme-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleThemeMenu();
+  });
+  menu.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', closeThemeMenu);
+}
+
+function toggleThemeMenu(): void {
+  $('theme-menu').hasAttribute('hidden') ? openThemeMenu() : closeThemeMenu();
+}
+function openThemeMenu(): void {
+  $('theme-menu').removeAttribute('hidden');
+  $('theme-toggle').setAttribute('aria-expanded', 'true');
+}
+function closeThemeMenu(): void {
+  $('theme-menu').setAttribute('hidden', '');
+  $('theme-toggle').setAttribute('aria-expanded', 'false');
+}
+
+function updateThemePicker(): void {
+  const label = t.wallpaper[currentWallpaper.labelKey];
+  $('theme-current-label').textContent = label;
+  ($('theme-toggle') as HTMLButtonElement).title = label;
+  document.querySelectorAll<HTMLElement>('#theme-menu .theme-item').forEach((el) => {
+    const w = WALLPAPERS.find((x) => x.id === el.dataset.id)!;
+    el.textContent = t.wallpaper[w.labelKey];
+    const on = w.id === currentWallpaper.id;
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
+    el.classList.toggle('active', on);
+  });
+}
+
+async function setWallpaper(w: WallpaperMeta): Promise<void> {
+  currentWallpaper = w;
+  const win = $('window');
+  win.setAttribute('data-theme', w.theme);
+  if (w.skin) win.setAttribute('data-skin', w.skin);
+  else win.removeAttribute('data-skin');
+  updateThemePicker();
+  updateMusicPickerVisibility();
+  try {
+    await gui.settingsSet({ wallpaper: w.id });
+  } catch {
+    /* persistence is best-effort; the wallpaper still applied for this session */
+  }
+}
+
+// ---- "Play Veselin Marinov" (IMPERATOR only) ---------------------------------
+// Placeholder — Stefan swaps in the real link later (no fixed video decided yet).
+const VESELIN_MARINOV_YOUTUBE_URL = 'https://www.youtube.com/results?search_query=Veselin+Marinov';
+
+function updateMusicPickerVisibility(): void {
+  $('music-picker').toggleAttribute('hidden', currentWallpaper.theme !== 'imperator');
+}
+
+function toggleMusicMenu(): void {
+  $('music-menu').hasAttribute('hidden') ? openMusicMenu() : closeMusicMenu();
+}
+function openMusicMenu(): void {
+  $('music-menu').removeAttribute('hidden');
+  $('music-toggle').setAttribute('aria-expanded', 'true');
+}
+function closeMusicMenu(): void {
+  $('music-menu').setAttribute('hidden', '');
+  $('music-toggle').setAttribute('aria-expanded', 'false');
+}
+
+function playLocalFile(path: string): void {
+  const player = $('music-player') as HTMLAudioElement;
+  // file:// URI, not a bare path — <audio src> needs a real URL scheme even for local playback.
+  player.src = `file://${path.replace(/\\/g, '/')}`;
+  void player.play().catch((e: Error) => toast('danger', 'Could not play the track', e.message));
+  ($('music-stop') as HTMLButtonElement).hidden = false;
+}
+
+function stopMusic(): void {
+  const player = $('music-player') as HTMLAudioElement;
+  player.pause();
+  player.removeAttribute('src');
+  player.load();
+  ($('music-stop') as HTMLButtonElement).hidden = true;
+}
+
+async function playRandomLocalTrack(): Promise<void> {
+  const path = await gui.musicRandomTrack();
+  if (!path) {
+    toast('warning', 'No local tracks found', 'Drop MP3 files into design/music/');
+    return;
+  }
+  playLocalFile(path);
+}
+
+async function openTrackPicker(): Promise<void> {
+  const files = await gui.musicList();
+  if (files.length === 0) {
+    toast('warning', 'No local tracks found', 'Drop MP3 files into design/music/');
+    return;
+  }
+  // A tiny inline picker reusing the same music-menu box — replaces its contents temporarily
+  // with one item per file, restored to the fixed 4-action menu the next time it opens.
+  const menu = $('music-menu');
+  menu.innerHTML = '';
+  for (const file of files) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'music-item';
+    item.textContent = file;
+    item.addEventListener('click', async () => {
+      const dir = (await gui.musicRandomTrack())?.replace(/[^/\\]+$/, '') ?? '';
+      playLocalFile(dir + file);
+      closeMusicMenu();
+      buildMusicMenu(); // restore the fixed menu for next time
+    });
+    menu.appendChild(item);
+  }
+  openMusicMenu();
+}
+
+function buildMusicMenu(): void {
+  const picker = $('music-picker');
+  picker.innerHTML =
+    `<button type="button" class="chip" id="music-toggle" aria-haspopup="true" aria-expanded="false">` +
+    `♪ <span id="music-label">${t.music.button}</span></button>` +
+    `<div class="music-menu" id="music-menu" role="menu" hidden>` +
+    `<button type="button" class="music-item" id="music-youtube" role="menuitem">${t.music.youtube}</button>` +
+    `<button type="button" class="music-item" id="music-random" role="menuitem">${t.music.random}</button>` +
+    `<button type="button" class="music-item" id="music-pick" role="menuitem">${t.music.pick}</button>` +
+    `<button type="button" class="music-item" id="music-stop" role="menuitem" hidden>${t.music.stop}</button>` +
+    `</div>`;
+  $('music-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMusicMenu();
+  });
+  $('music-menu').addEventListener('click', (e) => e.stopPropagation());
+  $('music-youtube').addEventListener('click', () => {
+    void gui.openExternal(VESELIN_MARINOV_YOUTUBE_URL);
+    closeMusicMenu();
+  });
+  $('music-random').addEventListener('click', () => {
+    void playRandomLocalTrack();
+    closeMusicMenu();
+  });
+  $('music-pick').addEventListener('click', () => void openTrackPicker());
+  $('music-stop').addEventListener('click', () => {
+    stopMusic();
+    closeMusicMenu();
+  });
+  updateMusicPickerVisibility();
 }
 
 // ---- file upload (renderer reads bytes, main validates + stages) ------------
@@ -524,6 +784,8 @@ function wire(): void {
 
   // run controls
   $('run-start').addEventListener('click', () => void attemptStart());
+  $('run-pause').addEventListener('click', () => void doPause());
+  $('run-resume').addEventListener('click', () => void doResume());
   $('run-stop').addEventListener('click', () => void doStop());
 
   // debug
@@ -576,6 +838,10 @@ function wire(): void {
   $('error-close').addEventListener('click', closeAndReset);
   $('toolbar-reopen').addEventListener('click', reopenLastResult);
 
+  // recent projects
+  $('recent-open').addEventListener('click', () => void openRecentSheet());
+  $('recent-close').addEventListener('click', () => $('recent-sheet').setAttribute('data-open', 'false'));
+
   // settings
   $('settings-open').addEventListener('click', () => void openSettings());
   $('settings-close').addEventListener('click', () => $('settings-sheet').setAttribute('data-open', 'false'));
@@ -588,7 +854,9 @@ function wire(): void {
       closeDuplicateDialog();
       closeResultScreens();
       closeLangMenu();
+      closeThemeMenu();
       $('settings-sheet').setAttribute('data-open', 'false');
+      $('recent-sheet').setAttribute('data-open', 'false');
     }
     if (e.key === 'Enter' && $('dup-dialog').getAttribute('data-open') === 'true') {
       $('dup-open').click();
@@ -679,18 +947,27 @@ function starfield(): void {
 // ---- boot -------------------------------------------------------------------
 async function boot(): Promise<void> {
   buildLangPicker();
-  // Restore the persisted GUI language (renderer-local; default EN) before first paint.
+  buildThemePicker();
+  buildMusicMenu();
+  // Restore the persisted GUI language + wallpaper before first paint.
   let language: string | undefined;
+  let wallpaper: string | undefined;
   try {
-    language = (await gui.settingsGet()).language;
+    const s = await gui.settingsGet();
+    language = s.language;
+    wallpaper = s.wallpaper;
   } catch {
-    /* settings unavailable — fall back to EN */
+    /* settings unavailable — fall back to EN / the default wallpaper */
   }
   currentLang = normalizeLang(language);
   t = stringsFor(currentLang);
+  currentWallpaper = normalizeWallpaper(wallpaper);
   $('window').classList.toggle('lang-sga', currentLang === 'sga');
+  $('window').setAttribute('data-theme', currentWallpaper.theme);
+  if (currentWallpaper.skin) $('window').setAttribute('data-skin', currentWallpaper.skin);
   applyStrings();
   updateLangPicker();
+  updateThemePicker();
   wire();
   subscribe();
   starfield();

@@ -37,7 +37,7 @@ button { font: inherit; color: inherit; }
 /* ---- NOVA (hud, default) — clean blue circuit HUD ---- */
 [data-theme="nova"] {
   --canvas-a: #050b16; --canvas-b: #0a1830; --canvas-c: #0e2340;
-  --scrim: rgba(4, 9, 18, 0.62);
+  --scrim: rgba(4, 9, 18, 0.42);
   --panel: rgba(10, 20, 38, 0.86); --panel-raised: rgba(15, 28, 50, 0.92); --inset: rgba(3, 7, 14, 0.92);
   --border-hairline: rgba(120, 180, 255, 0.16);
   --text-primary: #eaf3ff; --text-secondary: #a9c3e6; --text-muted: #6d84a8;
@@ -45,7 +45,109 @@ button { font: inherit; color: inherit; }
   --font-display: "Cascadia Code", "Consolas", ui-monospace, monospace;
   --display-transform: uppercase; --display-tracking: 0.12em; --display-style: normal; --display-weight: 600;
   --radius-mul: 0.6;
+  --canvas-image: url("/backgrounds/nova-astro-hud.png");
 }
+
+/* ---- NOVA skins (design-specs.md §4 "German (Das Deutsche Herz) -> skin of NOVA") ----
+   Imperator is ruled out for this skin (VM-exclusive, decision #1) — NOVA hosts it instead. */
+[data-theme="nova"][data-skin="german"] {
+  --accent: #ffce00; --accent-2: #dd0000; --glow: #ffce00aa;
+  --canvas-image: url("/backgrounds/nova-german-skin.png");
+}
+/* A second NOVA look (blue code/circuit corridor) — not one of the design doc's documented
+   skins, added as a 10th wallpaper option per Stefan's "10 clickable options" request. */
+[data-theme="nova"][data-skin="code"] {
+  --canvas-image: url("/backgrounds/nova-code-corridor.png");
+}
+
+/* ---- IMPERATOR (baroque) — Veselin Marinov gold cosmos, VM-exclusive (design-specs.md §4) ----
+   Ported from design/preview.html, the vetted token reference for all 5 themes. VM-exclusive:
+   no other background ever rides this theme (a real .jpg swap is a later asset task, not this
+   one — the canvas-layer gradient below is the same CSS-approximation stand-in every theme uses
+   until images/bg/*.jpg lands, per design-specs.md §8 decision 4). */
+[data-theme="imperator"] {
+  --canvas-a: #0e0904; --canvas-b: #241407; --canvas-c: #3a2308;
+  --scrim: rgba(10, 6, 2, 0.46);
+  --panel: rgba(28, 17, 6, 0.88); --panel-raised: rgba(38, 24, 9, 0.93); --inset: rgba(12, 7, 2, 0.94);
+  --border-hairline: rgba(230, 190, 110, 0.22);
+  --text-primary: #fbf1d9; --text-secondary: #dcbd84; --text-muted: #9a7f52;
+  --accent: #e7bb4c; --accent-2: #ffe08a; --glow: #e7bb4caa;
+  --font-display: Georgia, "Times New Roman", serif;
+  --display-transform: none; --display-tracking: 0.03em; --display-style: italic; --display-weight: 700;
+  --radius-mul: 1.4;
+  /* Default of 3 Veselin Marinov posters Stefan supplied (design/backgrounds/); the other 2 are
+     wired below as their own clickable wallpaper options (poster2/poster3 skins). */
+  --canvas-image: url("/backgrounds/imperator-vm-poster-1.png");
+}
+[data-theme="imperator"][data-skin="poster2"] {
+  --canvas-image: url("/backgrounds/imperator-vm-poster-2.png");
+}
+[data-theme="imperator"][data-skin="poster3"] {
+  --canvas-image: url("/backgrounds/imperator-vm-poster-3.png");
+}
+/* NOTE: an earlier iteration suppressed .logo-mark here (structure.showLogo: false, design-
+   specs.md §8 decision 2's "Imperator's art self-brands" reasoning). Stefan overrode that
+   explicitly for the logo specifically ("do not hide it") — the titlebar icon and the centered
+   watermark now show on every theme including Imperator. */
+
+/* ---- VEIL (arcane) — violet forbidden-knowledge portal ---- */
+[data-theme="veil"] {
+  --canvas-a: #0a0714; --canvas-b: #170e2c; --canvas-c: #251345;
+  --scrim: rgba(8, 5, 16, 0.44);
+  --panel: rgba(22, 13, 40, 0.87); --panel-raised: rgba(30, 18, 52, 0.92); --inset: rgba(9, 5, 17, 0.93);
+  --border-hairline: rgba(190, 140, 255, 0.2);
+  --text-primary: #ede4ff; --text-secondary: #bda3e8; --text-muted: #78649e;
+  --accent: #a76cf2; --accent-2: #d79bff; --glow: #a76cf2aa;
+  --font-display: "Palatino Linotype", Palatino, Georgia, serif;
+  --display-transform: none; --display-tracking: 0.06em; --display-style: normal; --display-weight: 600;
+  --radius-mul: 1.2;
+  /* VEIL's own default background (the "Veil of Isis" occult look, design-specs.md §4's own
+     description). The Islamic/Sufi skin below overrides this with its own image. */
+  --canvas-image: url("/backgrounds/veil-occult-isis-skin.png");
+}
+
+/* ---- VEIL skins (design-specs.md §4 "Skins documented from the art") ----
+   A skin inherits VEIL's structure/tokens and swaps only background+accent (per the design
+   doc's own skin model) — implemented here as a data attribute layered on top of the theme,
+   e.g. <div data-theme="veil" data-skin="islamic">. */
+[data-theme="veil"][data-skin="islamic"] {
+  --canvas-image: url("/backgrounds/veil-islamic-sufi-skin.png");
+}
+[data-theme="veil"][data-skin="occult"] {
+  --canvas-image: url("/backgrounds/veil-occult-isis-skin.png");
+}
+
+/* ---- FORGE (forged) — molten soul-forge, aggressive angular ---- */
+[data-theme="forge"] {
+  --canvas-a: #0c0402; --canvas-b: #260904; --canvas-c: #3d0f05;
+  --scrim: rgba(10, 3, 1, 0.4);
+  --panel: rgba(30, 9, 4, 0.87); --panel-raised: rgba(41, 13, 6, 0.93); --inset: rgba(12, 4, 2, 0.94);
+  --border-hairline: rgba(255, 120, 70, 0.24);
+  --text-primary: #fff1e8; --text-secondary: #f0ab8c; --text-muted: #a56a52;
+  --accent: #ff6a34; --accent-2: #ffa668; --glow: #ff6a34aa;
+  --font-display: "Arial Narrow", "Segoe UI", sans-serif;
+  --display-transform: uppercase; --display-tracking: 0.02em; --display-style: normal; --display-weight: 800;
+  --radius-mul: 0.3;
+  --canvas-image: url("/backgrounds/forge-molten-circuit.png");
+}
+
+/* ---- ENCHANT (astral) — cyan-magenta aurora + runic frame; home of the SGA display font ---- */
+[data-theme="enchant"] {
+  --canvas-a: #050f10; --canvas-b: #0a1c22; --canvas-c: #191038;
+  --scrim: rgba(4, 10, 12, 0.42);
+  --panel: rgba(10, 24, 30, 0.86); --panel-raised: rgba(14, 32, 40, 0.92); --inset: rgba(4, 10, 13, 0.93);
+  --border-hairline: rgba(120, 230, 220, 0.2);
+  --text-primary: #e4fffb; --text-secondary: #93dcd6; --text-muted: #5e8f8b;
+  --accent: #43e6cf; --accent-2: #d94ce0; --glow: #43e6cfaa;
+  --font-display: "Trebuchet MS", "Segoe UI", sans-serif;
+  --display-transform: uppercase; --display-tracking: 0.22em; --display-style: normal; --display-weight: 500;
+  --radius-mul: 1.0;
+  --canvas-image: url("/backgrounds/enchant-astral-phoenix.png");
+}
+/* ENCHANT is the SGA glyph font's conceptual "home" (design-specs.md §4 #5), but the actual
+   font-swap is already GLOBAL across every theme (see .window.lang-sga below, changelog 093) —
+   no Enchant-specific override needed here; this comment exists so a future reader doesn't
+   re-add one, expecting SGA to only apply on this theme. */
 
 /* ============================== THE APP WINDOW (fills the frameless OS window) ============================== */
 .window {
@@ -55,10 +157,19 @@ button { font: inherit; color: inherit; }
 }
 .canvas-layer {
   position: absolute; inset: 0; z-index: 0;
+  /* --canvas-image (per theme, design/backgrounds/*) sits UNDER the same gradient stack every
+     theme already used as its CSS-approximation stand-in (design-specs.md §8 decision 4) — the
+     gradients now function as a color-matched wash over the real photo/art instead of being the
+     whole background, so legibility (R8/§6 contrast) and the ambient drift motion are unchanged
+     whether or not a theme has a real image yet. var(--canvas-image, none) means a theme/skin
+     with no image assigned falls back to gradient-only, exactly like before this change. */
   background:
     radial-gradient(120% 90% at 78% 8%, var(--canvas-c), transparent 60%),
     radial-gradient(90% 70% at 15% 95%, var(--canvas-b), transparent 65%),
-    linear-gradient(160deg, var(--canvas-a), var(--canvas-b) 55%, var(--canvas-a));
+    linear-gradient(160deg, color-mix(in srgb, var(--canvas-a) 30%, transparent), color-mix(in srgb, var(--canvas-b) 18%, transparent) 55%, color-mix(in srgb, var(--canvas-a) 30%, transparent)),
+    var(--canvas-image, none);
+  background-size: auto, auto, auto, cover;
+  background-position: center, center, center, center;
   animation: drift var(--dur-ambient) ease-in-out infinite alternate;
 }
 @keyframes drift {
@@ -67,6 +178,26 @@ button { font: inherit; color: inherit; }
 }
 .canvas-layer canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.55; }
 .scrim-layer { position: absolute; inset: 0; z-index: 1; background: var(--scrim); }
+/* Centered logo watermark (design/logo.png) over every wallpaper EXCEPT Imperator — Imperator's
+   art self-brands (Veselin Marinov's own face/name), same "no double branding" reasoning as the
+   existing .logo-mark suppression (design-specs.md §8 decision 2). Sits above the scrim so it
+   stays visible over any background, but below .content/panels so it never competes with real
+   UI or blocks clicks (pointer-events: none). */
+.logo-watermark {
+  /* Anchored to the SAME reserved band as .hero-space (titlebar+toolbar height, then a vh-based
+     band) — not inset:0 (used to overlap the footer, Stefan's earlier screenshot) and not a
+     guessed fixed px box either. ~76px covers the real titlebar+toolbar height across themes. */
+  position: absolute; top: calc(76px + 2vh); height: 26vh; min-height: 140px; max-height: 260px;
+  left: 0; right: 0; z-index: 1.5; pointer-events: none;
+  background: url("/logo/logo.png") center center / min(42%, 320px) auto no-repeat;
+  /* Full opacity, NO blur/glow filter — Stefan wants the original PNG rendered sharp and bright
+     exactly as authored, not softened or tinted (the drop-shadow-glow attempt from changelog 110
+     was the wrong direction). image-rendering hints keep it crisp at non-1:1 scale factors. */
+  opacity: 1;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+/* Shown on EVERY theme, including Imperator — Stefan: "do not hide it." */
 .content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
 .frame-ornament {
   position: absolute; inset: 0; z-index: 3; pointer-events: none;
@@ -89,9 +220,8 @@ button { font: inherit; color: inherit; }
 }
 .brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .logo-mark {
-  width: 18px; height: 18px; border-radius: 4px;
-  background: conic-gradient(from 210deg, var(--accent), var(--accent-2), var(--accent));
-  box-shadow: 0 0 10px var(--glow); flex: none;
+  width: 22px; height: 22px; flex: none;
+  background: url("/logo/logo.png") center center / contain no-repeat;
 }
 .title-text {
   font-family: var(--font-display);
@@ -137,6 +267,14 @@ button.chip { cursor: pointer; }
 button.chip:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--accent); }
 .debug-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
 .debug-toggle input { accent-color: var(--accent); }
+
+/* ---- reserved hero band (logo watermark / IMPERATOR's Veselin Marinov face) ----
+   A real dedicated gap, same height on every theme (R1) — NOT a per-theme margin hack (the
+   prior approach only nudged the run row on IMPERATOR alone; Stefan wants the whole area
+   between the toolbar and the input panels kept clear everywhere, since that's exactly where
+   the centered .logo-watermark sits too). Height is a vh-based band so it scales with the
+   window instead of a fixed px value that would feel wrong on a resized window. */
+.hero-space { position: relative; z-index: 4; height: 26vh; min-height: 140px; max-height: 260px; }
 
 /* ---- input panels ---- */
 .panels {
@@ -289,6 +427,39 @@ select {
   background: var(--scrim); backdrop-filter: blur(2px);
 }
 .result-screen[data-open="true"] { display: flex; }
+
+/* ---- loading screen (design-specs.md §5) ---- */
+.loading-card {
+  width: min(340px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px;
+  background: var(--panel-raised); border: 1px solid var(--border-hairline);
+  border-radius: calc(10px * var(--radius-mul) * 0.7 + 4px); padding: 28px 22px;
+  box-shadow: 0 24px 60px -16px rgba(0,0,0,0.75), 0 0 40px -18px var(--glow);
+}
+.loading-spinner { display: flex; gap: 8px; }
+.loading-spinner span {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 10px var(--glow);
+  animation: loading-bounce var(--dur-pulse) ease-in-out infinite;
+}
+.loading-spinner span:nth-child(2) { animation-delay: calc(var(--dur-pulse) * 0.15); }
+.loading-spinner span:nth-child(3) { animation-delay: calc(var(--dur-pulse) * 0.3); }
+@keyframes loading-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-6px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner span { animation: none; opacity: 1; }
+}
+.loading-stage {
+  font-family: var(--font-display); text-transform: var(--display-transform);
+  letter-spacing: var(--display-tracking); font-weight: var(--display-weight);
+  font-size: var(--scale-heading); color: var(--text-primary);
+}
+.loading-count {
+  font-family: var(--font-technical); font-size: var(--scale-mono); color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.loading-track { width: 100%; }
 .readout {
   width: min(460px, 100%); background: var(--panel-raised); border: 1px solid var(--border-hairline);
   border-radius: calc(10px * var(--radius-mul) * 0.7 + 4px); padding: 18px;
@@ -352,6 +523,25 @@ select {
 .key-state { font-size: var(--scale-caption); color: var(--state-start); }
 .key-state.unset { color: var(--state-warning); }
 
+/* ---- recent projects sheet ---- */
+.recent-list { display: flex; flex-direction: column; gap: 8px; }
+.recent-empty { color: var(--text-muted); font-size: var(--scale-body); padding: 8px 0; }
+.recent-item {
+  background: var(--panel); border: 1px solid var(--border-hairline); border-radius: var(--radius-panel);
+  padding: 10px; display: flex; flex-direction: column; gap: 4px;
+}
+.recent-item .rp-name {
+  font-family: var(--font-display); text-transform: var(--display-transform); letter-spacing: var(--display-tracking);
+  font-weight: var(--display-weight); font-size: var(--scale-body); color: var(--text-primary);
+}
+.recent-item .rp-meta { font-size: var(--scale-caption); color: var(--text-muted); }
+.recent-item .rp-open {
+  align-self: flex-start; margin-top: 2px; background: transparent; border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-control); color: var(--text-secondary); padding: 4px 9px; cursor: pointer;
+  font-size: var(--scale-caption);
+}
+.recent-item .rp-open:hover { color: var(--text-primary); box-shadow: 0 0 0 1px var(--accent); }
+
 /* ---- toasts ---- */
 .toast-stack { position: absolute; z-index: 8; right: 12px; bottom: 12px; display: flex; flex-direction: column-reverse; gap: 8px; max-width: min(320px, 70%); pointer-events: none; }
 .toast {
@@ -381,6 +571,63 @@ select {
   .panels { grid-template-columns: 1fr; }
   .run-row { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---- theme picker (design-specs.md §5 "Theme switcher") ---- */
+.theme-picker { position: relative; }
+.theme-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.theme-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  /* Wide enough that every wallpaper label (incl. "ИСЛЯМСКИ СУФИ ПЪТ"/"DAS DEUTSCHE HERZ", the
+     longest real-language strings) fits on one line at the item font-size below — the previous
+     260px cap wrapped these to 2 lines (Stefan's screenshot). */
+  min-width: 220px; max-width: min(320px, 92vw); max-height: 70vh; overflow-y: auto;
+  padding: 4px;
+  background: var(--panel-raised); border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 14px 34px -10px #000c, inset 0 0 20px -12px var(--glow);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.theme-menu[hidden] { display: none; }
+/* One flat list of 10 clickable wallpaper options (theme+skin+background as one "look"),
+   no in-menu description — just the translated wallpaper name (Stefan's request). Smaller than
+   --scale-body + no-wrap so every label stays one line regardless of language/length. */
+.theme-item {
+  padding: 7px 9px; border: 0; background: transparent; cursor: pointer;
+  border-radius: var(--radius-control); color: var(--text-secondary);
+  text-align: left; font-size: var(--scale-mono);
+  /* max-width + min-width:0 is REQUIRED alongside white-space:nowrap for the ellipsis to actually
+     clip inside a flex-column parent (.theme-menu) — without it, a very long string (e.g. the
+     hex "joke" language's byte-dump encoding of a wallpaper name) stretches the flex item itself
+     wider than the menu instead of being clipped, blowing the menu out past its own rounded box
+     (Stefan's screenshot). */
+  display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--font-display); text-transform: var(--display-transform);
+  letter-spacing: var(--display-tracking); font-weight: var(--display-weight);
+}
+.theme-item:hover { background: var(--panel); color: var(--text-primary); }
+.theme-item.active { color: var(--text-primary); box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* ---- IMPERATOR "Play Veselin Marinov" (mirrors .theme-picker's exact structure) ---- */
+.music-picker { position: relative; }
+.music-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  min-width: 220px; max-width: min(280px, 92vw);
+  padding: 4px;
+  background: var(--panel-raised); border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 14px 34px -10px #000c, inset 0 0 20px -12px var(--glow);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.music-menu[hidden] { display: none; }
+.music-item {
+  padding: 7px 9px; border: 0; background: transparent; cursor: pointer;
+  border-radius: var(--radius-control); color: var(--text-secondary);
+  text-align: left; font-size: var(--scale-mono);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.music-item:hover { background: var(--panel); color: var(--text-primary); }
+.music-item.active { color: var(--text-primary); box-shadow: inset 0 0 0 1px var(--accent); }
 
 /* ---- language / flag picker (phase 3b) ---- */
 .lang-picker { position: relative; }

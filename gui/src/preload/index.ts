@@ -36,6 +36,9 @@ const api: GuiApi = {
   settingsSet: (patch: SettingsPatch) => ipcRenderer.invoke(CH.settingsSet, patch),
   footerGet: () => ipcRenderer.invoke(CH.footerGet),
   reportGet: (runId) => ipcRenderer.invoke(CH.reportGet, runId),
+  recentProjectsList: () => ipcRenderer.invoke(CH.recentProjectsList),
+  musicRandomTrack: () => ipcRenderer.invoke(CH.musicRandomTrack),
+  musicList: () => ipcRenderer.invoke(CH.musicList),
 
   windowMinimize: () => ipcRenderer.send(CH.windowMinimize),
   windowMaximize: () => ipcRenderer.send(CH.windowMaximize),

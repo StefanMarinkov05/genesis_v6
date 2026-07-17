@@ -122,9 +122,10 @@ export class GenesisRunner {
   }
 
   /**
-   * Pause (phase 2, UI-disabled in the MVP): kill after the current stage's checkpoint.
-   * Implemented via the same idempotent kill the state machine relies on — the next
-   * resume re-runs only the un-done stage. Kept minimal until phase 2 wires the UI.
+   * Pause: kills the child immediately (same as Stop) — NOT checkpoint-aware, despite an
+   * earlier doc draft claiming otherwise (corrected in changelog 102's doc fix). Still correct:
+   * every stage is idempotent and MarkDone only fires on completion, so an immediate kill
+   * mid-stage just discards that one stage's partial work; Resume re-runs it from scratch.
    */
   pause(runId: RunId): void {
     const st = this.runs.get(runId);
@@ -133,7 +134,7 @@ export class GenesisRunner {
     this.killChild(st);
   }
 
-  /** Resume (phase 2, UI-disabled): re-spawn run --all; done stages are skipped via state.json. */
+  /** Resume: re-spawn run --all; done stages are skipped via state.json. */
   resume(runId: RunId): void {
     const st = this.runs.get(runId);
     if (!st) return;
