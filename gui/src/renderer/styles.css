@@ -358,14 +358,17 @@ select {
 [disabled] { opacity: 0.4; cursor: not-allowed; }
 
 /* ---- run controls (R2 — colors NEVER from theme tokens) ---- */
-.run-row-wrap { position: relative; z-index: 4; padding: 10px 12px 4px; }
+/* Shrunk to ~1/3 the page width (was full-width) and the 4 buttons stacked 2x2 (Start/Pause
+   above Resume/Stop) instead of one row of 4 — matches the same "stack, don't span the whole
+   window" redesign as the input panels (changelog 124). */
+.run-row-wrap { position: relative; z-index: 4; padding: 10px 12px 4px; width: min(34%, 420px); }
 .run-caption {
   font-size: var(--scale-caption); color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
   display: flex; align-items: center; gap: 6px;
 }
 .run-caption .lock { color: var(--accent); }
-.run-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.run-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .run-btn {
   border-radius: var(--radius-control); border: 1px solid var(--btn-c);
   background: color-mix(in srgb, var(--btn-c) 14%, var(--panel)); color: #fff;
@@ -615,9 +618,6 @@ select {
 .toast.warning { --tc: var(--state-warning); }
 .toast.danger { --tc: var(--state-stop); }
 
-@media (max-width: 680px) {
-  .run-row { grid-template-columns: repeat(2, 1fr); }
-}
 
 /* ---- theme picker (design-specs.md §5 "Theme switcher") ---- */
 .theme-picker { position: relative; }
