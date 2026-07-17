@@ -33,10 +33,13 @@
           </div>
         </div>
 
-        <!-- toolbar — order per Stefan's screenshot: Music, Flag, Last result, Recent, Debug,
-             Settings, Theme (far right). -->
+        <!-- toolbar — two vertical stacks per Stefan's layout: LEFT = theme picker over the
+             language picker, with the (IMPERATOR-only) music button below both; RIGHT = settings,
+             debug, recent projects, last result stacked top-to-bottom. -->
         <div class="toolbar">
-          <div class="group">
+          <div class="group group-vertical">
+            <div class="theme-picker" id="theme-picker"></div>
+            <div class="lang-picker" id="lang-picker"></div>
             <!-- IMPERATOR-only: shown/hidden by main.ts based on the active wallpaper's theme. -->
             <div class="music-picker" id="music-picker" hidden>
               <button type="button" class="chip" id="music-toggle" aria-haspopup="true" aria-expanded="false">
@@ -57,16 +60,14 @@
                 </button>
               </div>
             </div>
-            <div class="lang-picker" id="lang-picker"></div>
-            <button type="button" class="chip" id="toolbar-reopen" disabled>Last result</button>
-            <button type="button" class="chip" id="recent-open"><span id="recent-label">Recent projects</span></button>
+          </div>
+          <div class="group group-vertical">
+            <button type="button" class="chip" id="settings-open" title="Settings">⚙ <span id="settings-label">Settings</span></button>
             <label class="debug-toggle chip"
               ><input type="checkbox" id="debug-toggle" /> <span id="debug-label">Debug</span></label
             >
-            <button type="button" class="chip" id="settings-open" title="Settings">⚙ <span id="settings-label">Settings</span></button>
-          </div>
-          <div class="group">
-            <div class="theme-picker" id="theme-picker"></div>
+            <button type="button" class="chip" id="recent-open"><span id="recent-label">Recent projects</span></button>
+            <button type="button" class="chip" id="toolbar-reopen" disabled>Last result</button>
           </div>
         </div>
 
@@ -75,13 +76,7 @@
              recolor, they never restructure). -->
         <div class="hero-space" aria-hidden="true"></div>
 
-        <!-- debug terminal (moved above the input panels per Stefan's request — swapped
-             positions with .panels) -->
-        <div class="terminal-wrap" id="terminal-wrap" hidden>
-          <div class="terminal" id="terminal"></div>
-        </div>
-
-        <!-- input panels -->
+        <!-- input panels (swapped back above the terminal per Stefan's latest request) -->
         <div class="panels">
           <div class="panel">
             <h3 id="spec-heading">Specification</h3>
@@ -100,6 +95,11 @@
               <button type="button" class="claude-btn" id="seed-claude" disabled>✦ Claude</button>
             </div>
           </div>
+        </div>
+
+        <!-- debug terminal -->
+        <div class="terminal-wrap" id="terminal-wrap" hidden>
+          <div class="terminal" id="terminal"></div>
         </div>
 
         <!-- run controls -->

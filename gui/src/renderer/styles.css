@@ -262,6 +262,20 @@ button { font: inherit; color: inherit; }
   display: flex; align-items: center; gap: 8px; color: var(--text-secondary);
   flex-wrap: wrap; row-gap: 6px;
 }
+/* Two vertical stacks (theme+language+music on the left; settings/debug/recent/last-result on
+   the right) instead of the previous single-row toolbar — each control keeps its own full width
+   so the stack reads as a clean column rather than wrapped chips. */
+.toolbar .group-vertical {
+  flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px;
+}
+.group-vertical .theme-picker,
+.group-vertical .lang-picker,
+.group-vertical .music-picker { width: 100%; }
+.group-vertical .theme-toggle,
+.group-vertical .lang-toggle,
+.group-vertical .music-toggle,
+.group-vertical .chip,
+.group-vertical .debug-toggle { width: 100%; justify-content: center; }
 .chip {
   border: 1px solid var(--border-hairline); background: var(--panel);
   border-radius: var(--radius-pill); padding: 4px 10px;
