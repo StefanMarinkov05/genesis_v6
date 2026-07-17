@@ -189,15 +189,19 @@ button { font: inherit; color: inherit; }
      guessed fixed px box either. ~76px covers the real titlebar+toolbar height across themes. */
   position: absolute; top: calc(76px + 2vh); height: 26vh; min-height: 140px; max-height: 260px;
   left: 0; right: 0; z-index: 1.5; pointer-events: none;
-  background: url("/logo/logo.png") center center / min(42%, 320px) auto no-repeat;
-  /* Full opacity, NO blur/glow filter — Stefan wants the original PNG rendered sharp and bright
-     exactly as authored, not softened or tinted (the drop-shadow-glow attempt from changelog 110
-     was the wrong direction). image-rendering hints keep it crisp at non-1:1 scale factors. */
-  opacity: 1;
+  /* Bigger + lighter (Stefan's screenshot: readable but wants more presence) — 42%/320px cap
+     raised to 56%/420px, opacity dialed back to 0.8 so it reads as a watermark, not a solid
+     sticker, over a busy wallpaper. */
+  background: url("/logo/logo.png") center center / min(56%, 420px) auto no-repeat;
+  opacity: 0.8;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
-/* Shown on EVERY theme, including Imperator — Stefan: "do not hide it." */
+/* Hidden on IMPERATOR ONLY — its Veselin Marinov art self-brands (own name/face), so the DPS-NN
+   watermark would double up on top of it (design-specs.md §8 decision 2's same reasoning). Every
+   other theme still shows it at full visibility per the earlier "do not hide it" instruction —
+   that was about not suppressing the logo everywhere, not an exception for VM specifically. */
+[data-theme="imperator"] .logo-watermark { display: none; }
 .content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
 .frame-ornament {
   position: absolute; inset: 0; z-index: 3; pointer-events: none;
