@@ -1255,7 +1255,7 @@ public class SeedSchemaTests
         var json = JsonSerializer.Serialize(schema);
         Assert.Contains("refKey", json);       // Brand/Category are parents
         Assert.Contains("parentRef_Category", json); // Product is a child
-        Assert.Contains("imageKeyword", json); // Product has images
+        Assert.Contains("imageKeywords", json); // Product has images (array - "multiple" mode = 2-4 per row)
     }
 
     [Fact]

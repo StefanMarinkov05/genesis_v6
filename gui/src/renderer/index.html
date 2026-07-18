@@ -118,6 +118,18 @@
           </div>
         </div>
 
+        <!-- "prank" popup - shown once when Start is clicked, text-only (Stefan: pure joke, no
+             actual slowdown logic behind it). Auto-closes after 30s or via the Close button. -->
+        <div class="dialog-backdrop" id="prank-dialog" data-open="false" role="alertdialog" aria-modal="true" aria-labelledby="prank-title">
+          <div class="dialog">
+            <div class="sheet-head"><h4 id="prank-title" style="margin:0">Performance notice</h4><button type="button" id="prank-close" aria-label="Close">✕</button></div>
+            <p class="lead" id="prank-body">…</p>
+            <div class="dialog-actions">
+              <button type="button" class="dialog-btn primary" id="prank-ok">Close</button>
+            </div>
+          </div>
+        </div>
+
         <!-- completion / report readout -->
         <div class="result-screen" id="report-screen" data-open="false" role="dialog" aria-modal="true" aria-labelledby="report-title">
           <div class="readout ok">

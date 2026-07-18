@@ -57,7 +57,7 @@
       "Quantity": 23,
       "Status": "Nalichen",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-2",
@@ -68,7 +68,7 @@
       "Quantity": 12,
       "Status": "Zapazen",
       "UserId": "$seedUser:1",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-3",
@@ -79,7 +79,7 @@
       "Quantity": 28,
       "Status": "Prodaden",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-4",
@@ -90,7 +90,7 @@
       "Quantity": 44,
       "Status": "Nalichen",
       "UserId": "$seedUser:1",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-5",
@@ -101,7 +101,7 @@
       "Quantity": 6,
       "Status": "Zapazen",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-6",
@@ -112,7 +112,7 @@
       "Quantity": 7,
       "Status": "Prodaden",
       "UserId": "$seedUser:1",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-1",
@@ -123,7 +123,7 @@
       "Quantity": 37,
       "Status": "Nalichen",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-2",
@@ -134,7 +134,7 @@
       "Quantity": 9,
       "Status": "Zapazen",
       "UserId": "$seedUser:1",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-3",
@@ -145,7 +145,7 @@
       "Quantity": 26,
       "Status": "Prodaden",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-4",
@@ -156,7 +156,7 @@
       "Quantity": 40,
       "Status": "Nalichen",
       "UserId": "$seedUser:1",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-5",
@@ -167,7 +167,7 @@
       "Quantity": 6,
       "Status": "Zapazen",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-6",
@@ -178,7 +178,7 @@
       "Quantity": 35,
       "Status": "Prodaden",
       "UserId": "$seedUser:1",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-1",
@@ -189,7 +189,7 @@
       "Quantity": 16,
       "Status": "Nalichen",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-2",
@@ -200,7 +200,7 @@
       "Quantity": 5,
       "Status": "Zapazen",
       "UserId": "$seedUser:1",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     },
     {
       "parentRef_Brand": "brand-3",
@@ -211,7 +211,7 @@
       "Quantity": 8,
       "Status": "Prodaden",
       "UserId": "$seedUser:0",
-      "imageKeyword": "product"
+      "imageKeywords": ["product", "product closeup"]
     }
   ]
 }

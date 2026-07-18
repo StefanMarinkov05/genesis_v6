@@ -36,10 +36,10 @@ public static class SeedData
         // ---- {{ model.name }} ----
         if (doc.RootElement.TryGetProperty("{{ model.name }}", out rows))
         {
-            var imageIndex = 0;
+            var rowIndex = 0;
             foreach (var row in rows.EnumerateArray())
             {
-                imageIndex++;
+                rowIndex++;
                 var entity = new {{ model.name }}
                 {
 {{~ for prop in model.properties ~}}
@@ -92,11 +92,23 @@ public static class SeedData
                 if (row.TryGetProperty("refKey", out var rk))
                     refKeys["{{ model.name }}:" + rk.GetString()] = entity.Id;
 {{~ if model.images ~}}
-                db.{{ model.name }}Images.Add(new {{ model.name }}Image
+                // One {{ model.name }}Image row per entry in this row's imageKeywords array - the
+                // count varies per row (schema: 1 for "single" mode, 2-4 for "multiple"), so it's
+                // read from the seed JSON itself rather than assumed fixed. Filenames mirror the
+                // exact "{model}-{row}-{img}.jpg" pattern SeedStage.cs's download loop wrote to disk.
+                if (row.TryGetProperty("imageKeywords", out var {{ model.name | string.downcase }}Imgs) && {{ model.name | string.downcase }}Imgs.ValueKind == JsonValueKind.Array)
                 {
-                    {{ model.name }}Id = entity.Id,
-                    RelativePath = "{{ model.images.stored_in | string.replace "wwwroot/" "" }}/{{ model.name | string.downcase }}-" + imageIndex + ".jpg"
-                });
+                    var imgIndex = 0;
+                    foreach (var _ in {{ model.name | string.downcase }}Imgs.EnumerateArray())
+                    {
+                        imgIndex++;
+                        db.{{ model.name }}Images.Add(new {{ model.name }}Image
+                        {
+                            {{ model.name }}Id = entity.Id,
+                            RelativePath = "{{ model.images.stored_in | string.replace "wwwroot/" "" }}/{{ model.name | string.downcase }}-" + rowIndex + "-" + imgIndex + ".jpg"
+                        });
+                    }
+                }
 {{~ end ~}}
             }
         }

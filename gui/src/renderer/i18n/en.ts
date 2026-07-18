@@ -129,6 +129,14 @@ export const en = {
     uploadFailed: 'Upload failed',
     couldNotStartApp: 'Could not start the app',
   },
+  prank: {
+    title: 'Performance notice',
+    body:
+      "The program is deliberately slowed down 10x. If you set the Veselin Marinov wallpaper it's " +
+      "only 5x. If you play a short song, it runs at normal speed while it's playing. If you play " +
+      'a concert and watch the video, extra threads get activated.',
+    close: 'Close',
+  },
 } as const;
 
 // The EN table is authored `as const`, so `typeof en` has narrow *literal* string types

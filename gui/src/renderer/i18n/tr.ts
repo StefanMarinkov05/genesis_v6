@@ -128,4 +128,12 @@ export const tr: Strings = {
     uploadFailed: 'Yükleme başarısız oldu',
     couldNotStartApp: 'Uygulama başlatılamadı',
   },
+  prank: {
+    title: 'Performans bildirimi',
+    body:
+      'Program kasıtlı olarak 10 kat yavaşlatıldı. Veselin Marinov duvar kağıdını ayarlarsan, sadece ' +
+      '5 kat. Kısa bir şarkı çalarsan, çalarken normal hızda çalışır. Bir konser oynatıp videoyu ' +
+      'izlersen, ek iş parçacıkları etkinleşir.',
+    close: 'Kapat',
+  },
 };

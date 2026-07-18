@@ -117,8 +117,11 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
                 "3. Rows must be varied - no two rows may share the same descriptive string.\n" +
                 "4. Respect each property's 'hint' when present - it constrains realistic ranges/content.\n" +
                 "5. Every parent row: unique refKey (kebab-case, Latin). Every child row: parentRef_{Target} " +
-                "referencing an emitted refKey. Models with hasImages=true: include imageKeyword " +
-                "(1-2 ENGLISH words for stock-photo search - the only intentionally English field).\n" +
+                "referencing an emitted refKey. Models with hasImages=true: include imageKeywords, an array of " +
+                "1-2-word ENGLISH stock-photo search phrases (the only intentionally English field) - one entry per " +
+                "photo. The schema fixes exactly how many entries each row needs; give each entry a DIFFERENT angle " +
+                "on the same item (e.g. \"red sneakers\", \"sneakers side view\", \"sneakers on foot\") so the " +
+                "photos in one row don't look identical.\n" +
                 "6. Dates ISO-8601; decimals plain numbers.\n" +
                 "7. Every property flagged isUserRef=true (owner/author fields) MUST use one of the exact strings " +
                 "listed in 'seedUsers' (e.g. \"$seedUser:0\") - never invent a user id or GUID. Distribute ownership " +
@@ -136,17 +139,29 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
         }
 
         // ---- 2. images ---------------------------------------------------------
+        // One or more images per row (mode "single" = exactly 1, "multiple" = 2-4, enforced by
+        // BuildSeedSchema's imageKeywords array). Filenames are "{model}-{row}-{img}.jpg" - the
+        // per-image suffix is new; seed_data.sbn's runtime loop computes the identical pattern
+        // from the same seed-data.json array, so the two stay in sync without passing state.
         foreach (var model in spec.Models.Where(m => m.Images is not null))
         {
             if (!doc.RootElement.TryGetProperty(model.Name, out var rows)) continue;
             var targetDir = Path.Combine(ctx.ProjectDir, model.Images!.StoredIn);
             Directory.CreateDirectory(targetDir);
-            var i = 0;
+            var rowIndex = 0;
             foreach (var row in rows.EnumerateArray())
             {
-                var keyword = row.TryGetProperty("imageKeyword", out var kw) ? kw.GetString()! : model.Name.ToLower();
-                var fileName = $"{model.Name.ToLower()}-{++i}.jpg";
-                await DownloadImageAsync(keyword, Path.Combine(targetDir, fileName), ctx, ct);
+                ++rowIndex;
+                var keywords = row.TryGetProperty("imageKeywords", out var kws) && kws.ValueKind == JsonValueKind.Array
+                    ? kws.EnumerateArray().Select(k => k.GetString()!).ToList()
+                    : [model.Name.ToLower()];
+                var imgIndex = 0;
+                foreach (var keyword in keywords)
+                {
+                    ++imgIndex;
+                    var fileName = $"{model.Name.ToLower()}-{rowIndex}-{imgIndex}.jpg";
+                    await DownloadImageAsync(keyword, Path.Combine(targetDir, fileName), ctx, ct);
+                }
             }
         }
 
@@ -269,7 +284,19 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
                 rowProps.Add((p.Name, new JsonSchemaBuilder().Type(t).Build()));
                 if (!p.Nullable) required.Add(p.Name);
             }
-            if (model.Images is not null) { rowProps.Add(("imageKeyword", new JsonSchemaBuilder().Type(SchemaValueType.String).Build())); required.Add("imageKeyword"); }
+            if (model.Images is not null)
+            {
+                // "multiple" mode gets a real gallery (2-4 stock photos/product); "single" stays
+                // exactly one, same as before this changed. Both are the SAME field
+                // (imageKeywords: string[]) so seed_data.sbn's runtime loop doesn't need to
+                // branch on mode - it just inserts one {Model}Image row per array element.
+                var (min, max) = model.Images.Mode == "multiple" ? (2u, 4u) : (1u, 1u);
+                var keywordsSchema = new JsonSchemaBuilder().Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Build())
+                    .MinItems(min).MaxItems(max).Build();
+                rowProps.Add(("imageKeywords", keywordsSchema));
+                required.Add("imageKeywords");
+            }
 
             var rowSchema = new JsonSchemaBuilder().Type(SchemaValueType.Object)
                 .Properties(rowProps.ToArray()).Required(required).AdditionalProperties(false);

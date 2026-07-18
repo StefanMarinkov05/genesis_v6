@@ -128,4 +128,13 @@ export const de: Strings = {
     uploadFailed: 'Upload fehlgeschlagen',
     couldNotStartApp: 'Anwendung konnte nicht gestartet werden',
   },
+  prank: {
+    title: 'Leistungshinweis',
+    body:
+      'Das Programm ist absichtlich um das 10-fache verlangsamt. Wenn du das Veselin-Marinov-' +
+      'Hintergrundbild einstellst, ist es nur das 5-fache. Wenn du einen kurzen Song abspielst, ' +
+      'läuft es mit normaler Geschwindigkeit, während er spielt. Wenn du ein Konzert abspielst und ' +
+      'das Video ansiehst, werden zusätzliche Threads aktiviert.',
+    close: 'Schließen',
+  },
 };

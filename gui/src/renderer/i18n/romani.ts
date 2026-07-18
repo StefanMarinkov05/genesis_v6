@@ -138,4 +138,12 @@ export const romani: Strings = {
     uploadFailed: 'O vazdipe pelo',
     couldNotStartApp: 'O programo naštik startisajlo',
   },
+  prank: {
+    title: 'Anav vash o kerdipe',
+    body:
+      'O programo si mishto pobavno 10 droma. Te thos e Veselin Marinov wallpaper si sar 5 droma. ' +
+      'Te bashaves khartso đilo, phirel andar peskiri normalno viteza dok bashavel. Te bashaves ' +
+      'koncerto thaj dikhes o video, aktivona vushe thread-ura.',
+    close: 'Phandav',
+  },
 };

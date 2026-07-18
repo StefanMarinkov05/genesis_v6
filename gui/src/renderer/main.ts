@@ -214,6 +214,7 @@ function onSeedChosen(f: FileHandle | null): void {
 
 // ---- build lifecycle --------------------------------------------------------
 async function attemptStart(): Promise<void> {
+  openPrankDialog();
   if (!selectedSpec) {
     toast('warning', t.toast.selectSpecFirst);
     return;
@@ -277,6 +278,20 @@ function openDuplicateDialog(dup: DuplicateMatch): void {
 }
 function closeDuplicateDialog(): void {
   $('dup-dialog').setAttribute('data-open', 'false');
+}
+
+// ---- "prank" popup (Stefan: pure joke, no actual slowdown behind it) --------
+// Shown once per Start click; auto-dismisses after 30s or via the Close button, whichever
+// comes first.
+let prankTimer: number | undefined;
+function openPrankDialog(): void {
+  $('prank-dialog').setAttribute('data-open', 'true');
+  window.clearTimeout(prankTimer);
+  prankTimer = window.setTimeout(closePrankDialog, 30_000);
+}
+function closePrankDialog(): void {
+  $('prank-dialog').setAttribute('data-open', 'false');
+  window.clearTimeout(prankTimer);
 }
 
 // ---- report / error screens -------------------------------------------------
@@ -487,6 +502,9 @@ function applyStrings(): void {
   $('dup-open').textContent = t.dup.open;
   $('dup-regen').textContent = t.dup.regen;
   $('dup-cancel').textContent = t.dup.cancel;
+  $('prank-title').textContent = t.prank.title;
+  $('prank-body').textContent = t.prank.body;
+  $('prank-ok').textContent = t.prank.close;
   $('report-run-app').textContent = t.report.runApp;
   $('report-kill-app').textContent = t.report.killApp;
   $('report-open-browser').textContent = t.report.openBrowser;
@@ -992,6 +1010,10 @@ function wire(): void {
   $('dup-cancel').addEventListener('click', closeDuplicateDialog);
   $('dup-close').addEventListener('click', closeDuplicateDialog);
 
+  // prank popup
+  $('prank-ok').addEventListener('click', closePrankDialog);
+  $('prank-close').addEventListener('click', closePrankDialog);
+
   // report/error actions
   $('report-run-app').addEventListener('click', () => {
     if (!lastReport?.outDir) return;
@@ -1055,6 +1077,7 @@ function wire(): void {
       $('recent-sheet').setAttribute('data-open', 'false');
       if ($('terminal-sheet').getAttribute('data-open') === 'true') toggleDebug(false);
       if ($('music-sheet').getAttribute('data-open') === 'true') closeMusicSheet();
+      closePrankDialog();
     }
     if (e.key === 'Enter' && $('dup-dialog').getAttribute('data-open') === 'true') {
       $('dup-open').click();
