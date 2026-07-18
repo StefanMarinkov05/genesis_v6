@@ -38,7 +38,7 @@ let runState: RunState = 'idle';
 let pendingDup: DuplicateMatch | null = null;
 
 const TOTAL_STAGES = 7; // the pipeline stages that emit progress (genesis-runner PIPELINE_STAGES)
-const APP_VERSION = '6.6.1'; // mirrors gui/package.json "version" - no IPC channel to read it live yet
+const APP_VERSION = '6.6.6'; // mirrors gui/package.json "version" - no IPC channel to read it live yet
 
 // ---- debug terminal ---------------------------------------------------------
 const term = new Terminal({

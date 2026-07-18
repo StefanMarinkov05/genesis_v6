@@ -1,6 +1,6 @@
 {
   "name": "dps-nn-gui",
-  "version": "6.6.1",
+  "version": "6.6.6",
   "description": "ДПС-НН GUI — Electron shell over the headless Genesis CLI (spec B.0 MVP)",
   "private": true,
   "author": "Stefan Marinkov",
