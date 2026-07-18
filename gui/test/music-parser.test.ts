@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { filterMp3Files, pickRandom } from '../src/main/music-parser.ts';
+import { filterMp3Files, filterVideoFiles, pickRandom } from '../src/main/music-parser.ts';
 
 // Guards the "Play Veselin Marinov" random-track picker's pure logic — no filesystem/Electron
 // import, so it's directly unit-testable under plain node --test (same split as
@@ -24,4 +24,9 @@ test('pickRandom always returns an element from the list', () => {
 
 test('pickRandom throws on an empty list rather than returning undefined', () => {
   assert.throws(() => pickRandom([]));
+});
+
+test('filterVideoFiles keeps only mp4/webm/mov (case-insensitive) and sorts them', () => {
+  const result = filterVideoFiles(['b.MP4', 'notes.txt', 'a.webm', 'c.mov', 'cover.jpg']);
+  assert.deepEqual(result, ['a.webm', 'b.MP4', 'c.mov']);
 });

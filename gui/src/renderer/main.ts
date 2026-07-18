@@ -1,7 +1,7 @@
 import '@xterm/xterm/css/xterm.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import type { BuildReport, DuplicateMatch, FileHandle, RecentProject } from '@shared/ipc-types';
+import type { BuildReport, DuplicateMatch, FileHandle, MusicCategory, RecentProject } from '@shared/ipc-types';
 import { LANGUAGES, langMeta, normalizeLang, stringsFor, type LangCode, type Strings } from './i18n';
 import { flagSvg } from './i18n/flags';
 import { activeButton, enablement, type RunState } from './state';
@@ -38,6 +38,7 @@ let runState: RunState = 'idle';
 let pendingDup: DuplicateMatch | null = null;
 
 const TOTAL_STAGES = 7; // the pipeline stages that emit progress (genesis-runner PIPELINE_STAGES)
+const APP_VERSION = '6.6.1'; // mirrors gui/package.json "version" - no IPC channel to read it live yet
 
 // ---- debug terminal ---------------------------------------------------------
 const term = new Terminal({
@@ -51,12 +52,43 @@ const term = new Terminal({
 const fit = new FitAddon();
 term.loadAddon(fit);
 
+// DPS-NN ASCII banner, written once the terminal is first mounted - visible immediately when
+// Debug is opened, even before Start is ever clicked (Stefan). ANSI colors: cyan for the glyphs
+// (matches the accent most themes share a family with), muted gray for status lines, dim yellow
+// for the warning-style log line. A function (not a static array) because it reads `t` - the
+// tagline and the flagged-project line both need to reflect the CURRENT language, including
+// Cyrillic "ДПС-НН" for BG/RU rather than a hardcoded "DPS-NN" (Stefan: "translate the name to
+// дпс-нн as well").
+function buildBanner(): string[] {
+  return [
+    '\x1b[36m██████╗ ██████╗ ███████╗    ███╗   ██╗███╗   ██╗\x1b[0m',
+    '\x1b[36m██╔══██╗██╔══██╗██╔════╝    ████╗  ██║████╗  ██║\x1b[0m',
+    '\x1b[36m██║  ██║██████╔╝███████╗    ██╔██╗ ██║██╔██╗ ██║\x1b[0m',
+    '\x1b[36m██║  ██║██╔═══╝ ╚════██║    ██║╚██╗██║██║╚██╗██║\x1b[0m',
+    '\x1b[36m██████╔╝██║     ███████║    ██║ ╚████║██║ ╚████║\x1b[0m',
+    '\x1b[36m╚═════╝ ╚═╝     ╚══════╝    ╚═╝  ╚═══╝╚═╝  ╚═══╝\x1b[0m',
+    '',
+    `\x1b[90m${t.hq} — ${t.title} — v${APP_VERSION}\x1b[0m`,
+    '\x1b[90m© 2026 DPS-NN (ДПС-НН). All rights reserved.\x1b[0m',
+    '\x1b[90mDebug terminal — pipeline output streams here once a build starts.\x1b[0m',
+    '',
+    '\x1b[33m[dps-nn]  проектът е белязан\x1b[0m',
+    '',
+    '\x1b[90mIdle. Waiting for Start.\x1b[0m',
+    '',
+  ];
+}
+let bannerWritten = false;
 function ensureTerminalMounted(): void {
   if (term.element) return;
   term.open($('terminal'));
+  if (!bannerWritten) {
+    for (const line of buildBanner()) term.writeln(line);
+    bannerWritten = true;
+  }
 }
 function refitTerminal(): void {
-  if (!term.element || $('terminal-wrap').hasAttribute('hidden')) return;
+  if (!term.element || $('terminal-sheet').getAttribute('data-open') !== 'true') return;
   try {
     fit.fit();
   } catch {
@@ -99,7 +131,27 @@ function setRunState(s: RunState): void {
   if ((s === 'idle' || s === 'done' || s === 'error' || s === 'stopped') && !selectedSpec) {
     ($('run-start') as HTMLButtonElement).disabled = true;
   }
-  setLoadingScreen(s === 'running' || s === 'awaiting-llm');
+  const generating = s === 'running' || s === 'awaiting-llm' || s === 'paused';
+  // Spec/Seed panels are only actionable before a run starts or after it ends - hide them while
+  // one is actively in flight (running/paused/awaiting-llm) so the terminal/progress get the
+  // space instead. They come back on idle/done/error/stopped.
+  $('panels').hidden = generating;
+  // Minimalism pass (Stefan: "too many buttons") - back to hiding what's not relevant, not just
+  // disabling it. Progress bar + Pause/Resume/Stop only appear once something is actually
+  // generating; Start is the mirror image, only shown before/after a run (there's nothing to
+  // "start" mid-run - that's what the other three act on).
+  $('progress-wrap').hidden = !generating;
+  ($('run-start') as HTMLButtonElement).hidden = generating;
+  ($('run-pause') as HTMLButtonElement).hidden = !generating;
+  ($('run-resume') as HTMLButtonElement).hidden = !generating;
+  ($('run-stop') as HTMLButtonElement).hidden = !generating;
+  // Explicit "only one button visible" flag (was relying on CSS grid auto-fit/flex-grow alone
+  // to fill the row when there's a single item - reported still narrower than the toolbar chips
+  // above it FIVE times over, despite that being textbook-correct CSS; switching to a JS-driven
+  // class removes all ambiguity about what's actually happening in the cascade). .run-row.single
+  // (below) forces that one button to a flat, unambiguous width:100% block instead of trusting
+  // grid/flex distribution math.
+  $('run-row').classList.toggle('single', !generating);
 }
 
 type ProgressCls = '' | 'running' | 'success' | 'error';
@@ -115,21 +167,6 @@ function setProgress(index: number, total: number, stage: string, cls: ProgressC
   fillEl.classList.remove('running', 'success', 'error');
   if (cls) fillEl.classList.add(cls);
   lastProgress = { index, total, stage, cls };
-  // Mirror the same reading onto the full-bleed loading screen (design-specs.md §5) — one
-  // source of truth for the numbers, two places they're painted.
-  $('loading-stage-text').textContent = stage;
-  $('loading-count-text').textContent = t.progress.of(index, total);
-  const loadingFill = $('loading-progress-fill');
-  loadingFill.style.width = `${Math.round((index / total) * 100)}%`;
-  loadingFill.classList.remove('running', 'success', 'error');
-  if (cls) loadingFill.classList.add(cls);
-}
-
-/** Show/hide the full-bleed loading screen — open only while a build is actively running or
- *  waiting on an LLM response; every other state (idle/paused/done/error/stopped) hides it, since
- *  done/error already show their OWN full-bleed screen and the rest return to the setup screen. */
-function setLoadingScreen(open: boolean): void {
-  $('loading-screen').setAttribute('data-open', open ? 'true' : 'false');
 }
 
 // ---- selection UI -----------------------------------------------------------
@@ -178,7 +215,7 @@ function onSeedChosen(f: FileHandle | null): void {
 // ---- build lifecycle --------------------------------------------------------
 async function attemptStart(): Promise<void> {
   if (!selectedSpec) {
-    toast('warning', 'Select a spec first');
+    toast('warning', t.toast.selectSpecFirst);
     return;
   }
   const dup = await gui.checkDuplicate(selectedSpec, selectedSeed);
@@ -303,11 +340,8 @@ function showError(stage: string | null, message: string): void {
   $('error-stage').textContent = stage ?? '—';
   $('error-cause').textContent = message;
   $('error-screen').setAttribute('data-open', 'true');
-  // Surface the terminal so the failing output is visible.
-  if ($('terminal-wrap').hasAttribute('hidden')) {
-    ($('debug-toggle') as HTMLInputElement).checked = true;
-    toggleDebug(true);
-  }
+  // Surface the terminal popup so the failing output is visible.
+  if ($('terminal-sheet').getAttribute('data-open') !== 'true') toggleDebug(true);
   ($('toolbar-reopen') as HTMLButtonElement).disabled = false;
 }
 
@@ -327,22 +361,24 @@ function reopenLastResult(): void {
 async function openSettings(): Promise<void> {
   const s = await gui.settingsGet();
   ($('s-key') as HTMLInputElement).value = '';
-  ($('s-cmd') as HTMLInputElement).value = s.genesisCommand;
   ($('s-out') as HTMLInputElement).value = s.outDir;
   const state = $('s-key-state');
   state.textContent = s.apiKeySet ? t.settings.apiKeySet : t.settings.apiKeyUnset;
   state.classList.toggle('unset', !s.apiKeySet);
   $('settings-sheet').setAttribute('data-open', 'true');
 }
+// The Genesis command field was removed from this sheet (Stefan - it's an advanced/debugging-
+// only override); genesisCommand is simply never included in the patch anymore, so
+// settings.ts's own `if (patch.genesisCommand !== undefined)` guard leaves the stored default
+// ('dotnet run --project src/Genesis.Cli --') permanently in effect. Nothing else changed.
 async function saveSettings(): Promise<void> {
   const key = ($('s-key') as HTMLInputElement).value;
   await gui.settingsSet({
-    genesisCommand: ($('s-cmd') as HTMLInputElement).value,
     outDir: ($('s-out') as HTMLInputElement).value,
     ...(key ? { apiKey: key } : {}),
   });
   $('settings-sheet').setAttribute('data-open', 'false');
-  toast('success', 'Settings saved');
+  toast('success', t.toast.settingsSaved);
 }
 
 // ---- recent projects sheet ---------------------------------------------------
@@ -387,22 +423,43 @@ async function openRecentSheet(): Promise<void> {
 }
 
 // ---- debug toggle -----------------------------------------------------------
+// Opens/closes the terminal as a closable popup (#terminal-sheet) instead of an inline box that
+// permanently ate space in .leftcol - Stefan: "so it wont cover the screen". The toggle checkbox
+// and the popup's own close button both funnel through here, so they can never drift out of sync
+// with each other.
 function toggleDebug(on: boolean): void {
-  const wrap = $('terminal-wrap');
+  $('terminal-sheet').setAttribute('data-open', on ? 'true' : 'false');
+  ($('debug-toggle') as HTMLInputElement).checked = on;
   if (on) {
-    wrap.removeAttribute('hidden');
     ensureTerminalMounted();
     requestAnimationFrame(refitTerminal);
-  } else {
-    wrap.setAttribute('hidden', '');
   }
 }
 
 // ---- static labels ----------------------------------------------------------
 function applyStrings(): void {
-  $('title-text').textContent = t.title;
+  // OS window title (taskbar/alt-tab tooltip) - was a static "DPS-NN — Genesis" in index.html,
+  // never actually localized despite everything else being. Stefan: "translate ... including
+  // the title of the app".
+  document.title = `DPS-NN — ${t.title}`;
+  // Settings button's own label IS the app title now (was t.toolbar.settings / "Settings") -
+  // the titlebar's separate .title-text element was removed so the name doesn't appear twice.
+  $('settings-label').textContent = t.title;
+  // Native hover tooltip - was a static title="Settings" attribute in index.html, never
+  // localized (Stefan: "the text when i hover the icon has dpn-nn in english even if my lang is
+  // bg" - it wasn't even "DPS-NN", it was literally the word "Settings", always in English).
+  $('settings-open').title = t.toolbar.settings;
+  $('hq-badge').textContent = t.hq;
   $('debug-label').textContent = t.toolbar.debug;
-  $('settings-label').textContent = t.toolbar.settings;
+  $('terminal-sheet-title').textContent = t.toolbar.debug;
+  $('music-sheet-title').textContent = t.music.button;
+  $('music-label').textContent = t.music.button;
+  $('music-youtube-label').textContent = t.music.youtube;
+  $('music-random-label').textContent = t.music.random;
+  $('music-stop-label').textContent = t.music.stop;
+  $('music-tab-songsAudio-label').textContent = t.music.songsTab;
+  $('music-tab-concertsAudio-label').textContent = t.music.concertsAudioTab;
+  $('music-tab-concertsVideo-label').textContent = t.music.concertsVideoTab;
   $('toolbar-reopen').textContent = t.toolbar.reopen;
   $('recent-label').textContent = t.toolbar.recent;
   $('recent-title').textContent = t.recent.title;
@@ -413,7 +470,6 @@ function applyStrings(): void {
   $('spec-upload').textContent = t.spec.upload;
   $('seed-upload').textContent = t.seed.upload;
   ($('seed-claude') as HTMLButtonElement).title = t.seed.claudeHint;
-  $('run-caption-text').textContent = t.run.caption;
   $('run-start').textContent = t.run.start;
   $('run-pause').textContent = t.run.pause;
   $('run-resume').textContent = t.run.resume;
@@ -439,11 +495,11 @@ function applyStrings(): void {
   $('error-l-stage').textContent = t.error.stage;
   $('error-retry').textContent = t.error.retry;
   $('error-new').textContent = t.report.close;
-  $('settings-title').textContent = t.settings.title;
+  // Settings sheet heading is the app title too now (was t.settings.title / "Settings") - same
+  // move as the toolbar button's own label, one commit ago.
+  $('settings-title').textContent = t.title;
   $('s-key-label').textContent = t.settings.apiKey;
   ($('s-key') as HTMLInputElement).placeholder = t.settings.apiKeyPlaceholder;
-  $('s-cmd-label').textContent = t.settings.genesisCmd;
-  $('s-cmd-hint').textContent = t.settings.genesisCmdHint;
   $('s-out-label').textContent = t.settings.outDir;
   $('settings-save').textContent = t.settings.save;
   $('settings-cancel').textContent = t.settings.cancel;
@@ -500,11 +556,11 @@ function buildLangPicker(): void {
 // Each picker's own toggle button calls e.stopPropagation(), so clicking picker B's toggle never
 // bubbles to picker A's `document.addEventListener('click', closeA)` — A stayed open when B
 // opened (Stefan's screenshot: theme menu still visible after clicking the music button). Every
-// toggle now closes the other two explicitly before opening its own.
-function closeAllPickerMenus(except?: 'lang' | 'theme' | 'music'): void {
+// toggle now closes the other explicitly before opening its own. Music is its own popup dialog
+// now (like Settings/Debug), not a click-outside dropdown, so it isn't part of this set.
+function closeAllPickerMenus(except?: 'lang' | 'theme'): void {
   if (except !== 'lang') closeLangMenu();
   if (except !== 'theme') closeThemeMenu();
-  if (except !== 'music') closeMusicMenu();
 }
 
 function toggleLangMenu(): void {
@@ -567,7 +623,7 @@ function retranslate(): void {
   if ($('recent-sheet').getAttribute('data-open') === 'true') renderRecentList(lastRecentProjects);
   updateLangPicker();
   updateThemePicker();
-  buildMusicMenu(); // rebuilds with the new language's labels; also re-applies visibility
+  updateMusicPickerVisibility();
 }
 
 // ---- theme picker (design-specs.md §5 "Theme switcher") ---------------------
@@ -619,9 +675,12 @@ function closeThemeMenu(): void {
 }
 
 function updateThemePicker(): void {
-  const label = t.wallpaper[currentWallpaper.labelKey];
-  $('theme-current-label').textContent = label;
-  ($('theme-toggle') as HTMLButtonElement).title = label;
+  // The dropdown TOGGLE button shows the generic "Theme" label now (was the current wallpaper's
+  // own name, e.g. "Das Deutsche Herz") - Stefan. The active wallpaper's real name still shows
+  // as the button's title tooltip AND as the highlighted/active item inside the open menu below.
+  const currentLabel = t.wallpaper[currentWallpaper.labelKey];
+  $('theme-current-label').textContent = t.wallpaper.title;
+  ($('theme-toggle') as HTMLButtonElement).title = currentLabel;
   document.querySelectorAll<HTMLElement>('#theme-menu .theme-item').forEach((el) => {
     const w = WALLPAPERS.find((x) => x.id === el.dataset.id)!;
     el.textContent = t.wallpaper[w.labelKey];
@@ -656,107 +715,206 @@ function applyFooterVisibility(): void {
 }
 
 // ---- "Play Veselin Marinov" (IMPERATOR only) ---------------------------------
-// Placeholder — Stefan swaps in the real link later (no fixed video decided yet).
-const VESELIN_MARINOV_YOUTUBE_URL = 'https://www.youtube.com/results?search_query=Veselin+Marinov';
+// A closable popup (#music-sheet), same pattern as the debug terminal (Stefan: "make a popup
+// like the settings or the terminal for marinov songs") instead of a toolbar dropdown menu -
+// dropdowns close on outside click, which the old menu never wired up (Stefan: "the dropdosn
+// never close"), and a real dialog also gives room to show the video full-size when expanded.
+const VESELIN_MARINOV_YOUTUBE_URL = 'https://www.youtube.com/watch?v=qcjyeG2FgXs&list=PLF0F4B6557CF21926';
+const MUSIC_CATEGORIES: MusicCategory[] = ['songsAudio', 'concertsAudio', 'concertsVideo'];
+let activeMusicCategory: MusicCategory = 'songsAudio';
 
 function updateMusicPickerVisibility(): void {
   $('music-picker').toggleAttribute('hidden', currentWallpaper.theme !== 'imperator');
 }
 
-function toggleMusicMenu(): void {
-  const wasOpen = !$('music-menu').hasAttribute('hidden');
-  closeAllPickerMenus();
-  if (!wasOpen) openMusicMenu();
+function toggleMusicSheet(): void {
+  const open = $('music-sheet').getAttribute('data-open') === 'true';
+  if (open) closeMusicSheet();
+  else openMusicSheet();
 }
-function openMusicMenu(): void {
-  $('music-menu').removeAttribute('hidden');
-  $('music-toggle').setAttribute('aria-expanded', 'true');
+function openMusicSheet(): void {
+  $('music-sheet').setAttribute('data-open', 'true');
+  void selectMusicCategory(activeMusicCategory);
 }
-function closeMusicMenu(): void {
-  $('music-menu').setAttribute('hidden', '');
-  $('music-toggle').setAttribute('aria-expanded', 'false');
+function closeMusicSheet(): void {
+  $('music-sheet').setAttribute('data-open', 'false');
 }
 
-function playLocalFile(path: string): void {
-  const player = $('music-player') as HTMLAudioElement;
-  // file:// URI, not a bare path — <audio src> needs a real URL scheme even for local playback.
-  player.src = `file://${path.replace(/\\/g, '/')}`;
-  void player.play().catch((e: Error) => toast('danger', 'Could not play the track', e.message));
-  ($('music-stop') as HTMLButtonElement).hidden = false;
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// The seek/timeupdate/loadedmetadata listeners are bound ONCE (not per-track) - the previous
+// version called bindSeekBar() fresh on every playLocalFile(), which ADDED a new set of
+// listeners on top of the old ones every time without ever removing them (both <audio>/<video>
+// are the SAME persistent DOM elements across tracks). After playing 2+ tracks in one session,
+// multiple stacked 'input' handlers all fought to set currentTime at once - exactly the kind of
+// bug that makes a seek bar "jump back to 0:00" instead of landing where you clicked (Stefan's
+// report). activeMedia tracks which of the two elements is currently live; both media elements'
+// events are listened to unconditionally, but only acted on when they match activeMedia.
+let activeMedia: HTMLMediaElement | null = null;
+
+function wireMediaPlayback(): void {
+  const seek = $('music-seek') as HTMLInputElement;
+  const cur = $('music-time-current');
+  const total = $('music-time-total');
+  const audio = $('music-player') as HTMLAudioElement;
+  const video = $('music-video') as HTMLVideoElement;
+  const playPause = $('music-playpause') as HTMLButtonElement;
+
+  for (const media of [audio, video]) {
+    media.addEventListener('loadedmetadata', () => {
+      if (media !== activeMedia) return;
+      seek.max = String(media.duration || 0);
+      total.textContent = formatTime(media.duration);
+    });
+    media.addEventListener('timeupdate', () => {
+      if (media !== activeMedia) return;
+      if (!seek.matches(':active')) seek.value = String(media.currentTime);
+      cur.textContent = formatTime(media.currentTime);
+    });
+    media.addEventListener('play', () => {
+      if (media !== activeMedia) return;
+      playPause.textContent = '❚❚';
+      playPause.setAttribute('aria-label', 'Pause');
+    });
+    media.addEventListener('pause', () => {
+      if (media !== activeMedia) return;
+      playPause.textContent = '▶';
+      playPause.setAttribute('aria-label', 'Resume');
+    });
+  }
+  seek.addEventListener('input', () => {
+    if (activeMedia) activeMedia.currentTime = Number(seek.value);
+  });
+  playPause.addEventListener('click', () => {
+    if (!activeMedia) return;
+    if (activeMedia.paused) void activeMedia.play();
+    else activeMedia.pause();
+  });
+}
+
+// Routed through the app-media:// custom protocol (registered in main/index.ts) instead of a
+// raw file:// URL — file:// media only loads in production, where the renderer itself is served
+// from file:// (same-origin); in dev the renderer is http://localhost:5173 and Chromium blocks
+// file:// media as cross-origin ("no supported source was found" regardless of path-encoding).
+// app-media: is registered secure+cors-enabled so it loads from either origin.
+function toMediaUrl(path: string): string {
+  return `app-media://play?path=${encodeURIComponent(path)}`;
+}
+
+function playLocalFile(path: string, label: string): void {
+  const isVideo = /\.(mp4|webm|mov)$/i.test(path);
+  const audio = $('music-player') as HTMLAudioElement;
+  const video = $('music-video') as HTMLVideoElement;
+  const url = toMediaUrl(path);
+  $('music-player-bar').hidden = false;
+  if (isVideo) {
+    audio.pause();
+    audio.removeAttribute('src');
+    video.hidden = false;
+    video.src = url;
+    activeMedia = video;
+    void video.play().catch((e: Error) => toast('danger', t.toast.couldNotPlayTrack, e.message));
+  } else {
+    video.pause();
+    video.removeAttribute('src');
+    video.hidden = true;
+    audio.src = url;
+    activeMedia = audio;
+    void audio.play().catch((e: Error) => toast('danger', t.toast.couldNotPlayTrack, e.message));
+  }
+  $('music-now-playing').textContent = label;
+  markActiveTrackItem(label);
+}
+
+function markActiveTrackItem(label: string): void {
+  $('music-track-list')
+    .querySelectorAll<HTMLButtonElement>('.music-item')
+    .forEach((item) => item.classList.toggle('active', item.textContent === label));
 }
 
 function stopMusic(): void {
-  const player = $('music-player') as HTMLAudioElement;
-  player.pause();
-  player.removeAttribute('src');
-  player.load();
-  ($('music-stop') as HTMLButtonElement).hidden = true;
+  const audio = $('music-player') as HTMLAudioElement;
+  const video = $('music-video') as HTMLVideoElement;
+  for (const media of [audio, video]) {
+    media.pause();
+    media.removeAttribute('src');
+    media.load();
+  }
+  activeMedia = null;
+  video.hidden = true;
+  $('music-player-bar').hidden = true;
+  $('music-now-playing').textContent = '';
+  markActiveTrackItem('');
 }
 
-async function playRandomLocalTrack(): Promise<void> {
-  const path = await gui.musicRandomTrack();
+async function playRandomLocalTrack(category: MusicCategory): Promise<void> {
+  const path = await gui.musicRandomTrack(category);
   if (!path) {
-    toast('warning', 'No local tracks found', 'Drop MP3 files into design/music/');
+    toast('warning', t.toast.noLocalTracks, t.toast.noLocalTracksHint);
     return;
   }
-  playLocalFile(path);
+  const label = path.replace(/^.*[/\\]/, '');
+  playLocalFile(path, label);
 }
 
-async function openTrackPicker(): Promise<void> {
-  const files = await gui.musicList();
+async function selectMusicCategory(category: MusicCategory): Promise<void> {
+  activeMusicCategory = category;
+  $('music-tabs')
+    .querySelectorAll<HTMLButtonElement>('.music-tab')
+    .forEach((tab) => tab.classList.toggle('active', tab.id === `music-tab-${category}`));
+  $('music-youtube').hidden = category !== 'songsAudio';
+
+  const list = $('music-track-list');
+  list.innerHTML = '';
+  const files = await gui.musicList(category);
   if (files.length === 0) {
-    toast('warning', 'No local tracks found', 'Drop MP3 files into design/music/');
+    const empty = document.createElement('div');
+    empty.className = 'music-empty';
+    empty.textContent = t.music.noTracks;
+    list.appendChild(empty);
     return;
   }
-  // A tiny inline picker reusing the same music-menu box — replaces its contents temporarily
-  // with one item per file, restored to the fixed 4-action menu the next time it opens.
-  const menu = $('music-menu');
-  menu.innerHTML = '';
+  // Built in a DocumentFragment and appended once (one paint pass instead of 80 reflows). The
+  // per-row text-clipping bug was NOT here though - it was `.music-item` shrinking vertically as
+  // a flex-column child with overflow:hidden; see the .music-item rule in styles.css.
+  const fragment = document.createDocumentFragment();
   for (const file of files) {
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'music-item';
     item.textContent = file;
+    item.title = file;
     item.addEventListener('click', async () => {
-      const dir = (await gui.musicRandomTrack())?.replace(/[^/\\]+$/, '') ?? '';
-      playLocalFile(dir + file);
-      closeMusicMenu();
-      buildMusicMenu(); // restore the fixed menu for next time
+      const dir = (await gui.musicRandomTrack(category))?.replace(/[^/\\]+$/, '') ?? '';
+      playLocalFile(dir + file, file);
     });
-    menu.appendChild(item);
+    fragment.appendChild(item);
   }
-  openMusicMenu();
+  list.appendChild(fragment);
 }
 
-function buildMusicMenu(): void {
-  const picker = $('music-picker');
-  picker.innerHTML =
-    `<button type="button" class="chip" id="music-toggle" aria-haspopup="true" aria-expanded="false">` +
-    `♪ <span id="music-label">${t.music.button}</span></button>` +
-    `<div class="music-menu" id="music-menu" role="menu" hidden>` +
-    `<button type="button" class="music-item" id="music-youtube" role="menuitem">${t.music.youtube}</button>` +
-    `<button type="button" class="music-item" id="music-random" role="menuitem">${t.music.random}</button>` +
-    `<button type="button" class="music-item" id="music-pick" role="menuitem">${t.music.pick}</button>` +
-    `<button type="button" class="music-item" id="music-stop" role="menuitem" hidden>${t.music.stop}</button>` +
-    `</div>`;
-  $('music-toggle').addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleMusicMenu();
+function wireMusicSheet(): void {
+  wireMediaPlayback();
+  $('music-toggle').addEventListener('click', () => toggleMusicSheet());
+  $('music-close').addEventListener('click', () => closeMusicSheet());
+  $('music-maximize').addEventListener('click', () => {
+    const maximized = $('music-dialog').classList.toggle('maximized');
+    ($('music-maximize') as HTMLButtonElement).setAttribute('aria-label', maximized ? 'Restore' : 'Maximize');
+    $('music-maximize').textContent = maximized ? '❐' : '▢';
   });
-  $('music-menu').addEventListener('click', (e) => e.stopPropagation());
   $('music-youtube').addEventListener('click', () => {
     void gui.openExternal(VESELIN_MARINOV_YOUTUBE_URL);
-    closeMusicMenu();
   });
-  $('music-random').addEventListener('click', () => {
-    void playRandomLocalTrack();
-    closeMusicMenu();
-  });
-  $('music-pick').addEventListener('click', () => void openTrackPicker());
-  $('music-stop').addEventListener('click', () => {
-    stopMusic();
-    closeMusicMenu();
-  });
+  $('music-random').addEventListener('click', () => void playRandomLocalTrack(activeMusicCategory));
+  for (const category of MUSIC_CATEGORIES) {
+    $(`music-tab-${category}`).addEventListener('click', () => void selectMusicCategory(category));
+  }
+  $('music-stop').addEventListener('click', () => stopMusic());
   updateMusicPickerVisibility();
 }
 
@@ -780,9 +938,13 @@ async function uploadFile(kind: 'spec' | 'seed'): Promise<void> {
         seeds.push(handle);
         onSeedChosen(handle);
       }
-      toast('success', `${kind === 'spec' ? 'Spec' : 'Seed'} uploaded`, `${handle.name} (${formatBytes(handle.size)})`);
+      toast(
+        'success',
+        kind === 'spec' ? t.toast.specUploaded : t.toast.seedUploaded,
+        `${handle.name} (${formatBytes(handle.size)})`,
+      );
     } catch (e) {
-      toast('danger', 'Upload failed', (e as Error).message);
+      toast('danger', t.toast.uploadFailed, (e as Error).message);
     }
   });
   input.click();
@@ -839,7 +1001,7 @@ function wire(): void {
         appLaunchedForLastReport = true;
         ($('report-kill-app') as HTMLButtonElement).disabled = false;
       })
-      .catch((e: Error) => toast('danger', 'Could not start the app', e.message));
+      .catch((e: Error) => toast('danger', t.toast.couldNotStartApp, e.message));
   });
   $('report-kill-app').addEventListener('click', () => {
     if (!lastReport?.outDir) return;
@@ -867,6 +1029,15 @@ function wire(): void {
   $('recent-open').addEventListener('click', () => void openRecentSheet());
   $('recent-close').addEventListener('click', () => $('recent-sheet').setAttribute('data-open', 'false'));
 
+  // debug terminal popup
+  $('terminal-close').addEventListener('click', () => toggleDebug(false));
+  $('terminal-maximize').addEventListener('click', () => {
+    const maximized = $('terminal-dialog').classList.toggle('maximized');
+    ($('terminal-maximize') as HTMLButtonElement).setAttribute('aria-label', maximized ? 'Restore' : 'Maximize');
+    $('terminal-maximize').textContent = maximized ? '❐' : '▢';
+    requestAnimationFrame(refitTerminal);
+  });
+
   // settings
   $('settings-open').addEventListener('click', () => void openSettings());
   $('settings-close').addEventListener('click', () => $('settings-sheet').setAttribute('data-open', 'false'));
@@ -882,6 +1053,8 @@ function wire(): void {
       closeThemeMenu();
       $('settings-sheet').setAttribute('data-open', 'false');
       $('recent-sheet').setAttribute('data-open', 'false');
+      if ($('terminal-sheet').getAttribute('data-open') === 'true') toggleDebug(false);
+      if ($('music-sheet').getAttribute('data-open') === 'true') closeMusicSheet();
     }
     if (e.key === 'Enter' && $('dup-dialog').getAttribute('data-open') === 'true') {
       $('dup-open').click();
@@ -992,10 +1165,10 @@ async function boot(): Promise<void> {
   $('window').classList.toggle('lang-sga', currentLang === 'sga');
   $('window').setAttribute('data-theme', currentWallpaper.theme);
   if (currentWallpaper.skin) $('window').setAttribute('data-skin', currentWallpaper.skin);
-  buildMusicMenu();
   applyStrings();
   updateLangPicker();
   updateThemePicker();
+  wireMusicSheet();
   wire();
   subscribe();
   starfield();
@@ -1003,6 +1176,10 @@ async function boot(): Promise<void> {
   await reloadLists();
   lastFooterText = await gui.footerGet();
   applyFooterVisibility();
+  // Boot splash (index.html #boot-splash, inline-styled so it paints before this file even
+  // finishes loading) comes down here, as the LAST step - once everything above has actually
+  // run, not on a timer/guess.
+  document.getElementById('boot-splash')?.remove();
 }
 
 void boot();

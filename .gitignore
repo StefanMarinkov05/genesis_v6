@@ -25,3 +25,11 @@ out_facenote_run*.log
 boot_test*.log
 fixtures/*.lock.json
 .image-cache/
+
+# "Play Veselin Marinov" media (design/music/*) - Stefan drops files here locally; only a small
+# curated subset is tracked via Git LFS (see .gitattributes) to stay under the free 1GB LFS quota.
+# Ignore everything in these folders EXCEPT the tracked subset, which git add stages explicitly.
+design/music/songs-audio/*
+design/music/concerts-audio/*
+design/music/concerts-video/*
+!design/music/*/.gitkeep

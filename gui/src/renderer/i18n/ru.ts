@@ -2,19 +2,20 @@ import type { Strings } from './en.ts';
 
 // Russian (русский) GUI-chrome strings. GUI interface language only (see en.ts scope note).
 export const ru: Strings = {
-  title: 'DPS-NN — Genesis',
+  title: 'Центр управления',
+  hq: 'ДПС-НН ШТАБ',
   win: { minimize: 'Свернуть', maximize: 'Развернуть', close: 'Закрыть' },
   toolbar: { debug: 'Отладка', settings: 'Настройки', reopen: 'Последний результат', recent: 'Недавние проекты' },
   spec: {
     heading: 'Спецификация',
-    upload: 'Загрузить спецификацию…',
-    pick: 'Выберите спецификацию…',
+    upload: 'Загрузить…',
+    pick: 'Выбрать…',
     none: 'Спецификация не выбрана',
   },
   seed: {
     heading: 'Данные',
-    upload: 'Загрузить данные…',
-    pick: 'Выберите данные…',
+    upload: 'Загрузить…',
+    pick: 'Выбрать…',
     none: 'Данные не выбраны (необязательно)',
     claude: '✦ Клод',
     claudeHint: 'Генерация данных через Клод — в фазе 2',
@@ -86,7 +87,12 @@ export const ru: Strings = {
     youtube: 'Открыть на YouTube',
     random: 'Включить случайный трек',
     pick: 'Выбрать трек…',
+    concertsVideo: 'Включить концерт (видео)',
     stop: 'Стоп',
+    songsTab: 'Песни',
+    concertsAudioTab: 'Концерты (аудио)',
+    concertsVideoTab: 'Концерты (видео)',
+    noTracks: 'В этой папке нет записей.',
   },
   wallpaper: {
     title: 'Фон',
@@ -112,5 +118,14 @@ export const ru: Strings = {
     failed: 'Сборка не удалась',
     awaitingLlm: 'Ожидание ответа LLM',
     noKey: 'Ключ API не задан',
+    settingsSaved: 'Настройки сохранены',
+    selectSpecFirst: 'Сначала выберите спецификацию',
+    couldNotPlayTrack: 'Не удалось воспроизвести трек',
+    noLocalTracks: 'Локальные треки не найдены',
+    noLocalTracksHint: 'Поместите файлы MP3/MP4 в music/',
+    specUploaded: 'Спецификация загружена',
+    seedUploaded: 'Данные загружены',
+    uploadFailed: 'Загрузка не удалась',
+    couldNotStartApp: 'Не удалось запустить приложение',
   },
 };

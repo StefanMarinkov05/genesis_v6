@@ -1,3 +1,10 @@
 * text=auto eol=lf
 *.bat text eol=crlf
 *.cmd text eol=crlf
+
+# "Play Veselin Marinov" media - large binaries, tracked via Git LFS (only a small curated
+# subset is actually committed; see .gitignore).
+design/music/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
+design/music/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
+design/music/**/*.webm filter=lfs diff=lfs merge=lfs -text
+design/music/**/*.mov filter=lfs diff=lfs merge=lfs -text

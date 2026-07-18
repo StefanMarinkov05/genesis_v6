@@ -13,9 +13,9 @@ test('WALLPAPERS has ten unique ids, each with a theme and a labelKey', () => {
   assert.ok(WALLPAPERS.every((w) => w.theme.length > 0 && w.labelKey.length > 0));
 });
 
-test('the default (first) wallpaper is a NOVA look with no skin', () => {
+test('the default (first) wallpaper is the NOVA code-corridor look', () => {
   assert.equal(WALLPAPERS[0]!.theme, 'nova');
-  assert.equal(WALLPAPERS[0]!.skin, '');
+  assert.equal(WALLPAPERS[0]!.skin, 'code');
 });
 
 test('IMPERATOR never carries a skin belonging to another theme (VM-exclusive, decision #1)', () => {

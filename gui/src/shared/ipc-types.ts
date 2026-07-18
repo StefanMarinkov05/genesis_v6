@@ -8,6 +8,9 @@
 // their channels are declared so the surface is stable, but the renderer disables
 // their controls until then.
 
+/** "Play Veselin Marinov" media category (design/music/{songs-audio,concerts-audio,concerts-video}/). */
+export type MusicCategory = 'songsAudio' | 'concertsAudio' | 'concertsVideo';
+
 /** A resolved spec or seed file the main process has validated and can hand to the CLI. */
 export interface FileHandle {
   /** Absolute path on disk (main-process only ever acts on this). */
@@ -121,11 +124,12 @@ export interface GuiApi {
   /** Every project the CLI has ever recorded a completed run for (logs/registry.json), newest first. */
   recentProjectsList(): Promise<RecentProject[]>;
 
-  // ---- IMPERATOR "Play Veselin Marinov" (design/music/*.mp3) ----
-  /** Absolute path to a randomly-picked track in design/music/, or null if none exist. */
-  musicRandomTrack(): Promise<string | null>;
-  /** Every .mp3 filename in design/music/ (for a "pick a specific track" list), sorted. */
-  musicList(): Promise<string[]>;
+  // ---- IMPERATOR "Play Veselin Marinov" (design/music/{songs-audio,concerts-audio,
+  // concerts-video}/) ----
+  /** Absolute path to a randomly-picked file in the given category, or null if none exist. */
+  musicRandomTrack(category: MusicCategory): Promise<string | null>;
+  /** Every filename in the given category's subfolder (for a "pick a specific one" list), sorted. */
+  musicList(category: MusicCategory): Promise<string[]>;
 
   // ---- window chrome ----
   windowMinimize(): void;

@@ -75,10 +75,25 @@ export function hexEncode(text: string): string {
     .join(' ');
 }
 
-// ---- Sign language (per Stefan: "everything is blank") ------------------------------------
-/** Every leaf becomes the same placeholder glyph — there is no text, only the gesture. */
+// ---- Sign language ---------------------------------------------------------------------------
+// Every leaf becomes a short run of hand-gesture emoji instead of one fixed glyph (Stefan: "add
+// more hand gesture emojis at random size and order every time") - a real pool, a random COUNT
+// per string (1-3, the "size"), and a random ORDER (fresh Fisher-Yates-via-sort each call), no
+// fixed mapping from source text to gesture (there is no text, only gestures - same spirit as
+// the original placeholder). buildSignTable() (below) re-invokes this over the WHOLE table on
+// every call rather than once at module load, so re-selecting/re-rendering this language
+// actually looks different each time, not just once at startup.
+const HAND_GESTURES = [
+  '✋', '🤚', '🖐️', '👋', '🤟', '🤙', '👌', '👍', '👎', '✊', '👊', '🤛', '🤜',
+  '🖖', '👏', '🙌', '🤲', '🫶', '👐', '🤝', '☝️', '✌️', '🤞', '🫰', '👉', '👈',
+] as const;
 export function signGlyph(_text: string): string {
-  return '✋';
+  const count = 1 + Math.floor(Math.random() * 3); // 1-3 gestures - the "random size"
+  const picks: string[] = [];
+  for (let i = 0; i < count; i++) {
+    picks.push(HAND_GESTURES[Math.floor(Math.random() * HAND_GESTURES.length)]!);
+  }
+  return picks.join(' ');
 }
 
 // ---- Pirate speak ---------------------------------------------------------------------------

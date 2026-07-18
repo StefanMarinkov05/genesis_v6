@@ -12,19 +12,20 @@ import type { Strings } from './en.ts';
 // being treated as final — flagged in changelog 093. Choosing Romani still fully exercises the
 // language-switch + flag-picker machinery, which is the point of shipping it here.
 export const romani: Strings = {
-  title: 'DPS-NN — Genesis',
+  title: 'Kontrolno Centro',
+  hq: 'DPS-NN Baza',
   win: { minimize: 'Cikno', maximize: 'Baro', close: 'Phandav' },
   toolbar: { debug: 'Debug', settings: 'Lačhardimata', reopen: 'Paluno rezultato', recent: 'Palune projekturja' },
   spec: {
     heading: 'Specifikacia',
-    upload: 'Vazde specifikacia…',
-    pick: 'Alosar specifikacia…',
+    upload: 'Vazde…',
+    pick: 'Alosar…',
     none: 'Nai alome specifikacia',
   },
   seed: {
     heading: 'Seme',
-    upload: 'Vazde seme…',
-    pick: 'Alosar seme…',
+    upload: 'Vazde…',
+    pick: 'Alosar…',
     none: 'Nai alome seme (po alosaripe)',
     claude: '✦ Claude',
     claudeHint: 'Generisaripe semensa Claude — avela ande faza 2',
@@ -96,7 +97,12 @@ export const romani: Strings = {
     youtube: 'Putar pe YouTube',
     random: 'Kerav bašav jekh random khelipe',
     pick: 'Alosar khelipe…',
+    concertsVideo: 'Kerav bašav koncerto (video)',
     stop: 'Ačh',
+    songsTab: 'Đilja',
+    concertsAudioTab: 'Koncerturja (audio)',
+    concertsVideoTab: 'Koncerturja (video)',
+    noTracks: 'Nane arakhle khelimata ande akava fold.',
   },
   wallpaper: {
     title: 'Fundo',
@@ -122,5 +128,14 @@ export const romani: Strings = {
     failed: 'O keriba pelo',
     awaitingLlm: 'Azhukarav LLM dativ',
     noKey: 'Nai thodino API čhavi',
+    settingsSaved: 'Lačhardimata garade',
+    selectSpecFirst: 'Anglal alosar specifikacia',
+    couldNotPlayTrack: 'O khelipe naštik bašajlo',
+    noLocalTracks: 'Nai arakhle lokalna khelipa',
+    noLocalTracksHint: 'Thov MP3/MP4 lila ande music/',
+    specUploaded: 'Specifikacia vazdini',
+    seedUploaded: 'Seme vazdino',
+    uploadFailed: 'O vazdipe pelo',
+    couldNotStartApp: 'O programo naštik startisajlo',
   },
 };

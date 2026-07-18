@@ -25,10 +25,10 @@ for (const { code } of LANGUAGES) {
   });
 }
 
-test('LANGUAGES has fourteen unique codes and short labels', () => {
-  assert.equal(LANGUAGES.length, 14);
+test('LANGUAGES has thirteen unique codes and short labels', () => {
+  assert.equal(LANGUAGES.length, 13);
   const codes = new Set(LANGUAGES.map((l) => l.code));
-  assert.equal(codes.size, 14);
+  assert.equal(codes.size, 13);
   // sign's short code is the single ✋ glyph itself — length >= 1, not >= 2, is the real bar.
   assert.ok(LANGUAGES.every((l) => l.short.length >= 1 && l.nativeLabel.length > 0));
 });
@@ -37,8 +37,8 @@ test('SGA is the English strings verbatim (font swap, not a translation)', () =>
   assert.equal(stringsFor('sga'), en);
 });
 
-test('joke tier (Morse/hex/sign/pirate/leet/flip/yoda) is flagged and sits after the real languages', () => {
-  const jokeCodes = ['morseFull', 'hex', 'sign', 'pirate', 'leet', 'flip', 'yoda'];
+test('joke tier (Morse/hex/sign/pirate/leet/flip) is flagged and sits after the real languages', () => {
+  const jokeCodes = ['morseFull', 'hex', 'sign', 'pirate', 'leet', 'flip'];
   for (const l of LANGUAGES) {
     assert.equal(Boolean(l.joke), jokeCodes.includes(l.code), `unexpected joke flag on ${l.code}`);
   }
@@ -61,11 +61,27 @@ test('hex encodes every string, including function outputs, as space-separated b
   assert.ok(/^([0-9a-f]{2} ?)+$/.test(h.error.title('seed')));
 });
 
-test('sign language reduces every string (including function output) to the ✋ placeholder', () => {
+// Broad on purpose (Dingbats U+2600-27BF covers ✋✊☝️✌️; the SMP emoji block U+1F000-1FFFF
+// covers the rest, incl. the newer 🫶/🫰 range) - precisely enumerating every individual hand
+// emoji's codepoint is exactly the kind of hand-transcribed detail that's easy to get subtly
+// wrong (an off-by-one nearly happened here), so this checks "is emoji, isn't Latin text"
+// rather than "is exactly this emoji set".
+const HAS_EMOJI = /[\u{2600}-\u{27BF}\u{1F000}-\u{1FFFF}]/u;
+
+test('sign language reduces every string (including function output) to hand-gesture emoji, not text', () => {
   const s = stringsFor('sign');
-  assert.equal(s.win.close, '✋');
-  assert.equal(s.error.title('anything'), '✋');
-  assert.equal(s.progress.of(3, 7), '✋');
+  assert.ok(HAS_EMOJI.test(s.win.close), `"${s.win.close}" should contain gesture emoji`);
+  assert.ok(HAS_EMOJI.test(s.error.title('anything')));
+  assert.ok(HAS_EMOJI.test(s.progress.of(3, 7)));
+  assert.ok(!/[A-Za-z]/.test(s.win.close), 'no stray Latin text should survive');
+});
+
+test('sign language re-rolls its gestures on every stringsFor() call (random size + order)', () => {
+  // Not provably different on a single draw (both could roll the same 1-gesture string by
+  // chance), so sample many times and confirm at least SOME variation shows up rather than one
+  // frozen value baked in at module load (the bug this replaced - Stefan's "every time").
+  const draws = new Set(Array.from({ length: 40 }, () => stringsFor('sign').win.close));
+  assert.ok(draws.size > 1, 'expected multiple distinct gesture strings across repeated calls');
 });
 
 test('pirate speak swaps known words and preserves capitalization', () => {
@@ -102,14 +118,6 @@ test('flip reverses the string and swaps letters for upside-down lookalikes', ()
   // exact glyph mapping is visual and covered by the encoder itself; here we just prove every
   // leaf (and function output) actually changed.
   assert.notEqual(f.error.title('seed'), en.error.title('seed'));
-});
-
-test('yoda reorders every string by hand and covers function-valued entries', () => {
-  const y = stringsFor('yoda');
-  assert.notEqual(y.win.close, en.win.close);
-  assert.notEqual(y.error.title('seed'), en.error.title('seed'));
-  assert.ok(y.error.title('seed').includes('seed'), 'the interpolated stage name must survive');
-  assert.notEqual(y.progress.of(3, 7), en.progress.of(3, 7));
 });
 
 test('function-valued strings render without throwing', () => {

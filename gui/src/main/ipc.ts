@@ -1,5 +1,5 @@
 import { type BrowserWindow, ipcMain, shell } from 'electron';
-import { CH, type FileHandle, type SettingsPatch } from '@shared/ipc-types';
+import { CH, type FileHandle, type MusicCategory, type SettingsPatch } from '@shared/ipc-types';
 import { listSeeds, listSpecs, uploadSeed, uploadSpec } from './files';
 import { checkDuplicate } from './dedup';
 import { getSettings, setSettings } from './settings';
@@ -50,8 +50,8 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(CH.footerGet, () => getFooter());
   ipcMain.handle(CH.reportGet, (_e, runId: string) => runner.getReport(runId));
   ipcMain.handle(CH.recentProjectsList, () => listRecentProjects());
-  ipcMain.handle(CH.musicRandomTrack, () => pickRandomTrack());
-  ipcMain.handle(CH.musicList, () => listMusicFiles());
+  ipcMain.handle(CH.musicRandomTrack, (_e, category: MusicCategory) => pickRandomTrack(category));
+  ipcMain.handle(CH.musicList, (_e, category: MusicCategory) => listMusicFiles(category));
 
   // ---- window chrome (frameless window; controls are real DOM per R6) ----
   ipcMain.on(CH.windowMinimize, () => win.minimize());

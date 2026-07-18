@@ -8,14 +8,15 @@
 // Bulgarian-only (CLAUDE.md hard requirement) unless the *spec's* meta.language says "en"
 // (a completely separate axis, changelog 054). The main process is language-agnostic.
 export const en = {
-  title: 'DPS-NN — Genesis',
+  title: 'Control Center',
+  hq: 'DPS-NN HQ',
   win: { minimize: 'Minimize', maximize: 'Maximize', close: 'Close' },
   toolbar: { debug: 'Nerd mode', settings: 'Settings', reopen: 'Last result', recent: 'Recent projects' },
-  spec: { heading: 'Specification', upload: 'Upload spec…', pick: 'Select a spec…', none: 'No spec selected' },
+  spec: { heading: 'Specification', upload: 'Upload…', pick: 'Select…', none: 'No spec selected' },
   seed: {
     heading: 'Seed',
-    upload: 'Upload seed…',
-    pick: 'Select a seed…',
+    upload: 'Upload…',
+    pick: 'Select…',
     none: 'No seed selected (optional)',
     claude: '✦ Claude',
     claudeHint: 'Claude seed generation — coming in phase 2',
@@ -87,7 +88,12 @@ export const en = {
     youtube: 'Open on YouTube',
     random: 'Play a random local track',
     pick: 'Choose a track…',
+    concertsVideo: 'Play a concert (video)',
     stop: 'Stop',
+    songsTab: 'Songs',
+    concertsAudioTab: 'Concerts (audio)',
+    concertsVideoTab: 'Concerts (video)',
+    noTracks: 'No tracks found in this folder.',
   },
   wallpaper: {
     title: 'Wallpaper',
@@ -113,6 +119,15 @@ export const en = {
     failed: 'Build failed',
     awaitingLlm: 'Waiting for an LLM response',
     noKey: 'No API key set',
+    settingsSaved: 'Settings saved',
+    selectSpecFirst: 'Select a spec first',
+    couldNotPlayTrack: 'Could not play the track',
+    noLocalTracks: 'No local tracks found',
+    noLocalTracksHint: 'Drop MP3/MP4 files into music/',
+    specUploaded: 'Spec uploaded',
+    seedUploaded: 'Seed uploaded',
+    uploadFailed: 'Upload failed',
+    couldNotStartApp: 'Could not start the app',
   },
 } as const;
 

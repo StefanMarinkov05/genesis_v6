@@ -15,11 +15,10 @@ import { romani } from './romani.ts';
 import { sga } from './sga.ts';
 import { morseFull } from './morse-full.ts';
 import { hex } from './hex.ts';
-import { sign } from './sign.ts';
+import { buildSign } from './sign.ts';
 import { pirate } from './pirate.ts';
 import { leet } from './leet.ts';
 import { flip } from './flip.ts';
-import { yoda } from './yoda.ts';
 
 export type { Strings };
 
@@ -27,14 +26,15 @@ export type { Strings };
  * The supported GUI languages. `sga` is a font swap over English, not a translation.
  * `morseFull`/`hex`/`sign`/`pirate`/`leet`/`flip` are the MECHANICALLY-GENERATED
  * joke tier (see encoders.ts) — real encodings of the EN table, not hand-written prose.
- * `morseFull`/`hex` commit fully; `sign` replaces every string with a placeholder glyph; `pirate` is a whole-word
- * dictionary swap; `leet` is character substitution; `flip` is upside-down/mirrored Unicode.
- * `yoda` is the one HAND-WRITTEN joke-tier table (see yoda.ts) — natural word-reordering isn't
- * a safe mechanical transform, same honesty boundary as the real Romani table.
+ * `morseFull`/`hex` commit fully; `sign` is a random run of hand-gesture emoji, re-rolled every
+ * time it's (re)selected (stringsFor() below rebuilds it fresh instead of reusing a cached
+ * table, unlike every other language); `pirate` is a whole-word dictionary swap; `leet` is
+ * character substitution; `flip` is upside-down/mirrored Unicode.
+ * (`yoda`, the one hand-written joke-tier table, was removed - Stefan.)
  */
 export type LangCode =
   | 'en' | 'bg' | 'de' | 'ru' | 'tr' | 'romani' | 'sga'
-  | 'morseFull' | 'hex' | 'sign' | 'pirate' | 'leet' | 'flip' | 'yoda';
+  | 'morseFull' | 'hex' | 'sign' | 'pirate' | 'leet' | 'flip';
 
 export interface LanguageMeta {
   code: LangCode;
@@ -64,7 +64,6 @@ export const LANGUAGES: readonly LanguageMeta[] = [
   { code: 'pirate', label: 'Pirate', nativeLabel: 'Pirate speak', short: 'ARR', joke: true },
   { code: 'leet', label: 'l33tspeak', nativeLabel: '1337sp34k', short: '1337', joke: true },
   { code: 'flip', label: 'Upside down', nativeLabel: 'uʍop-ǝpısdn', short: 'ᔭᴉꞁℲ', joke: true },
-  { code: 'yoda', label: 'Yoda', nativeLabel: 'Yoda Master', short: 'YDA', joke: true },
 ] as const;
 
 /** Metadata for a language code (falls back to EN's entry for an unknown code). */
@@ -73,9 +72,11 @@ export function langMeta(code: string | undefined | null): LanguageMeta {
   return LANGUAGES.find((l) => l.code === c)!;
 }
 
-const CATALOG: Record<LangCode, Strings> = {
+// `sign` deliberately excluded - it's rebuilt fresh on every stringsFor() call (below) instead
+// of cached here, so its random gestures actually change each time it's selected.
+const CATALOG: Record<Exclude<LangCode, 'sign'>, Strings> = {
   en, bg, de, ru, tr, romani, sga,
-  morseFull, hex, sign, pirate, leet, flip, yoda,
+  morseFull, hex, pirate, leet, flip,
 };
 
 /** Resolve a (possibly persisted/unknown) code to a valid one; defaults to EN. */
@@ -85,7 +86,8 @@ export function normalizeLang(code: string | undefined | null): LangCode {
 
 /** The string table for a language code (falls back to EN for an unknown code). */
 export function stringsFor(code: string | undefined | null): Strings {
-  return CATALOG[normalizeLang(code)];
+  const c = normalizeLang(code);
+  return c === 'sign' ? buildSign() : CATALOG[c];
 }
 
 export { en };

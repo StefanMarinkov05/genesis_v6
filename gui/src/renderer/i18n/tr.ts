@@ -2,19 +2,20 @@ import type { Strings } from './en.ts';
 
 // Turkish (Türkçe) GUI-chrome strings. GUI interface language only (see en.ts scope note).
 export const tr: Strings = {
-  title: 'DPS-NN — Genesis',
+  title: 'Kontrol Merkezi',
+  hq: 'DPS-NN Karargahı',
   win: { minimize: 'Küçült', maximize: 'Büyüt', close: 'Kapat' },
   toolbar: { debug: 'Inek modu', settings: 'Ayarlar', reopen: 'Son sonuç', recent: 'Son projeler' },
   spec: {
     heading: 'Spesifikasyon',
-    upload: 'Spesifikasyon yükle…',
-    pick: 'Bir spesifikasyon seçin…',
+    upload: 'Yükle…',
+    pick: 'Seç…',
     none: 'Spesifikasyon seçilmedi',
   },
   seed: {
     heading: 'Tohum',
-    upload: 'Tohum yükle…',
-    pick: 'Bir tohum seçin…',
+    upload: 'Yükle…',
+    pick: 'Seç…',
     none: 'Tohum seçilmedi (isteğe bağlı)',
     claude: '✦ Claude',
     claudeHint: 'Claude ile tohum üretimi — faz 2\'de geliyor',
@@ -86,7 +87,12 @@ export const tr: Strings = {
     youtube: "YouTube'da aç",
     random: 'Rastgele yerel parça çal',
     pick: 'Parça seç…',
+    concertsVideo: 'Konser oynat (video)',
     stop: 'Durdur',
+    songsTab: 'Şarkılar',
+    concertsAudioTab: 'Konserler (ses)',
+    concertsVideoTab: 'Konserler (video)',
+    noTracks: 'Bu klasörde parça bulunamadı.',
   },
   wallpaper: {
     title: 'Duvar kağıdı',
@@ -112,5 +118,14 @@ export const tr: Strings = {
     failed: 'Build başarısız oldu',
     awaitingLlm: 'LLM yanıtı bekleniyor',
     noKey: 'API anahtarı tanımlı değil',
+    settingsSaved: 'Ayarlar kaydedildi',
+    selectSpecFirst: 'Önce bir spesifikasyon seçin',
+    couldNotPlayTrack: 'Parça oynatılamadı',
+    noLocalTracks: 'Yerel parça bulunamadı',
+    noLocalTracksHint: 'music/ klasörüne MP3/MP4 dosyaları koyun',
+    specUploaded: 'Spesifikasyon yüklendi',
+    seedUploaded: 'Tohum yüklendi',
+    uploadFailed: 'Yükleme başarısız oldu',
+    couldNotStartApp: 'Uygulama başlatılamadı',
   },
 };

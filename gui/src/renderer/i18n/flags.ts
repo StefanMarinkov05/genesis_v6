@@ -135,19 +135,8 @@ const flip = `
   </g>
 </svg>`;
 
-// Yoda: a small green lightsaber-glow tile — no character likeness, just the motif colors.
-const yoda = `
-<svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect width="60" height="40" fill="#0a1206"/>
-  <g stroke="#5cff5c" stroke-linecap="round">
-    <line x1="30" y1="6" x2="30" y2="30" stroke-width="3"/>
-    <line x1="30" y1="6" x2="30" y2="30" stroke-width="7" opacity="0.35"/>
-  </g>
-  <rect x="26" y="30" width="8" height="6" rx="1.5" fill="#8a8a8a"/>
-</svg>`;
-
 const FLAGS: Record<LangCode, string> = {
-  en: uk, bg, de, ru, tr, romani, sga, morseFull, hex, sign, pirate, leet, flip, yoda,
+  en: uk, bg, de, ru, tr, romani, sga, morseFull, hex, sign, pirate, leet, flip,
 };
 
 /** Inline SVG markup for a language's flag/emblem (trusted static string, safe for innerHTML). */

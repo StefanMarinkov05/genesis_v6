@@ -3,19 +3,20 @@ import type { Strings } from './en.ts';
 // Bulgarian (български) GUI-chrome strings. This is the GUI's own interface language only —
 // it does NOT change what a generated app is in (see the scope note in en.ts).
 export const bg: Strings = {
-  title: 'ДПС-НН — Контролен център',
+  title: 'Контролен център',
+  hq: 'ДПС-НН Щаб',
   win: { minimize: 'Намали', maximize: 'Уголеми', close: 'Затвори' },
   toolbar: { debug: 'Режим "Нърд"', settings: 'Настройки', reopen: 'Последен резултат', recent: 'Последни проекти' },
   spec: {
     heading: 'Спецификация',
-    upload: 'Качи спецификация…',
-    pick: 'Изберете спецификация…',
+    upload: 'Качи…',
+    pick: 'Избери…',
     none: 'Няма избрана спецификация',
   },
   seed: {
     heading: 'Осеменяване',
-    upload: 'Качи данни…',
-    pick: 'Изберете данни…',
+    upload: 'Качи…',
+    pick: 'Избери…',
     none: 'Няма избрани данни (по избор)',
     claude: '✦ Клодич',
     claudeHint: 'Генериране на данни с Клодич — предстои във фаза 2',
@@ -87,7 +88,12 @@ export const bg: Strings = {
     youtube: 'Отвори в YouTube',
     random: 'Пусни случаен запис',
     pick: 'Избери запис…',
+    concertsVideo: 'Пусни концерт (видео)',
     stop: 'Спри',
+    songsTab: 'Песни',
+    concertsAudioTab: 'Концерти (аудио)',
+    concertsVideoTab: 'Концерти (видео)',
+    noTracks: 'Няма намерени записи в тази папка.',
   },
   wallpaper: {
     title: 'Фон',
@@ -113,5 +119,14 @@ export const bg: Strings = {
     failed: 'Строежът се провали',
     awaitingLlm: 'Изчакване на отговор от LLM',
     noKey: 'Няма зададен API ключ',
+    settingsSaved: 'Настройките са запазени',
+    selectSpecFirst: 'Първо изберете спецификация',
+    couldNotPlayTrack: 'Записът не можа да се пусне',
+    noLocalTracks: 'Няма намерени записи',
+    noLocalTracksHint: 'Пуснете MP3/MP4 файлове в music/',
+    specUploaded: 'Спецификацията е качена',
+    seedUploaded: 'Данните са качени',
+    uploadFailed: 'Качването се провали',
+    couldNotStartApp: 'Приложението не можа да стартира',
   },
 };

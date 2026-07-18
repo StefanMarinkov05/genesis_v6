@@ -66,7 +66,17 @@ export function uploadsDir(): string {
   return join(genesisRoot(), 'gui', '.uploads');
 }
 
-/** Where the IMPERATOR theme's "Play Veselin Marinov" MP3s live (Stefan drops files in here). */
+/** Where the IMPERATOR theme's "Play Veselin Marinov" media lives (Stefan drops files in here),
+ *  split into 3 category subfolders instead of one flat directory. */
 export function musicDir(): string {
   return join(genesisRoot(), 'design', 'music');
+}
+export type MusicCategory = 'songsAudio' | 'concertsAudio' | 'concertsVideo';
+const MUSIC_SUBDIRS: Record<MusicCategory, string> = {
+  songsAudio: 'songs-audio',
+  concertsAudio: 'concerts-audio',
+  concertsVideo: 'concerts-video',
+};
+export function musicCategoryDir(category: MusicCategory): string {
+  return join(musicDir(), MUSIC_SUBDIRS[category]);
 }

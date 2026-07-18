@@ -29,9 +29,11 @@ export interface WallpaperMeta {
     | 'enchant';
 }
 
+// nova-code-corridor is FIRST (Stefan: default wallpaper on first open should be the coding
+// theme) - normalizeWallpaper()/every "unknown or unset" fallback resolves to WALLPAPERS[0].
 export const WALLPAPERS: readonly WallpaperMeta[] = [
-  { id: 'nova-astro-hud', theme: 'nova', skin: '', labelKey: 'novaAstroHud' },
   { id: 'nova-code-corridor', theme: 'nova', skin: 'code', labelKey: 'novaCodeCorridor' },
+  { id: 'nova-astro-hud', theme: 'nova', skin: '', labelKey: 'novaAstroHud' },
   { id: 'nova-german', theme: 'nova', skin: 'german', labelKey: 'novaGerman' },
   { id: 'imperator-poster-1', theme: 'imperator', skin: '', labelKey: 'imperatorPoster1' },
   { id: 'imperator-poster-2', theme: 'imperator', skin: 'poster2', labelKey: 'imperatorPoster2' },
