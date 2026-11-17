@@ -202,6 +202,21 @@ async function reloadLists(): Promise<void> {
   populateSelect($('seed-select') as HTMLSelectElement, seeds, t.seed.pick);
 }
 
+// A fresh install opens ready to Start with no API key: when nothing is chosen yet, preselect the
+// bundled FaceNote sample spec + its seed (the seed is what makes the seed stage key-free). Only
+// those exact files; anything else is left to the user. (ADR-014, changelog 134)
+function preselectSample(): void {
+  if (selectedSpec) return;
+  const spec = specs.findIndex((f) => f.name === 'project-spec.facenote.json' && f.source === 'fixtures');
+  if (spec < 0) return;
+  ($('spec-select') as HTMLSelectElement).value = String(spec);
+  onSpecChosen(specs[spec]);
+  const seed = seeds.findIndex((f) => f.name === 'facenote-rich-seed.json' && f.source === 'seeds');
+  if (selectedSeed || seed < 0) return;
+  ($('seed-select') as HTMLSelectElement).value = String(seed);
+  onSeedChosen(seeds[seed]);
+}
+
 function onSpecChosen(f: FileHandle | null): void {
   selectedSpec = f;
   $('spec-well').textContent = f ? `${f.name} (${formatBytes(f.size)})` : t.spec.none;
@@ -238,6 +253,35 @@ async function doStart(): Promise<void> {
   const seedPart = selectedSeed ? ` · ${selectedSeed.name} (${formatBytes(selectedSeed.size)})` : '';
   toast('info', t.toast.started, specPart + seedPart);
   // A fresh run makes the previous result stale - hide the reopen control until this run finishes.
+  ($('toolbar-reopen') as HTMLButtonElement).disabled = true;
+}
+
+/**
+ * Agent mode (ADR-013): hand the description to `create`; the CLI drafts the spec, runs the
+ * pipeline and repairs the spec on failure. Same progress/done/error events as a normal run.
+ */
+async function doCreate(): Promise<void> {
+  if (runState === 'running' || runState === 'paused' || runState === 'awaiting-llm') return;
+  const text = ($('spec-describe') as HTMLTextAreaElement).value.trim();
+  if (!text) {
+    toast('warning', t.toast.describeFirst);
+    return;
+  }
+  if (!(await gui.settingsGet()).apiKeySet) {
+    toast('warning', t.toast.noKey);
+    return;
+  }
+  term.clear();
+  setProgress(0, TOTAL_STAGES, '…', 'running');
+  try {
+    runId = await gui.buildCreate(text);
+  } catch (e) {
+    toast('danger', t.toast.failed, (e as Error).message);
+    return;
+  }
+  setRunState('running');
+  $('settings-sheet').setAttribute('data-open', 'false'); // the terminal is where the agent narrates
+  toast('info', t.toast.agentStarted);
   ($('toolbar-reopen') as HTMLButtonElement).disabled = true;
 }
 
@@ -483,6 +527,8 @@ function applyStrings(): void {
   $('spec-well').textContent = t.spec.none;
   $('seed-well').textContent = t.seed.none;
   $('spec-upload').textContent = t.spec.upload;
+  ($('spec-describe') as HTMLTextAreaElement).placeholder = t.spec.describe;
+  $('spec-create').textContent = t.spec.create;
   $('seed-upload').textContent = t.seed.upload;
   ($('seed-claude') as HTMLButtonElement).title = t.seed.claudeHint;
   $('run-start').textContent = t.run.start;
@@ -985,6 +1031,7 @@ function wire(): void {
     onSeedChosen(v === '' ? null : seeds[Number(v)]);
   });
   $('spec-upload').addEventListener('click', () => void uploadFile('spec'));
+  $('spec-create').addEventListener('click', () => void doCreate());
   $('seed-upload').addEventListener('click', () => void uploadFile('seed'));
 
   // run controls
@@ -1197,6 +1244,7 @@ async function boot(): Promise<void> {
   starfield();
   setRunState('idle');
   await reloadLists();
+  preselectSample();
   lastFooterText = await gui.footerGet();
   applyFooterVisibility();
   // Boot splash (index.html #boot-splash, inline-styled so it paints before this file even

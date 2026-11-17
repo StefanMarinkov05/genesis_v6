@@ -1,0 +1,67 @@
+name: Lite mirror
+
+# Mirrors this repo, minus design/music (~1 GB), into the lite repo as one ordinary commit per
+# sync: a fresh linear history, no force-push of master, no LFS. A v* tag is mirrored too, so the
+# lite repo's own release.yml builds the Lite installer. scripts/lite-tree.py defines exactly what
+# differs; setup (repo + deploy key): docs/how-to/mirror-the-lite-edition.md.
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: lite-mirror
+  cancel-in-progress: false # syncs must land in order
+
+jobs:
+  mirror:
+    if: github.repository == 'StefanMarinkov05/genesis_v6' # never in the mirror itself
+    runs-on: ubuntu-24.04
+    env:
+      LITE_REPO: StefanMarinkov05/genesis_v6-lite
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: full
+          lfs: false # the music is dropped anyway; don't spend LFS bandwidth on it
+
+      - name: Deploy key for the lite repo
+        env:
+          KEY: ${{ secrets.LITE_DEPLOY_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::secret LITE_DEPLOY_KEY is not set - see docs/how-to/mirror-the-lite-edition.md"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/lite_mirror && chmod 600 ~/.ssh/lite_mirror
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+          echo "GIT_SSH_COMMAND=ssh -i $HOME/.ssh/lite_mirror -o IdentitiesOnly=yes" >> "$GITHUB_ENV"
+
+      - name: Clone the lite repo
+        run: |
+          git clone "git@github.com:${LITE_REPO}.git" lite
+          # A brand-new empty repo has no branch yet: start master.
+          git -C lite rev-parse -q --verify HEAD >/dev/null || git -C lite symbolic-ref HEAD refs/heads/master
+
+      - name: Rebuild the lite tree
+        run: python3 full/scripts/lite-tree.py lite --lite-repo "$LITE_REPO"
+
+      - name: Commit and push
+        working-directory: lite
+        run: |
+          sha="$(git -C ../full rev-parse --short HEAD)"
+          git config user.name "$(git -C ../full log -1 --format=%an)"
+          git config user.email "$(git -C ../full log -1 --format=%ae)"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "lite tree already matches ${sha}"
+          else
+            git commit -q -m "$(git -C ../full log -1 --format=%s)" \
+              -m "Mirrored from ${GITHUB_REPOSITORY}@${sha} without design/music."
+          fi
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            # Tag only: the tagged tree may be older than master, which must never move backwards.
+            git tag -f "$GITHUB_REF_NAME"
+            git push -f origin "refs/tags/${GITHUB_REF_NAME}"
+          else
+            git push origin HEAD:master
+          fi

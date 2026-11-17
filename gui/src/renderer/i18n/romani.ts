@@ -18,6 +18,8 @@ export const romani: Strings = {
   toolbar: { debug: 'Debug', settings: 'Lačhardimata', reopen: 'Paluno rezultato', recent: 'Palune projekturja' },
   spec: {
     heading: 'Specifikacia',
+    describe: 'Vaj phen o proekto pe vorbenca — o Claude lekhel i specifikacia, pala kodo kerel la…',
+    create: '✦ Ker andar o phenipe',
     upload: 'Vazde…',
     pick: 'Alosar…',
     none: 'Nai alome specifikacia',
@@ -130,6 +132,8 @@ export const romani: Strings = {
     noKey: 'Nai thodino API čhavi',
     settingsSaved: 'Lačhardimata garade',
     selectSpecFirst: 'Anglal alosar specifikacia',
+    describeFirst: 'Anglal phen o proekto',
+    agentStarted: 'O agento startisajlo',
     couldNotPlayTrack: 'O khelipe naštik bašajlo',
     noLocalTracks: 'Nai arakhle lokalna khelipa',
     noLocalTracksHint: 'Thov MP3/MP4 lila ande music/',

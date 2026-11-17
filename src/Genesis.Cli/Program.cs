@@ -1,10 +1,13 @@
 // FILE-MAP: CLI entry point — command surface, interactive spec/seed pickers, registry + archive bookkeeping, the completion banner.
 using System.CommandLine;
+using GenesisV6.Core.Agent;
 using GenesisV6.Core.Cli;
+using GenesisV6.Core.Diagnostics;
 using GenesisV6.Core.Llm;
 using GenesisV6.Core.Pipeline;
 using GenesisV6.Core.Spec;
 using GenesisV6.Core.Stages;
+using GenesisV6.Core.Util;
 using GenesisV6.Core.Variation;
 
 // dps-nn (ДПС-НН) - declarative ASP.NET MVC project generator. (internal assembly name: Genesis.Cli)
@@ -13,7 +16,10 @@ using GenesisV6.Core.Variation;
 //   dps-nn spec expand --spec project-spec.json
 //   dps-nn scaffold|emit-models|identity|emit-controllers-views|seed|verify|report --spec ...
 //   dps-nn run --all [--from <stage>] [--spec ...] [--out <dir>] [--image-pack <dir>] [--image-provider pexels|pixabay|picsum]
+//   dps-nn doctor                                                     (prerequisite check)
+//   dps-nn create --describe "<text>" | --describe-file <file> [--max-repairs 3] [--out <dir>]   (agent mode, ADR-013)
 // LLM mode: automatic when ANTHROPIC_API_KEY is set, else manual file contract (--resume to continue).
+// Models: Sonnet for spec draft/repair/review, Haiku for seed (LlmModels; DPS_NN_MODEL_SPEC/_SEED override).
 // Interactive pickers (skipped entirely when --spec is explicit, or under --no-interactive):
 //   - multiple project-spec*.json in cwd/fixtures/ -> numbered menu instead of the bare default
 //   - multiple *.json under seeds/ -> numbered menu; the chosen file becomes prompts/in/seed-response.json
@@ -30,6 +36,9 @@ var imagePackOpt = new Option<DirectoryInfo?>("--image-pack", "Local image direc
 var imageProviderOpt = new Option<string>("--image-provider", () => "pexels", "pexels | pixabay | picsum");
 var noInteractiveOpt = new Option<bool>("--no-interactive", "Never prompt; fail if a prompt would be required");
 var resumeOpt = new Option<bool>("--resume", "Continue after manually filling prompts/in/<stage>-response.json");
+
+// The installed self-contained exe has no `dotnet` parent to set DOTNET_ROOT (see DotnetHost).
+DotnetHost.EnsureDotnetRoot(Environment.GetEnvironmentVariable, Environment.SetEnvironmentVariable, OperatingSystem.IsWindows());
 
 var root = new RootCommand("dps-nn (ДПС-НН) - ASP.NET Core MVC project generator");
 root.AddGlobalOption(specOpt);
@@ -59,12 +68,13 @@ StageContext BuildContext(FileInfo spec, DirectoryInfo outDir, bool useLock)
     return new StageContext(loaded, variation, outDir.FullName, genesisRoot, state, Console.Out);
 }
 
-LlmBridge Llm(DirectoryInfo outDir, string? projectName = null) => new(
+LlmBridge Llm(DirectoryInfo outDir, string? projectName = null, string? model = null) => new(
     promptsDir: Path.Combine(Directory.GetCurrentDirectory(), "prompts"),
     logPath: Path.Combine(Directory.GetCurrentDirectory(), "dps-nn.log.jsonl"),
     apiKey: Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"),
     inputDir: projectName is not null && Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "input", projectName))
-        ? Path.Combine(Directory.GetCurrentDirectory(), "input", projectName) : null);
+        ? Path.Combine(Directory.GetCurrentDirectory(), "input", projectName) : null,
+    model: model);
 
 Func<string, string> Prompt(bool noInteractive) => noInteractive
     ? q => throw new InvalidOperationException($"--no-interactive but a prompt is required: {q}")
@@ -320,28 +330,22 @@ AddStageCommand("emit-models", (_, _, _, _) => new EmitModelsStage());
 AddStageCommand("identity", (_, _, _, _) => new IdentityStage());
 AddStageCommand("emit-controllers-views", (_, _, _, _) => new EmitControllersViewsStage());
 AddStageCommand("seed", (ctx, _, outDir, projectName) => new SeedStage(
-    Llm(outDir, projectName),
+    Llm(outDir, projectName, LlmModels.Seed),
     ctx.ParseResult.GetValueForOption(imagePackOpt)?.FullName,
     ctx.ParseResult.GetValueForOption(imageProviderOpt)!));
 AddStageCommand("verify", (_, _, _, _) => new VerifyStage());
 AddStageCommand("report", (_, _, _, _) => new ReportStage());
 
 // ---- run --all --------------------------------------------------------------
-var runCmd = new Command("run", "Run the full pipeline");
-var allOpt = new Option<bool>("--all", "Run all stages");
-runCmd.AddOption(allOpt);
-runCmd.AddOption(fromOpt);
-runCmd.AddOption(imagePackOpt);
-runCmd.AddOption(imageProviderOpt);
-runCmd.SetHandler(async ctx =>
+// Shared by `run --all` and the agent (`create`). agentMode: no interactive pickers (the seeds/
+// picker would apply another project's seed), and any failure is re-thrown as an
+// AgentStageException naming the stage, so the repair loop knows where it broke.
+async Task RunPipelineAsync(FileInfo spec, DirectoryInfo outDir, string? from, string? imagePack,
+    string imageProvider, bool noInt, bool agentMode)
 {
+    PipelineRunner? runner = null;
     try
     {
-        var spec = ctx.ParseResult.GetValueForOption(specOpt)!;
-        var outDir = ctx.ParseResult.GetValueForOption(outOpt)!;
-        var from = ctx.ParseResult.GetValueForOption(fromOpt);
-        var noInt = ctx.ParseResult.GetValueForOption(noInteractiveOpt);
-        spec = ResolveSpecInteractively(spec, noInt);
         var genesisRoot = GenesisRoot();
         var loader = new SpecLoader(Path.Combine(genesisRoot, "spec.schema.json"));
         var lockPath = Path.ChangeExtension(spec.FullName, null) + ".lock.json";
@@ -354,7 +358,7 @@ runCmd.SetHandler(async ctx =>
 
         var lockCtx = BuildContext(spec, outDir, useLock: true);
         RecordProjectRegistry(spec, outDir, lockCtx);
-        ResolveSeedInteractively(lockCtx, noInt);
+        if (!agentMode) ResolveSeedInteractively(lockCtx, noInt);
 
         // Reset actions.log.jsonl at the start of each run for fresh visibility
         var actionLogPath = Path.Combine(Directory.GetCurrentDirectory(), "logs", lockCtx.Spec.Meta.ProjectName, "actions.log.jsonl");
@@ -368,21 +372,191 @@ runCmd.SetHandler(async ctx =>
         var stages = new IStage[]
         {
             new ScaffoldStage(), new EmitModelsStage(), new IdentityStage(), new EmitControllersViewsStage(),
-            new SeedStage(Llm(outDir, lockCtx.Spec.Meta.ProjectName), ctx.ParseResult.GetValueForOption(imagePackOpt)?.FullName,
-                ctx.ParseResult.GetValueForOption(imageProviderOpt)!),
+            new SeedStage(Llm(outDir, lockCtx.Spec.Meta.ProjectName, LlmModels.Seed), imagePack, imageProvider),
             new VerifyStage(), new ReportStage(),
         };
+        runner = new PipelineRunner(stages);
+        await runner.RunAllAsync(lockCtx, from);
+        PrintCompletionBanner(lockCtx);
+        ArchiveCompletedProject(spec, lockCtx);
+    }
+    catch (LlmBridge.LlmPendingException) { throw; }
+    catch (Exception ex) when (agentMode && ex is not OperationCanceledException)
+    {
+        // Anything before the stage loop (expansion, lock re-validation) counts as spec-expand.
+        throw new AgentStageException(runner?.FailedStage ?? "spec-expand", ex);
+    }
+}
+
+var runCmd = new Command("run", "Run the full pipeline");
+var allOpt = new Option<bool>("--all", "Run all stages");
+runCmd.AddOption(allOpt);
+runCmd.AddOption(fromOpt);
+runCmd.AddOption(imagePackOpt);
+runCmd.AddOption(imageProviderOpt);
+runCmd.SetHandler(async ctx =>
+{
+    try
+    {
+        var spec = ctx.ParseResult.GetValueForOption(specOpt)!;
+        var outDir = ctx.ParseResult.GetValueForOption(outOpt)!;
+        var noInt = ctx.ParseResult.GetValueForOption(noInteractiveOpt);
+        spec = ResolveSpecInteractively(spec, noInt);
         try
         {
-            await new PipelineRunner(stages).RunAllAsync(lockCtx, from);
-            PrintCompletionBanner(lockCtx);
-            ArchiveCompletedProject(spec, lockCtx);
+            await RunPipelineAsync(spec, outDir, ctx.ParseResult.GetValueForOption(fromOpt),
+                ctx.ParseResult.GetValueForOption(imagePackOpt)?.FullName,
+                ctx.ParseResult.GetValueForOption(imageProviderOpt)!, noInt, agentMode: false);
         }
         catch (LlmBridge.LlmPendingException e) { Console.WriteLine(e.Message); Environment.ExitCode = 3; }
     }
     catch (Exception ex) { LogGlobalError(ex); throw; }
 });
 root.AddCommand(runCmd);
+
+// ---- create: autonomous agent mode (ADR-013) ---------------------------------
+// description -> LLM drafts spec -> pipeline -> on failure the LLM repairs the SPEC (never the
+// generated code) and the run starts over, up to --max-repairs times. Needs ANTHROPIC_API_KEY:
+// a loop of manual pastes is the manual flow (`spec build` + `run --all`), not an agent.
+var describeOpt = new Option<string?>("--describe", "Project description (free text, any language)");
+var describeFileOpt = new Option<FileInfo?>("--describe-file", "File containing the project description");
+var maxRepairsOpt = new Option<int>("--max-repairs", () => 3, "Repair rounds before giving up");
+var createCmd = new Command("create", "Agent mode: description -> spec -> generated, verified app (needs ANTHROPIC_API_KEY)");
+createCmd.AddOption(describeOpt);
+createCmd.AddOption(describeFileOpt);
+createCmd.AddOption(maxRepairsOpt);
+createCmd.AddOption(imagePackOpt);
+createCmd.AddOption(imageProviderOpt);
+createCmd.SetHandler(async ctx =>
+{
+    try
+    {
+        var description = ctx.ParseResult.GetValueForOption(describeOpt);
+        if (ctx.ParseResult.GetValueForOption(describeFileOpt) is { } df) description = await File.ReadAllTextAsync(df.FullName);
+        if (string.IsNullOrWhiteSpace(description) && Console.IsInputRedirected) description = await Console.In.ReadToEndAsync();
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            Console.Error.WriteLine("create: give the project description via --describe \"...\", --describe-file <file>, or stdin.");
+            Environment.ExitCode = 2; return;
+        }
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")))
+        {
+            Console.Error.WriteLine("create: agent mode needs ANTHROPIC_API_KEY. Without a key use the manual flow:\n" +
+                "  dps-nn spec build --notes <file> --spec <spec.json>   (paste the request into any Claude chat)\n" +
+                "  dps-nn run --all --spec <spec.json>");
+            Environment.ExitCode = 2; return;
+        }
+
+        // Every agent run gets its own folder unless --out is explicit (same idea as 2-generate.bat).
+        var outDir = args.Contains("--out")
+            ? ctx.ParseResult.GetValueForOption(outOpt)!
+            : new DirectoryInfo(Path.Combine("out", $"agent_{DateTime.Now:yyyyMMdd_HHmmss}"));
+        outDir.Create();
+        var spec = args.Contains("--spec")
+            ? ctx.ParseResult.GetValueForOption(specOpt)!
+            : new FileInfo(Path.Combine(outDir.FullName, "project-spec.json"));
+
+        var genesisRoot = GenesisRoot();
+        var schemaPath = Path.Combine(genesisRoot, "spec.schema.json");
+        var guidePath = Path.Combine(genesisRoot, "utils", "claude-skills", "dps-nn-spec-authoring", "SKILL.md");
+        var examplePath = Path.Combine(genesisRoot, "fixtures", "project-spec.facenote.json");
+        foreach (var required in new[] { guidePath, examplePath })
+            if (!File.Exists(required)) throw new FileNotFoundException($"agent mode needs {required} (ships with dps-nn).");
+
+        // Stale response files from an earlier run must never stand in for this project's:
+        // LlmBridge falls back to them when an API call fails.
+        var promptsIn = Path.Combine(Directory.GetCurrentDirectory(), "prompts", "in");
+        foreach (var stale in new[] { LlmSpecAuthor.DraftStage, LlmSpecAuthor.RepairStage, "seed" })
+            File.Delete(Path.Combine(promptsIn, $"{stale}-response.json"));
+
+        var loader = new SpecLoader(schemaPath);
+        var author = new LlmSpecAuthor(Llm(outDir, model: LlmModels.Spec), Json.Schema.JsonSchema.FromFile(schemaPath),
+            await File.ReadAllTextAsync(guidePath), await File.ReadAllTextAsync(examplePath));
+        var imagePack = ctx.ParseResult.GetValueForOption(imagePackOpt)?.FullName;
+        var imageProvider = ctx.ParseResult.GetValueForOption(imageProviderOpt)!;
+
+        // A repaired spec reruns from scratch: stale files from the failed attempt (a model that no
+        // longer exists, an old controller) would otherwise break the next build. Only ever deletes
+        // a project folder INSIDE this run's own --out directory.
+        void ResetGeneratedOutput(string oldSpecJson)
+        {
+            var lockPath = Path.ChangeExtension(spec.FullName, null) + ".lock.json";
+            if (File.Exists(lockPath)) File.Delete(lockPath);
+            string? name = null;
+            try { name = System.Text.Json.Nodes.JsonNode.Parse(oldSpecJson)?["meta"]?["projectName"]?.GetValue<string>(); }
+            catch { /* unparsable old spec: nothing was generated from it */ }
+            if (string.IsNullOrWhiteSpace(name) || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains("..")) return;
+            var projectDir = Path.GetFullPath(Path.Combine(outDir.FullName, name));
+            if (projectDir.StartsWith(outDir.FullName + Path.DirectorySeparatorChar) && Directory.Exists(projectDir))
+                Directory.Delete(projectDir, recursive: true);
+        }
+
+        Console.WriteLine($"[dps-nn] agent mode - spec/repair: {LlmModels.Spec}, seed: {LlmModels.Seed}, output: {outDir.FullName}");
+        var agent = new AgentRunner(author,
+            (specPath, ct) => RunPipelineAsync(new FileInfo(specPath), outDir, null, imagePack, imageProvider, noInt: true, agentMode: true),
+            path => loader.Load(path),
+            ResetGeneratedOutput,
+            msg => Console.WriteLine($"[dps-nn] {msg}"),
+            ctx.ParseResult.GetValueForOption(maxRepairsOpt));
+
+        AgentResult result;
+        try { result = await agent.RunAsync(description, spec.FullName); }
+        catch (LlmBridge.LlmPendingException e) { Console.WriteLine(e.Message); Environment.ExitCode = 3; return; }
+
+        var unsupported = new List<UnsupportedRequest>();
+        try { unsupported = loader.Load(spec.FullName).Meta.UnsupportedRequests ?? []; } catch { /* spec may be invalid on failure */ }
+        WriteAgentReport(outDir, description, spec.FullName, result, unsupported);
+
+        if (unsupported.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Not generated - the description asked for things the generator can't express yet:");
+            foreach (var u in unsupported) Console.WriteLine($"  - {u.Request}: {u.Reason}");
+        }
+        Console.WriteLine(result.Success
+            ? $"[dps-nn] agent: done after {result.Attempts.Count} attempt(s). Report: {Path.Combine(outDir.FullName, "agent-report.json")}"
+            : $"[dps-nn] agent: stopped - {result.StopReason}. Report: {Path.Combine(outDir.FullName, "agent-report.json")}");
+        if (!result.Success) Environment.ExitCode = 1;
+    }
+    catch (Exception ex) { LogGlobalError(ex); throw; }
+});
+root.AddCommand(createCmd);
+
+// ---- doctor: prerequisite check (also run by the GUI at startup) --------------
+// Exit 0 = everything a pipeline run needs is present (warnings allowed), 1 = something is missing.
+var doctorCmd = new Command("doctor", "Check the prerequisites (.NET SDK, dotnet-ef, scaffolder, LocalDB, API key) and print fixes");
+doctorCmd.SetHandler(async () =>
+{
+    string? root;
+    try { root = GenesisRoot(); } catch (InvalidOperationException) { root = null; }
+    var doctor = new Doctor(Doctor.RunProcessAsync, Environment.GetEnvironmentVariable,
+        OperatingSystem.IsWindows(), root, Directory.GetCurrentDirectory());
+    var checks = await doctor.RunAsync();
+    Console.WriteLine($"dps-nn {typeof(Doctor).Assembly.GetName().Version} - prerequisite check");
+    foreach (var line in Doctor.Format(checks)) Console.WriteLine(line);
+    var failed = checks.Count(c => c.Status == CheckStatus.Fail);
+    Console.WriteLine(failed == 0 ? "All required prerequisites are present." : $"{failed} required prerequisite(s) missing - see the fixes above.");
+    Environment.ExitCode = failed == 0 ? 0 : 1;
+});
+root.AddCommand(doctorCmd);
+
+static void WriteAgentReport(DirectoryInfo outDir, string description, string specPath, AgentResult result,
+    List<UnsupportedRequest> unsupported)
+{
+    var report = new
+    {
+        generatedAt = DateTimeOffset.UtcNow,
+        description,
+        spec = specPath,
+        models = new { spec = LlmModels.Spec, seed = LlmModels.Seed },
+        success = result.Success,
+        stopReason = result.StopReason,
+        attempts = result.Attempts,
+        unsupportedRequests = unsupported,
+    };
+    File.WriteAllText(Path.Combine(outDir.FullName, "agent-report.json"),
+        System.Text.Json.JsonSerializer.Serialize(report, ProjectSpec.JsonOpts));
+}
 
 // C2: after a full green run, print the ДПС-НН banner with seeded credentials + local URL.
 static void PrintCompletionBanner(StageContext ctx)
@@ -483,7 +657,11 @@ static async Task RunStage(IStage stage, StageContext ctx)
 
 try
 {
-    return await root.InvokeAsync(args);
+    // Handlers signal 1/2/3 via Environment.ExitCode, but System.CommandLine returns 0 for
+    // void handlers and Main's return value wins over Environment.ExitCode - so without this
+    // the exit-3 "LLM pending" signal and create's failure codes all surfaced as 0 (changelog 132).
+    var invokeCode = await root.InvokeAsync(args);
+    return invokeCode != 0 ? invokeCode : Environment.ExitCode;
 }
 catch (Exception ex)
 {

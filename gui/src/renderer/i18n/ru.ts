@@ -8,6 +8,8 @@ export const ru: Strings = {
   toolbar: { debug: 'Отладка', settings: 'Настройки', reopen: 'Последний результат', recent: 'Недавние проекты' },
   spec: {
     heading: 'Спецификация',
+    describe: 'Или опишите проект своими словами — Claude напишет спецификацию, затем сгенерирует и исправит её…',
+    create: '✦ Сгенерировать по описанию',
     upload: 'Загрузить…',
     pick: 'Выбрать…',
     none: 'Спецификация не выбрана',
@@ -120,6 +122,8 @@ export const ru: Strings = {
     noKey: 'Ключ API не задан',
     settingsSaved: 'Настройки сохранены',
     selectSpecFirst: 'Сначала выберите спецификацию',
+    describeFirst: 'Сначала опишите проект',
+    agentStarted: 'Агент запущен',
     couldNotPlayTrack: 'Не удалось воспроизвести трек',
     noLocalTracks: 'Локальные треки не найдены',
     noLocalTracksHint: 'Поместите файлы MP3/MP4 в music/',

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { Settings, SettingsPatch } from '@shared/ipc-types';
-import { genesisRoot } from './paths';
+import { bundledCli, workspaceRoot } from './paths';
 
 // Settings live in Electron's per-user userData dir, NOT in the repo — so an API key is
 // never written anywhere git tracks. The key is the sensitive bit: it is stored here,
@@ -23,11 +23,18 @@ function defaults(): StoredSettings {
   return {
     wallpaper: 'nova-astro-hud',
     language: 'en',
-    // ADR-010 decision #1: default to the dev CLI form the batch scripts use; overridable.
-    genesisCommand: 'dotnet run --project src/Genesis.Cli --',
+    genesisCommand: defaultGenesisCommand(),
     outDir: 'out',
     apiKey: '',
   };
+}
+
+/** ADR-010 decision #1: the dev CLI form the batch scripts use; a packaged build runs its bundled
+ *  self-contained dps-nn.exe instead (ADR-014). Quoted: the install path may contain spaces. */
+const DEV_COMMAND = 'dotnet run --project src/Genesis.Cli --';
+function defaultGenesisCommand(): string {
+  const exe = bundledCli();
+  return exe ? `"${exe}"` : DEV_COMMAND;
 }
 
 function settingsPath(): string {
@@ -91,13 +98,15 @@ export function effectiveApiKey(): string | undefined {
 /** Absolute output directory the CLI writes generated projects into (--out). */
 export function effectiveOutDir(): string {
   const out = loadStored().outDir || 'out';
-  // Relative outDir resolves under the Genesis root (same as the CLI's default "out").
-  return out.match(/^([a-zA-Z]:[\\/]|[\\/])/) ? out : join(genesisRoot(), out);
+  // Relative outDir resolves under the workspace, the CLI's cwd (same as the CLI's default "out").
+  return out.match(/^([a-zA-Z]:[\\/]|[\\/])/) ? out : join(workspaceRoot(), out);
 }
 
 /** The configured CLI invocation, split into a program + base args (naive shell split). */
 export function effectiveGenesisCommand(): { program: string; baseArgs: string[] } {
-  const cmd = loadStored().genesisCommand.trim() || 'dotnet run --project src/Genesis.Cli --';
+  let cmd = loadStored().genesisCommand.trim() || defaultGenesisCommand();
+  // A packaged build has no src/ to `dotnet run`; a dev-form command can only be stale here.
+  if (bundledCli() && cmd === DEV_COMMAND) cmd = defaultGenesisCommand();
   const parts = cmd.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((p) => p.replace(/^"|"$/g, '')) ?? [];
   return { program: parts[0] ?? 'dotnet', baseArgs: parts.slice(1) };
 }

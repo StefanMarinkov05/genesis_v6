@@ -52,6 +52,13 @@ public sealed class MetaSection
     [JsonPropertyName("routing")] public RoutingMeta Routing { get; set; } = new();
 
     /// <summary>
+    /// Capability-gap report written by the agent (`dps-nn create`): what the description asked
+    /// for that the generator cannot express yet. Informational only - never drives generation;
+    /// it is the backlog for new feature-templates. See docs/explanation/agent-mode.md.
+    /// </summary>
+    [JsonPropertyName("unsupportedRequests")] public List<UnsupportedRequest>? UnsupportedRequests { get; set; }
+
+    /// <summary>
     /// True when this project's generated UI language is Bulgarian - the ONLY language the
     /// retrofit BG-translation passes are written for (bg-term-map residue rewriting,
     /// identity-bg-map replacement, BG validation-message injection, BgIdentityErrorDescriber,
@@ -67,6 +74,12 @@ public sealed class MetaSection
     /// </summary>
     [JsonIgnore]
     public bool IsBulgarian => string.Equals(Language, "bg", StringComparison.OrdinalIgnoreCase);
+}
+
+public sealed class UnsupportedRequest
+{
+    [JsonPropertyName("request")] public string Request { get; set; } = "";
+    [JsonPropertyName("reason")] public string Reason { get; set; } = "";
 }
 
 public sealed class RoutingMeta

@@ -12,7 +12,7 @@ non-functional today. (3) The `/images/avatar-default.png` fallback the views re
 emitted (404), and product download failures write a 1×1 PNG rather than a real placeholder.
 
 **Decision**: redesign the image pipeline along four lines — (a) a **persistent cache** at
-`{genesisRoot}/.image-cache/` (gitignored, outside `out/`) that survives the per-run folders;
+`.image-cache/` in the workspace (cwd; ADR-014 — gitignored, outside `out/`) that survives the per-run folders;
 (b) **shipped generic fallbacks as SVG** (`images/avatar-default.svg`, `images/product-default.svg`),
 copied into each generated `wwwroot/images/` by a new `ScaffoldStage.CopyStaticAssets` step —
 SVG over binary PNG because a generator repo should carry text, diffable, scalable assets;

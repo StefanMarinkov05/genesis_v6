@@ -123,6 +123,17 @@ that point in the pipeline, even though it will by the time the whole run finish
 new cross-cutting helper type, emit it in (or before) the earliest stage that will reference it, not
 wherever feels most topically related.
 
+## "You must install .NET to run this application" from a global tool, only when installed
+
+`dotnet-aspnet-codegenerator` and `dotnet-ef` are framework-dependent apphosts: they find the
+runtime through `DOTNET_ROOT`, else the registered/default install location. `dotnet run` sets
+`DOTNET_ROOT` for the app it launches, so from a checkout they always worked. The installed,
+self-contained `dps-nn.exe` has no `dotnet` parent, and with .NET installed anywhere but the
+default location (a per-user install) `identity` failed with "App host version … .NET location:
+Not found". `DotnetHost.EnsureDotnetRoot` (called first thing in `Program.cs`) now sets it from the
+`dotnet` on `PATH` when unset. Any future child process that is itself a .NET apphost inherits the
+fix; one that needs a *different* runtime must set its own. (ADR-014, changelog 134.)
+
 ## Where to look next
 
 For *why* the pipeline is staged and verify-gated this way (which is why these build-gate-ordering

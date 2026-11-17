@@ -3,7 +3,7 @@
 
 **Diataxis type:** explanation (synthesis + index). **Source of truth:** `docs/adr/*` — this doc
 holds **no decision detail of its own**; every claim below links the ADR that owns it. Per
-`plan/task-a-doc-architecture.md` decision D1, the 11 ADRs stay the decision *store*, individually
+`plan/task-a-doc-architecture.md` decision D1, the ADRs stay the decision *store*, individually
 cross-referenced elsewhere in the repo; this file is the overview *over* them, not a replacement.
 
 ## The shape, in one paragraph
@@ -126,6 +126,29 @@ auto-derived convention (FK→select, user→select, enum→select, rating→sel
 admin listing rather than bespoke per page — the rename from "Характеристики" happens last.
 → **[ADR-012](../adr/adr-012-specifications-consolidation-and-filters.md)** (full design:
 `docs/explanation/specifications-consolidation.md`)
+
+## Why the agent repairs the spec, never the generated code
+
+`dps-nn create` closes the loop: the model drafts the spec, the generator runs, and failures go
+back to the model — but its only lever is the spec. Patching generated code would turn every app
+into a one-off the templates can no longer fix and would cost a read of the whole codebase per
+repair; editing the spec keeps every app pure template output under the same verify gate. What
+the spec cannot express is recorded as `meta.unsupportedRequests` — the backlog for extending the
+generator once, for everyone. Machine problems (SDK, tools, LocalDB, API key) stop the loop at once.
+→ **[ADR-013](../adr/adr-013-agent-mode-spec-only-repair.md)** (full design:
+`docs/explanation/agent-mode.md`)
+
+## Why the installed app splits a read-only install root from a writable workspace
+
+A checkout used one folder for both what the CLI reads (templates, schema) and what it writes
+(logs, prompts, output). An installed program can't write into its own install folder — updates
+replace it and per-machine installs forbid it. The installer therefore ships a self-contained
+`dps-nn.exe` next to its templates (found via the exe's own directory, as `GenesisRoot()` already
+tried first) and runs it with cwd = `Documents\DPS-NN`; in a checkout both roots stay the repo
+root. Prerequisites that can't be bundled (.NET SDK, EF/scaffolding tools, LocalDB) are reported
+by `dps-nn doctor`, which the GUI runs at startup.
+→ **[ADR-014](../adr/adr-014-install-root-and-workspace.md)** (how to build it:
+`docs/how-to/build-the-installer.md`)
 
 ## Reading further
 

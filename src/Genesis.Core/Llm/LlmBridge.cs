@@ -14,18 +14,25 @@ namespace GenesisV6.Core.Llm;
 /// Two fill modes, one validation path:
 ///   manual    - genesis exits with instructions; user pastes request into a Claude
 ///               session, saves the response file, re-runs `genesis <stage> --resume`.
-///   automatic - ANTHROPIC_API_KEY set: genesis calls claude-haiku-4-5 itself and
-///               writes the response file, so the artifact trail is identical.
+///   automatic - ANTHROPIC_API_KEY set: genesis calls the Messages API itself (model per
+///               LlmModels: spec/repair vs seed) and writes the response file, so the
+///               artifact trail is identical. ANTHROPIC_BASE_URL overrides the endpoint.
 ///
 /// Validation: response must parse as JSON AND satisfy the stage's response schema.
 /// On violation: a violation report is written to prompts/out/ and (in automatic
 /// mode) the request is retried with the violations appended, max 3 attempts.
 /// Every exchange is hashed + logged to dps-nn.log.jsonl.
 /// </summary>
-public sealed class LlmBridge(string promptsDir, string logPath, string? apiKey, string? inputDir = null)
+public sealed class LlmBridge(string promptsDir, string logPath, string? apiKey, string? inputDir = null,
+    string? model = null, string? baseUrl = null)
 {
-    public const string Model = "claude-haiku-4-5";
+    /// <summary>The model this bridge calls in automatic mode (default: <see cref="LlmModels.Spec"/>).</summary>
+    public string Model { get; } = model ?? LlmModels.Spec;
     private const int MaxAttempts = 3;
+    // Large enough for a full spec or a multi-model seed; long generations need the raised
+    // HTTP timeout below (HttpClient's 100 s default cut off big seed responses).
+    private const int MaxTokens = 32000;
+    private static readonly TimeSpan HttpTimeout = TimeSpan.FromMinutes(10);
 
     public string RequestPath(string stage) => Path.Combine(promptsDir, "out", $"{stage}-request.md");
     public string ResponsePath(string stage) => Path.Combine(promptsDir, "in", $"{stage}-response.json");
@@ -161,13 +168,14 @@ public sealed class LlmBridge(string promptsDir, string logPath, string? apiKey,
 
     private async Task<string> CallApiAsync(string prompt, CancellationToken ct)
     {
-        using var http = new HttpClient { BaseAddress = new Uri("https://api.anthropic.com/") };
+        var endpoint = (baseUrl ?? Environment.GetEnvironmentVariable("ANTHROPIC_BASE_URL") ?? "https://api.anthropic.com").TrimEnd('/') + "/";
+        using var http = new HttpClient { BaseAddress = new Uri(endpoint), Timeout = HttpTimeout };
         http.DefaultRequestHeaders.Add("x-api-key", apiKey);
         http.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
         var body = new
         {
             model = Model,
-            max_tokens = 8192,
+            max_tokens = MaxTokens,
             messages = new[] { new { role = "user", content = prompt } }
         };
         var resp = await http.PostAsync("v1/messages",

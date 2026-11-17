@@ -185,6 +185,11 @@
                   <select id="spec-select"></select>
                   <button type="button" class="upload-btn" id="spec-upload">Upload…</button>
                 </div>
+                <!-- Agent mode (ADR-013): describe the project instead of picking a spec. -->
+                <textarea id="spec-describe" rows="4" placeholder="Or describe the project in your own words…"></textarea>
+                <div class="select-row">
+                  <button type="button" class="claude-btn" id="spec-create">✦ Generate from description</button>
+                </div>
               </div>
               <div class="panel">
                 <h3 id="seed-heading">Seed</h3>

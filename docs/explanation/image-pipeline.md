@@ -34,7 +34,8 @@ All three are verified against the real code, not assumed:
 Introduce a repo-root cache directory **outside** the `out/` tree, so it survives the
 per-run timestamped folders:
 
-- Location: `{genesisRoot}/.image-cache/` (cwd is always the genesis root — ADR-010).
+- Location: `{cwd}/.image-cache/` — the workspace: the repo root in a checkout, `Documents\DPS-NN`
+  when installed (moved off `GenesisRoot`, which is read-only when installed — ADR-014).
   Add `.image-cache/` to `.gitignore` (local, disposable, but persistent across runs).
 - Key: `{provider}-{slug(keyword)}.jpg` where `slug` lowercases + strips non-alphanumerics
   (Picsum already seeds by keyword, so keyword→image is stable and cacheable).

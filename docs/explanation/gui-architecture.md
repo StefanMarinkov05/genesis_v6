@@ -28,7 +28,7 @@ flowchart LR
     R <-->|"ipcRenderer ↔ contextBridge"| P
     P <-->|"ipcMain handlers + webContents.send"| M
   end
-  M -->|"child_process.spawn\ncwd = Genesis root\nenv: ANTHROPIC_API_KEY?\n--no-interactive"| CLI["dps-nn CLI\n(existing .NET, unchanged)"]
+  M -->|"child_process.spawn\ncwd = workspace\nenv: ANTHROPIC_API_KEY?\n--no-interactive"| CLI["dps-nn CLI\n(existing .NET, unchanged)"]
   CLI -->|"stdout/stderr (pipe)"| M
   CLI -->|"writes"| LOG["{out}/{Project}/dps-nn.log.jsonl\nstate.json · logs/registry.json\nwwwroot/output/project-summary.json"]
   M -->|"tails / reads"| LOG
@@ -50,7 +50,8 @@ flowchart LR
 | Concern | Contract | Source of truth |
 |---|---|---|
 | Invocation | `dps-nn run --all --spec <path> --out <dir> --no-interactive` | `Program.cs` run command |
-| Working dir | **Must** be the Genesis root — CLI resolves `templates/`, `spec.schema.json`, `feature-templates/` and writes `logs/`, `prompts/`, `dps-nn.log.jsonl`, the registry all relative to cwd | `GenesisRoot()`, `Llm()` |
+| Working dir | **Must** be the workspace — the CLI writes `logs/`, `prompts/`, `dps-nn.log.jsonl`, `.image-cache/`, the registry relative to cwd, and reads `templates/`, `spec.schema.json`, `feature-templates/` from its own `GenesisRoot()` (exe dir first, then cwd). In a checkout both are the repo root; installed, the install root is read-only and the workspace is `Documents\DPS-NN` (ADR-014) | `GenesisRoot()`, `Llm()`, `paths.ts` |
+| Prerequisites | At startup the GUI runs `dps-nn doctor` once and streams it into the debug terminal (no new channel — it rides `build:onLog`). Informational only; a run started meanwhile waits for it to exit (two concurrent `dotnet run` builds of the CLI collide on Windows file locks) | `GenesisRunner.doctor()`, `Doctor` |
 | No prompts | `--no-interactive` is **mandatory** — the GUI can't answer the CLI's stdin spec/seed pickers, so it replaces them with its own file/list UI and passes an explicit `--spec` + pre-places the seed at `prompts/in/seed-response.json` | `ResolveSpecInteractively`, `ResolveSeedInteractively` |
 | API key | Injected into the **child env** by the main process when configured; never on the command line, never in the renderer | `Llm()` reads `ANTHROPIC_API_KEY` |
 | Progress feed | `{out}/{Project}/dps-nn.log.jsonl` — one line per stage boundary: `{ ts, stage, phase: "start"\|"end"\|"error", durationMs, error }` | `PipelineRunner.AppendLog` |
@@ -79,6 +80,10 @@ both implement.
 - `seed:generateWithClaude(specHandle)` → **main-process** Anthropic call, writes `prompts/in/seed-response.json`
 - `build:checkDuplicate(specHandle, seedHandle)` → prior completed build for this (spec+seed) hash, or null
 - `build:start(specHandle, seedHandle, outDir)` → spawns the CLI, returns a `runId`
+- `build:create(description)` → agent mode (ADR-013): writes the text to
+  `<out>/agent_<stamp>/description.txt`, spawns `create --describe-file`, returns a `runId`. Same
+  push events as `build:start`; the runner learns the project name by polling the drafted spec
+  (`gui/src/main/agent-helpers.ts`). Rejects when the description is empty or no API key is set.
 - `build:pause(runId)` / `build:resume(runId)` / `build:stop(runId)`
 - `settings:get()` / `settings:set(patch)` → theme, language, genesis-command, api-key
   (**write-only** from the renderer's view — the key is never returned)
@@ -180,6 +185,10 @@ The "Claude" *seed* button specifically is the same mechanism scoped to the seed
 design (model choice, prompt, cost) is Opus Task 3 — this doc only fixes *where* it runs (main) and
 *what* it writes (the seed file the CLI already reads).
 
+**Agent mode** (`build:create`) needs the key — every repair round is an exchange, so the paste
+flow does not apply. Details: `docs/explanation/agent-mode.md`. Agent runs are not recorded in
+the dedup manifest (there is no chosen spec+seed pair to hash).
+
 ## Dedup (entirely GUI-side, CLI untouched)
 
 The 6.5.0 spec wants "(spec, seed) already built → skip". This lives wholly in the main process and
@@ -259,19 +268,34 @@ Task 1 must leave the right seams; it does not choose colours.
 ## Folder layout
 
 ```
-gui/                      # the Electron app — sibling to src/, never contains pipeline logic
-  package.json
-  electron/
-    main.ts               # spawns CLI, owns fs + key, tails log, dedup, IPC handlers
-    preload.ts            # the typed contextBridge surface (the IPC contract above)
-    genesis-runner.ts     # child-process lifecycle: start/pause/resume/stop, progress, exit-3
-  src/                    # renderer web UI (framework TBD by the impl task)
-    screens/  themes/  i18n/  components/
-  ...
+gui/                         # the Electron app — sibling to src/, never contains pipeline logic
+  package.json               # electron-vite build, node --test runner (Node >= 23.6 for .ts tests)
+  src/
+    main/                    # main process: owns fs, the API key, the CLI child
+      index.ts               #   window + app lifecycle
+      ipc.ts                 #   IPC handlers (the contract above)
+      genesis-runner.ts      #   child lifecycle: start/create/pause/resume/stop, log tail, exit codes
+      agent-helpers.ts       #   agent mode: project-name polling, stop-reason parsing (Electron-free)
+      settings.ts paths.ts   #   persisted settings; installRoot() (read-only) / workspaceRoot() (CLI cwd), ADR-014
+      dedup.ts report.ts     #   (spec+seed) dedup manifest, completion-banner parser
+      recent-projects.ts registry-parser.ts files.ts footer.ts
+      music.ts music-parser.ts media-protocol.ts
+    preload/index.ts         # the typed contextBridge surface
+    shared/ipc-types.ts      # channel names + payload types shared by main/preload/renderer
+    renderer/                # the UI: index.html, main.ts, state.ts, themes.ts, styles.css, i18n/
+  test/                      # node --test suites for the Electron-free modules
+  scripts/stage-genesis.mjs  # stages the install root (self-contained dps-nn.exe + templates…) for packaging
+  electron-builder.yml       # NSIS installer config (docs/how-to/build-the-installer.md)
 ```
 
-`images/` (logo, flags, wallpapers) and `design/` (`design-specs.md`, `footer.md`) already exist at
-the repo root (Task 0) and are read at runtime.
+**Packaged builds** (ADR-014): the install root is `<install>\resources\genesis\` (electron-builder
+`extraResources`), the CLI command defaults to its bundled `dps-nn.exe`, and the workspace
+`Documents\DPS-NN\` is created on first use with copies of the sample spec + seed. On boot the
+renderer preselects that sample (`project-spec.facenote.json` from `fixtures`,
+`facenote-rich-seed.json` from `seeds`) when nothing is chosen, so Start works without an API key.
+
+`design/footer.md` and `design/music/` are read at runtime from the install root (the repo root in
+a checkout); the wallpapers and logo are bundled into the renderer from `src/renderer/public/`.
 
 ## What this doc fixes vs. what later tasks own
 

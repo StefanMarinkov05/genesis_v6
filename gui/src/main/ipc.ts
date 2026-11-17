@@ -22,6 +22,10 @@ export function registerIpc(win: BrowserWindow): void {
     error: (e) => win.webContents.send(CH.onError, e),
   });
 
+  // Prerequisite report into the debug terminal once the renderer is listening (onLog is
+  // subscribed during renderer startup, before did-finish-load).
+  win.webContents.once('did-finish-load', () => runner.doctor());
+
   // ---- spec / seed input ----
   ipcMain.handle(CH.specList, () => listSpecs());
   ipcMain.handle(CH.specUpload, (_e, bytes: Uint8Array, name: string) => uploadSpec(bytes, name));
@@ -40,6 +44,7 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(CH.buildStart, (_e, spec: FileHandle, seed: FileHandle | null) =>
     runner.start(spec, seed),
   );
+  ipcMain.handle(CH.buildCreate, (_e, description: string) => runner.create(description));
   ipcMain.handle(CH.buildPause, (_e, runId: string) => runner.pause(runId));
   ipcMain.handle(CH.buildResume, (_e, runId: string) => runner.resume(runId));
   ipcMain.handle(CH.buildStop, (_e, runId: string) => runner.stop(runId));

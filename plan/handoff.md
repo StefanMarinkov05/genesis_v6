@@ -19,12 +19,12 @@ a mechanical, single-file, pattern-copy task.
 ```
 Read CLAUDE.md first (router, not a container — follow its table to whatever doc the actual task
 needs). Read plan/state.md + plan/decisions.md per CLAUDE.md's "read first" rule, but trust
-tasks.md over state.md for "what's open" — state.md's own header says how current it is.
+plan/tasks.md over state.md for "what's open" — state.md's own header says how current it is.
 
 ## Goal
 No task is currently in progress — the last unit of work (multi-image seed data + a GUI session)
 is complete, tested, committed, and pushed. Your first job is to ask what to work on next, not to
-resume something. If the user says "continue" without specifics, check tasks.md's "Now working"
+resume something. If the user says "continue" without specifics, check plan/tasks.md's "Now working"
 section first — it should say "Idle" if nothing was left mid-flight.
 
 ## State (done + VERIFIED, not just claimed)
@@ -40,7 +40,7 @@ section first — it should say "Idle" if nothing was left mid-flight.
   multi-round root-cause debugging session for a text-rendering bug). Changelogs 128-129.
 - `plan/v6-task-breakdown.md` (Packages A-K): all items done as of changelog 101 — do not
   re-propose any of those as "missing," they're shipped.
-- `tasks.md`'s only unchecked line: an optional "Claude CI step" idea, explicitly never committed
+- `plan/tasks.md`'s only unchecked line: an optional "Claude CI step" idea, explicitly never committed
   to. Not a blocker for anything.
 
 ## Decisions made (with rationale — check plan/decisions.md for the full log)
@@ -62,10 +62,10 @@ section first — it should say "Idle" if nothing was left mid-flight.
   cosmetic/joke, by explicit request. Don't build real throttling behind it.
 
 ## Assumptions & open questions (unconfirmed — check before acting on them)
-- `tasks.md` has NOT been updated to reflect changelogs 112-129 (everything past the "Play
+- `plan/tasks.md` has NOT been updated to reflect changelogs 112-129 (everything past the "Play
   Veselin Marinov button" entry) — it's stale but was left that way pending confirmation from the
   user on whether they want it refreshed. Ask, don't assume either way.
-- Whether `context.md` (this file) should be committed to git, vs. staying a local-only scratch
+- Whether `plan/handoff.md` (this file, formerly root `context.md`) should be committed to git, vs. staying a local-only scratch
   file — was raised, never answered.
 - `gui/resources/icon.ico` vs `gui/src/renderer/public/logo/icon.ico` — earlier in the prior
   session the user updated the renderer-side icon directly; whether the OS-window/taskbar icon
@@ -110,7 +110,7 @@ section first — it should say "Idle" if nothing was left mid-flight.
 
 ## Next actions
 1. Ask the user what they want to work on — there is no queued task.
-2. If they want housekeeping first: offer to update `tasks.md` to reflect changelogs 112-129 (see
+2. If they want housekeeping first: offer to update `plan/tasks.md` to reflect changelogs 112-129 (see
    Assumptions above — don't do it unprompted, ask first).
 3. If they mention "the music popup" or "the track list" again: read the Gotchas section above
    before touching CSS there — the flexbox trap is the single most expensive lesson from the
