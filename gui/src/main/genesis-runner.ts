@@ -10,7 +10,7 @@ import type {
   RunId,
   StageName,
 } from '@shared/ipc-types';
-import { genesisRoot } from './paths';
+import { workspaceRoot } from './paths';
 import { effectiveApiKey, effectiveGenesisCommand, effectiveOutDir } from './settings';
 import { recordBuild } from './dedup';
 import { parseCompletionBanner } from './report';
@@ -77,12 +77,14 @@ interface RunState {
 
 export class GenesisRunner {
   private readonly runs = new Map<RunId, RunState>();
+  /** Resolves when the startup `doctor` has exited; runs wait for it (see doctor()). */
+  private ready: Promise<void> = Promise.resolve();
 
   constructor(private readonly ev: RunnerEvents) {}
 
   /** Spawn `run --all` for a (spec, seed) pair. Returns a runId addressing its lifecycle. */
   start(spec: FileHandle, seed: FileHandle | null): RunId {
-    const root = genesisRoot();
+    const root = workspaceRoot();
     const outDirAbs = effectiveOutDir();
     const projectName = readProjectName(spec.path);
     const projectDir = join(outDirAbs, projectName);
@@ -193,6 +195,37 @@ export class GenesisRunner {
     this.spawnChild(st);
   }
 
+  /**
+   * `dps-nn doctor` at GUI startup, streamed into the debug terminal like any CLI output: the
+   * prerequisite report (SDK, dotnet-ef, scaffolder, LocalDB, API key) with the fix for each gap.
+   * Informational only - a failing check never blocks Start. Runs spawned meanwhile wait for it:
+   * in dev both would `dotnet run` the CLI project, and two concurrent builds of it collide on
+   * Windows file locks.
+   */
+  doctor(): void {
+    this.ready = new Promise((done) => {
+      const { program, baseArgs } = effectiveGenesisCommand();
+      let child: ChildProcess;
+      try {
+        child = spawn(program, [...baseArgs, 'doctor'], { cwd: workspaceRoot(), env: childEnv(), shell: false });
+      } catch (e) {
+        this.ev.log(`dps-nn doctor could not start: ${(e as Error).message}`);
+        done();
+        return;
+      }
+      const forward = (buf: Buffer): void => {
+        for (const line of buf.toString().split(/\r?\n/)) if (line) this.ev.log(line);
+      };
+      child.stdout?.on('data', forward);
+      child.stderr?.on('data', forward);
+      child.on('error', (e) => {
+        this.ev.log(`dps-nn doctor could not start: ${e.message}`);
+        done();
+      });
+      child.on('exit', () => done());
+    });
+  }
+
   getReport(runId: RunId): BuildReport | null {
     return this.runs.get(runId)?.report ?? null;
   }
@@ -200,18 +233,21 @@ export class GenesisRunner {
   // ---- internals ------------------------------------------------------------
 
   private spawnChild(st: RunState): void {
-    const root = genesisRoot();
+    // A Stop/Pause that lands while waiting for the doctor simply means "never spawn".
+    void this.ready.then(() => {
+      if (!st.stopping) this.spawnNow(st);
+    });
+  }
+
+  private spawnNow(st: RunState): void {
+    const root = workspaceRoot();
     const { program, baseArgs } = effectiveGenesisCommand();
     const args =
       st.mode === 'create'
         ? [...baseArgs, 'create', '--describe-file', st.descriptionPath!, '--out', st.outDirAbs, '--no-interactive']
         : [...baseArgs, 'run', '--all', '--spec', st.spec.path, '--out', st.outDirAbs, '--no-interactive'];
 
-    const env = { ...process.env };
-    const key = effectiveApiKey();
-    if (key) env.ANTHROPIC_API_KEY = key; // injected into the child env only (security model)
-
-    const child = spawn(program, args, { cwd: root, env, shell: false });
+    const child = spawn(program, args, { cwd: root, env: childEnv(), shell: false });
     st.child = child;
     st.stopping = false;
 
@@ -338,7 +374,7 @@ export class GenesisRunner {
     if (code === EXIT_AWAITING_LLM) {
       this.ev.awaitingLlm({
         stage: st.lastStartedStage ?? 'seed',
-        requestPath: join(genesisRoot(), 'prompts', 'in'),
+        requestPath: join(workspaceRoot(), 'prompts', 'in'),
       });
       return;
     }
@@ -360,6 +396,14 @@ export class GenesisRunner {
 }
 
 // ---- helpers ----------------------------------------------------------------
+
+/** The CLI child's env: the GUI's own, plus the API key injected into the child only (security model). */
+function childEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  const key = effectiveApiKey();
+  if (key) env.ANTHROPIC_API_KEY = key;
+  return env;
+}
 
 /** Read meta.projectName from a spec JSON; the log/state paths are keyed by it. */
 function readProjectName(specPath: string): string {
@@ -418,7 +462,7 @@ function summaryPathIfExists(projectDir: string): string | null {
 // running — an in-memory-only map would silently strand the process with no GUI-side kill path
 // short of re-launching a second instance via Run app.
 function launchedAppsPath(): string {
-  return join(genesisRoot(), 'logs', 'launched-apps.json');
+  return join(workspaceRoot(), 'logs', 'launched-apps.json');
 }
 
 function readLaunchedApps(): Record<string, number> {
@@ -431,7 +475,7 @@ function readLaunchedApps(): Record<string, number> {
 
 function writeLaunchedApps(apps: Record<string, number>): void {
   try {
-    mkdirSync(join(genesisRoot(), 'logs'), { recursive: true });
+    mkdirSync(join(workspaceRoot(), 'logs'), { recursive: true });
     writeFileSync(launchedAppsPath(), JSON.stringify(apps));
   } catch {
     /* best-effort — worst case Kill app just won't find the PID */

@@ -202,6 +202,21 @@ async function reloadLists(): Promise<void> {
   populateSelect($('seed-select') as HTMLSelectElement, seeds, t.seed.pick);
 }
 
+// A fresh install opens ready to Start with no API key: when nothing is chosen yet, preselect the
+// bundled FaceNote sample spec + its seed (the seed is what makes the seed stage key-free). Only
+// those exact files; anything else is left to the user. (ADR-014, changelog 134)
+function preselectSample(): void {
+  if (selectedSpec) return;
+  const spec = specs.findIndex((f) => f.name === 'project-spec.facenote.json' && f.source === 'fixtures');
+  if (spec < 0) return;
+  ($('spec-select') as HTMLSelectElement).value = String(spec);
+  onSpecChosen(specs[spec]);
+  const seed = seeds.findIndex((f) => f.name === 'facenote-rich-seed.json' && f.source === 'seeds');
+  if (selectedSeed || seed < 0) return;
+  ($('seed-select') as HTMLSelectElement).value = String(seed);
+  onSeedChosen(seeds[seed]);
+}
+
 function onSpecChosen(f: FileHandle | null): void {
   selectedSpec = f;
   $('spec-well').textContent = f ? `${f.name} (${formatBytes(f.size)})` : t.spec.none;
@@ -1229,6 +1244,7 @@ async function boot(): Promise<void> {
   starfield();
   setRunState('idle');
   await reloadLists();
+  preselectSample();
   lastFooterText = await gui.footerGet();
   applyFooterVisibility();
   // Boot splash (index.html #boot-splash, inline-styled so it paints before this file even

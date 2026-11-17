@@ -3,7 +3,7 @@ import type { RecentProject } from '@shared/ipc-types';
 // Pure parsing logic for the CLI's own logs/registry.json (Program.cs "RecordProjectRegistry").
 // Deliberately has ZERO import of './paths' (which pulls in Electron's `app`) so this file is
 // directly unit-testable under plain `node --test` — same reasoning as report.ts staying
-// Electron-free. recent-projects.ts is the thin filesystem/genesisRoot()-dependent wrapper.
+// Electron-free. recent-projects.ts is the thin filesystem/workspaceRoot()-dependent wrapper.
 
 interface RegistryRecord {
   ts: string;

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RecentProject } from '@shared/ipc-types';
-import { genesisRoot } from './paths.ts';
+import { workspaceRoot } from './paths.ts';
 import { parseRegistrySnapshot } from './registry-parser.ts';
 
 // Reads the CLI's own logs/registry.json (Program.cs "RecordProjectRegistry") — the GUI never
@@ -10,7 +10,7 @@ import { parseRegistrySnapshot } from './registry-parser.ts';
 // projects" rather than a thrown error, matching the CLI's own "registry is best-effort" stance.
 
 function registryPath(): string {
-  return join(genesisRoot(), 'logs', 'registry.json');
+  return join(workspaceRoot(), 'logs', 'registry.json');
 }
 
 /** All recorded projects, newest first. Empty array if the registry doesn't exist or is malformed. */

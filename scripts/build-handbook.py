@@ -50,7 +50,7 @@ PARTS: list[tuple[str, list[str]]] = [
         "docs/reference/spec-format.md",
         "docs/reference/file-map.md",
     ]),
-    ("How-to guides", ["docs/how-to/add-a-stage.md", "docs/how-to/add-a-template.md"]),
+    ("How-to guides", ["docs/how-to/add-a-stage.md", "docs/how-to/add-a-template.md", "docs/how-to/build-the-installer.md"]),
     ("Architecture decision records", None),  # filled from docs/adr/ below
 ]
 

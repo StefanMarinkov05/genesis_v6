@@ -2,10 +2,12 @@
 using System.CommandLine;
 using GenesisV6.Core.Agent;
 using GenesisV6.Core.Cli;
+using GenesisV6.Core.Diagnostics;
 using GenesisV6.Core.Llm;
 using GenesisV6.Core.Pipeline;
 using GenesisV6.Core.Spec;
 using GenesisV6.Core.Stages;
+using GenesisV6.Core.Util;
 using GenesisV6.Core.Variation;
 
 // dps-nn (ДПС-НН) - declarative ASP.NET MVC project generator. (internal assembly name: Genesis.Cli)
@@ -14,6 +16,7 @@ using GenesisV6.Core.Variation;
 //   dps-nn spec expand --spec project-spec.json
 //   dps-nn scaffold|emit-models|identity|emit-controllers-views|seed|verify|report --spec ...
 //   dps-nn run --all [--from <stage>] [--spec ...] [--out <dir>] [--image-pack <dir>] [--image-provider pexels|pixabay|picsum]
+//   dps-nn doctor                                                     (prerequisite check)
 //   dps-nn create --describe "<text>" | --describe-file <file> [--max-repairs 3] [--out <dir>]   (agent mode, ADR-013)
 // LLM mode: automatic when ANTHROPIC_API_KEY is set, else manual file contract (--resume to continue).
 // Models: Sonnet for spec draft/repair/review, Haiku for seed (LlmModels; DPS_NN_MODEL_SPEC/_SEED override).
@@ -33,6 +36,9 @@ var imagePackOpt = new Option<DirectoryInfo?>("--image-pack", "Local image direc
 var imageProviderOpt = new Option<string>("--image-provider", () => "pexels", "pexels | pixabay | picsum");
 var noInteractiveOpt = new Option<bool>("--no-interactive", "Never prompt; fail if a prompt would be required");
 var resumeOpt = new Option<bool>("--resume", "Continue after manually filling prompts/in/<stage>-response.json");
+
+// The installed self-contained exe has no `dotnet` parent to set DOTNET_ROOT (see DotnetHost).
+DotnetHost.EnsureDotnetRoot(Environment.GetEnvironmentVariable, Environment.SetEnvironmentVariable, OperatingSystem.IsWindows());
 
 var root = new RootCommand("dps-nn (ДПС-НН) - ASP.NET Core MVC project generator");
 root.AddGlobalOption(specOpt);
@@ -515,6 +521,24 @@ createCmd.SetHandler(async ctx =>
     catch (Exception ex) { LogGlobalError(ex); throw; }
 });
 root.AddCommand(createCmd);
+
+// ---- doctor: prerequisite check (also run by the GUI at startup) --------------
+// Exit 0 = everything a pipeline run needs is present (warnings allowed), 1 = something is missing.
+var doctorCmd = new Command("doctor", "Check the prerequisites (.NET SDK, dotnet-ef, scaffolder, LocalDB, API key) and print fixes");
+doctorCmd.SetHandler(async () =>
+{
+    string? root;
+    try { root = GenesisRoot(); } catch (InvalidOperationException) { root = null; }
+    var doctor = new Doctor(Doctor.RunProcessAsync, Environment.GetEnvironmentVariable,
+        OperatingSystem.IsWindows(), root, Directory.GetCurrentDirectory());
+    var checks = await doctor.RunAsync();
+    Console.WriteLine($"dps-nn {typeof(Doctor).Assembly.GetName().Version} - prerequisite check");
+    foreach (var line in Doctor.Format(checks)) Console.WriteLine(line);
+    var failed = checks.Count(c => c.Status == CheckStatus.Fail);
+    Console.WriteLine(failed == 0 ? "All required prerequisites are present." : $"{failed} required prerequisite(s) missing - see the fixes above.");
+    Environment.ExitCode = failed == 0 ? 0 : 1;
+});
+root.AddCommand(doctorCmd);
 
 static void WriteAgentReport(DirectoryInfo outDir, string description, string specPath, AgentResult result,
     List<UnsupportedRequest> unsupported)

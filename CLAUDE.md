@@ -21,7 +21,7 @@ Older sessions (1-21) live in `plan/state-archive.md`, split out to keep the aut
 |---|---|
 | Orienting for the first time | `README.md` → `docs/01-tutorial-genesis.md` for the full walkthrough |
 | Working on pipeline order / stages | `docs/reference/control-flow.md` (Mermaid diagram + stage table + verify-gate ordering) |
-| Asking *why* it is built this way | `docs/explanation/architecture-decisions.md` (synthesis, links each of the 14 `docs/adr/adr-*.md`) |
+| Asking *why* it is built this way | `docs/explanation/architecture-decisions.md` (synthesis, links each of the 15 `docs/adr/adr-*.md`) |
 | Touching `project-spec.json` shape | `spec.schema.json` (authoritative) + `docs/reference/spec-format.md` (concepts) |
 | Looking for what's open right now | `plan/tasks.md` (live queue) → `plan/handoff.md` (last session handoff) |
 | Looking for the v6 feature backlog (all shipped) | `plan/v6-task-breakdown.md` |
@@ -39,6 +39,7 @@ Older sessions (1-21) live in `plan/state-archive.md`, split out to keep the aut
 | Reworking image handling (cache, fallbacks, PFP) | `docs/explanation/image-pipeline.md` (+ ADR-011) |
 | Consolidating small admin models / adding filters | `docs/explanation/specifications-consolidation.md` (+ ADR-012) |
 | Working on agent mode (`dps-nn create`, description → spec → repair loop) | `docs/explanation/agent-mode.md` (+ ADR-013) |
+| Packaging the Windows installer, `dps-nn doctor`, install root vs workspace | `docs/how-to/build-the-installer.md` (+ ADR-014) |
 
 ## Critical rules (DO NOT)
 
@@ -86,7 +87,7 @@ ordering: `docs/reference/control-flow.md`. Stage implementations live in `src/G
 - `plan/` — `state.md` (session log), `decisions.md` (bug/decision history), `tasks.md` (live
   queue), `handoff.md` (last-session handoff), `v6-task-breakdown.md` (v6 backlog, all shipped),
   `dps-nn-6.5.0-spec.md` (modularization + GUI plan)
-- `docs/` — tutorial, `reference/`, `how-to/`, `explanation/`, `adr/` (14 ADRs)
+- `docs/` — tutorial, `reference/`, `how-to/`, `explanation/`, `adr/` (15 ADRs)
 - `logs/` — `registry.json` + per-project `actions.log.jsonl`, tracks every generation run
 - `prompts/out/schemas/` + `prompts/out/seeds/` — permanent archive of every completed
   generation's spec+seed (gitignored, local-only)

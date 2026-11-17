@@ -22,6 +22,10 @@ export function registerIpc(win: BrowserWindow): void {
     error: (e) => win.webContents.send(CH.onError, e),
   });
 
+  // Prerequisite report into the debug terminal once the renderer is listening (onLog is
+  // subscribed during renderer startup, before did-finish-load).
+  win.webContents.once('did-finish-load', () => runner.doctor());
+
   // ---- spec / seed input ----
   ipcMain.handle(CH.specList, () => listSpecs());
   ipcMain.handle(CH.specUpload, (_e, bytes: Uint8Array, name: string) => uploadSpec(bytes, name));

@@ -317,7 +317,9 @@ public sealed class SeedStage(LlmBridge llm, string? imagePackDir, string imageP
     {
         if (File.Exists(targetPath)) return; // idempotent within a single run
 
-        var cacheDir = Path.Combine(ctx.GenesisRoot, ".image-cache");
+        // Workspace (cwd), not GenesisRoot: an installed GenesisRoot is read-only (ADR-014). In the repo
+        // both are the repo root, so dev behaviour is unchanged.
+        var cacheDir = Path.Combine(Directory.GetCurrentDirectory(), ".image-cache");
         Directory.CreateDirectory(cacheDir);
         var cacheKey = $"{(imagePackDir is not null ? "pack" : imageProvider)}-{SlugifyKeyword(keyword)}.jpg";
         var cachePath = Path.Combine(cacheDir, cacheKey);

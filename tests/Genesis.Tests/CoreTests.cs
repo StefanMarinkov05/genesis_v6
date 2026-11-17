@@ -1422,8 +1422,18 @@ public class ParallelEmitTests
     public async Task Every_item_runs_under_a_bulgarian_worker_name()
     {
         var seen = new System.Collections.Concurrent.ConcurrentBag<string?>();
+        // Each item holds its lane until a second lane has picked up work. With instantly
+        // completing items, the first lane the thread pool starts could drain all 30 before
+        // another is scheduled - on a loaded or single-CPU machine it always did (30/30 under
+        // `taskset -c 0`, changelog 134). If the code ever regresses to one lane, this times out.
+        var secondLane = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var items = Enumerable.Range(0, 30)
-            .Select(_ => ("item", new Func<Task>(() => { seen.Add(ParallelEmit.CurrentWorker.Value); return Task.CompletedTask; })))
+            .Select(_ => ("item", new Func<Task>(async () =>
+            {
+                seen.Add(ParallelEmit.CurrentWorker.Value);
+                if (seen.Distinct().Count() > 1) secondLane.TrySetResult();
+                await secondLane.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            })))
             .ToList();
 
         await ParallelEmit.RunAsync(items);

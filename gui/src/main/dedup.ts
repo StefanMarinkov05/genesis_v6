@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DuplicateMatch, FileHandle } from '@shared/ipc-types';
-import { genesisRoot } from './paths';
+import { workspaceRoot } from './paths';
 
 // Dedup is entirely GUI-side and does NOT touch the headless CLI (ADR-010). It hashes
 // the (spec, seed) file contents and looks the pair up in a GUI-owned manifest. This
@@ -19,7 +19,7 @@ interface ManifestEntry {
 type Manifest = Record<string, ManifestEntry>;
 
 function manifestPath(): string {
-  const dir = join(genesisRoot(), 'logs');
+  const dir = join(workspaceRoot(), 'logs');
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return join(dir, 'gui-build-manifest.json');
 }

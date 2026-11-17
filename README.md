@@ -48,7 +48,19 @@ flowchart LR
   → [ADR-004](docs/adr/adr-004-variation-profile.md), [ADR-008](docs/adr/adr-008-design-overlay.md)
 - **Desktop GUI over the same CLI.** An Electron shell spawns the unchanged CLI and reconstructs
   live progress from its log — no second implementation of the pipeline. → [ADR-010](docs/adr/adr-010-gui-electron-cli-child.md)
-- **Documented decisions.** 14 ADRs, a Diátaxis docs tree, 190+ automated tests (.NET + GUI) in CI.
+- **Documented decisions.** 15 ADRs, a Diátaxis docs tree, 190+ automated tests (.NET + GUI) in CI.
+
+## Install (Windows)
+
+Download `DPS-NN-Setup-<version>.exe` from [Releases](https://github.com/StefanMarinkov05/genesis_v6/releases)
+and run it (it is unsigned — SmartScreen: *More info* → *Run anyway*). The installer brings the GUI
+and the generator; it cannot bring the .NET toolchain the generated apps are built with. On first
+launch the GUI checks for it and prints what's missing, with the command to fix it, in the debug
+terminal (**Debug** toggle) — the same report as `dps-nn doctor`. You need the first four rows of
+the prerequisites table below; Node.js is only for building from source.
+
+The FaceNote sample is preselected, so **Start** generates a complete app without an API key.
+Your generated projects and logs live in `Documents\DPS-NN\`; uninstalling never deletes them.
 
 ## Quick start (Windows, from source)
 
@@ -65,6 +77,8 @@ flowchart LR
 
 > An outdated `dotnet-ef` builds the generated project and *then* fails with "the specified
 > deps.json does not exist" — update it with `dotnet tool update -g dotnet-ef --version 10.0.*`.
+
+`dotnet run --project src/Genesis.Cli -- doctor` checks all of these and prints the fix for anything missing.
 
 **Build and test the generator** (or double-click `1-build-and-check.bat`)
 
@@ -135,7 +149,7 @@ design/               GUI themes, backgrounds, icon, music
 Start with the [tutorial](docs/01-tutorial-genesis.md). Then, by need:
 
 - **Reference** — [CLI](docs/reference/cli.md) · [pipeline & control flow](docs/reference/control-flow.md) · [spec format](docs/reference/spec-format.md) · [file map](docs/reference/file-map.md)
-- **Explanation** — [architecture decisions](docs/explanation/architecture-decisions.md) (indexes all 14 [ADRs](docs/adr/)) · [agent mode](docs/explanation/agent-mode.md) · [GUI architecture](docs/explanation/gui-architecture.md) · [image pipeline](docs/explanation/image-pipeline.md) · [techniques & traps](docs/explanation/techniques.md)
+- **Explanation** — [architecture decisions](docs/explanation/architecture-decisions.md) (indexes all 15 [ADRs](docs/adr/)) · [agent mode](docs/explanation/agent-mode.md) · [GUI architecture](docs/explanation/gui-architecture.md) · [image pipeline](docs/explanation/image-pipeline.md) · [techniques & traps](docs/explanation/techniques.md)
 - **How-to** — [add a stage](docs/how-to/add-a-stage.md) · [add a template](docs/how-to/add-a-template.md)
 
 The same docs are built into a single **Architecture Handbook PDF** by CI (`scripts/build-handbook.py`).

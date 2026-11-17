@@ -403,3 +403,13 @@ README rewritten as the public front page; CLI detail moved to new `docs/referen
 Handbook PDF from docs/ (mermaid-cli, pandoc 3.13, XeLaTeX/DejaVu) — artifact on docs changes,
 attached on release. Verified the key-free quick start (copy the bundled seed to prompts/in).
 Workflow not yet run (needs a push). Next: phase 4 installer + `dps-nn doctor`.
+
+## Session 35 (Opus: public-release prep, phase 4 - installer + doctor) - changelog 134
+`dps-nn doctor` (prerequisite check, GUI runs it at startup into the debug terminal); install
+root vs workspace split (ADR-014: read-only `resources\genesis` with self-contained `dps-nn.exe`,
+writable `Documents\DPS-NN` as CLI cwd); electron-builder NSIS config + `stage-genesis.mjs`;
+`release.yml` (tag → draft release with installer). Running the staged build found a real bug:
+global tools couldn't find a per-user .NET without `DOTNET_ROOT` → `DotnetHost` infers it. Flaky
+ParallelEmit test reproduced (30/30 on one CPU) and fixed. Packaged Linux build verified end to
+end over CDP up to the LocalDB stop. Not verified: the NSIS installer on Windows. Next: Windows
+dry run of `release.yml`, then phase 5 (lite mirror - ask first).

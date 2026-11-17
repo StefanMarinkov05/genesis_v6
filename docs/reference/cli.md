@@ -3,7 +3,10 @@
 
 **Diataxis type:** reference. **Source of truth:** the command tree in `src/Genesis.Cli/Program.cs`
 (`dotnet run --project src/Genesis.Cli -- <command> --help` prints the same options).
-Run from the repo root — `templates/` and `spec.schema.json` resolve relative to it.
+From a checkout, run from the repo root. The CLI reads `templates/` and `spec.schema.json` from
+its own folder first, then the current one, and writes `logs/`, `prompts/`, `out/` and
+`.image-cache/` to the current folder — so the installed `dps-nn.exe` works from any writable
+folder (the GUI uses `Documents\DPS-NN`; ADR-014).
 
 ## Commands
 
@@ -12,6 +15,7 @@ Run from the repo root — `templates/` and `spec.schema.json` resolve relative 
 | `run --all` | The whole pipeline for one spec: `spec-expand` → `scaffold` → … → `report`. Skips stages already done (resume). |
 | `run --all --from <stage>` | Force `<stage>` and everything after it to re-run. |
 | `create` | Agent mode (ADR-013): description → drafted spec → `run --all` → repair the spec on failure. See `docs/explanation/agent-mode.md`. |
+| `doctor` | Check the prerequisites — .NET 10 SDK, `dotnet-ef` 10.x, `dotnet-aspnet-codegenerator`, LocalDB, the templates, a writable workspace, the API key (warning only) — and print the fix for each gap. The GUI runs it at startup into its debug terminal. |
 | `spec build --notes <file>` | Draft a `project-spec.json` from free-form notes via the LLM (manual paste flow without a key). |
 | `spec expand` | Feature expansion + `$variation:` resolution → `project-spec.lock.json`. |
 | `scaffold`, `emit-models`, `identity`, `emit-controllers-views`, `seed`, `verify`, `report` | Run one stage on its own (debugging). |
@@ -38,7 +42,7 @@ to picsum without a key) and `--image-pack <dir>` (local images instead of downl
 | Code | Meaning |
 |---|---|
 | `0` | Success. |
-| `1` | A stage failed / the agent stopped (reason printed; agent writes `agent-report.json`). |
+| `1` | A stage failed / the agent stopped (reason printed; agent writes `agent-report.json`) / `doctor` found a missing prerequisite. |
 | `2` | Bad usage (`create` without a description or without `ANTHROPIC_API_KEY`). |
 | `3` | An LLM exchange is waiting for a manual response (ADR-005): paste into the printed `prompts/in/<stage>-response.json`, re-run with `--resume`. |
 
@@ -46,6 +50,7 @@ to picsum without a key) and `--image-pack <dir>` (local images instead of downl
 
 | Variable | Effect |
 |---|---|
+| `DOTNET_ROOT` | Where .NET lives, for the global tools the pipeline launches. Inferred from the `dotnet` on `PATH` when unset (the self-contained exe has no `dotnet` parent to set it). |
 | `ANTHROPIC_API_KEY` | Automatic LLM exchanges (else: manual file contract, exit 3). Required by `create`. |
 | `DPS_NN_MODEL_SPEC` / `DPS_NN_MODEL_SEED` | Override the models (defaults `claude-sonnet-5-5` / `claude-haiku-5-5`). |
 | `ANTHROPIC_BASE_URL` | Alternative API endpoint (proxy, test stub). |
