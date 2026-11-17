@@ -28,6 +28,7 @@ const api: GuiApi = {
 
   checkDuplicate: (spec, seed) => ipcRenderer.invoke(CH.checkDuplicate, spec, seed),
   buildStart: (spec, seed, opts) => ipcRenderer.invoke(CH.buildStart, spec, seed, opts),
+  buildCreate: (description) => ipcRenderer.invoke(CH.buildCreate, description),
   buildPause: (runId) => ipcRenderer.invoke(CH.buildPause, runId),
   buildResume: (runId) => ipcRenderer.invoke(CH.buildResume, runId),
   buildStop: (runId) => ipcRenderer.invoke(CH.buildStop, runId),

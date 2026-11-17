@@ -25,6 +25,11 @@ flowchart LR
   verify --> report["report"]
 ```
 
+**Agent mode** (`dps-nn create`, ADR-013) wraps this whole flow in a loop: an LLM drafts the
+spec from a free-text description, the pipeline runs, and on failure the LLM repairs the *spec*
+(never the generated code) and the run starts over — bounded, with environment errors stopping
+it immediately. The loop's own diagram lives in `docs/explanation/agent-mode.md`.
+
 ## Stage table
 
 | # | Stage | Emits | Build gate | Checkpoint key |

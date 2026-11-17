@@ -127,6 +127,17 @@ admin listing rather than bespoke per page — the rename from "Характер
 → **[ADR-012](../adr/adr-012-specifications-consolidation-and-filters.md)** (full design:
 `docs/explanation/specifications-consolidation.md`)
 
+## Why the agent repairs the spec, never the generated code
+
+`dps-nn create` closes the loop: the model drafts the spec, the generator runs, and failures go
+back to the model — but its only lever is the spec. Patching generated code would turn every app
+into a one-off the templates can no longer fix and would cost a read of the whole codebase per
+repair; editing the spec keeps every app pure template output under the same verify gate. What
+the spec cannot express is recorded as `meta.unsupportedRequests` — the backlog for extending the
+generator once, for everyone. Machine problems (SDK, tools, LocalDB, API key) stop the loop at once.
+→ **[ADR-013](../adr/adr-013-agent-mode-spec-only-repair.md)** (full design:
+`docs/explanation/agent-mode.md`)
+
 ## Reading further
 
 For the pipeline's mechanics (not the why) see `docs/reference/control-flow.md`. For hard-won

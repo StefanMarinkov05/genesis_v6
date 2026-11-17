@@ -8,6 +8,8 @@ export const de: Strings = {
   toolbar: { debug: 'Nerd-Modus', settings: 'Einstellungen', reopen: 'Letztes Ergebnis', recent: 'Letzte Projekte' },
   spec: {
     heading: 'Spezifikation',
+    describe: 'Oder beschreiben Sie das Projekt in eigenen Worten — Claude schreibt die Spezifikation, generiert und repariert sie…',
+    create: '✦ Aus Beschreibung generieren',
     upload: 'Hochladen…',
     pick: 'Auswählen…',
     none: 'Keine Spezifikation ausgewählt',
@@ -120,6 +122,8 @@ export const de: Strings = {
     noKey: 'Kein API-Schlüssel gesetzt',
     settingsSaved: 'Einstellungen gespeichert',
     selectSpecFirst: 'Zuerst eine Spezifikation wählen',
+    describeFirst: 'Zuerst das Projekt beschreiben',
+    agentStarted: 'Agent gestartet',
     couldNotPlayTrack: 'Titel konnte nicht abgespielt werden',
     noLocalTracks: 'Keine lokalen Titel gefunden',
     noLocalTracksHint: 'MP3/MP4-Dateien in music/ ablegen',

@@ -166,11 +166,15 @@ public sealed class StateStore(string path)
 
 public sealed class PipelineRunner(IReadOnlyList<IStage> stages)
 {
+    /// <summary>Name of the stage that threw in the last RunAllAsync, else null (agent mode reads it).</summary>
+    public string? FailedStage { get; private set; }
+
     public static readonly string[] CanonicalOrder =
         ["spec-build", "spec-expand", "scaffold", "emit-models", "identity", "emit-controllers-views", "seed", "verify", "report"];
 
     public async Task RunAllAsync(StageContext ctx, string? fromStage = null, CancellationToken ct = default)
     {
+        FailedStage = null;
         var started = fromStage is null;
         var totalSw = Stopwatch.StartNew();
         var timings = new List<(string Stage, long Ms, string Outcome)>();
@@ -202,6 +206,7 @@ public sealed class PipelineRunner(IReadOnlyList<IStage> stages)
             catch (Exception ex)
             {
                 sw.Stop();
+                FailedStage = stage.Name;
                 timings.Add((stage.Name, sw.ElapsedMilliseconds, "FAILED"));
                 AppendLog(logPath, stage.Name, "error", sw.ElapsedMilliseconds, ex.Message);
                 // Full detail (not just ex.Message) - so it's still there in logs/ even after

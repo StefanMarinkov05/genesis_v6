@@ -23,7 +23,8 @@ Per ADR-001, a spec passes through three files with three different owners:
 - **`meta`** — project identity (`projectName`, `solutionName`, `rootNamespace`), `language`
   (`"bg"` drives the whole Bulgarian-UI requirement and the verify English-leak gate;
   anything else opts out of both), `database`, `style` (Bootstrap theme + design-overlay preset,
-  ADR-008), `routing`.
+  ADR-008), `routing`. `unsupportedRequests` (`[{ request, reason }]`, optional) is written by
+  agent mode (ADR-013) for asks the generator cannot express; the pipeline ignores it.
 - **`conventions`** — cross-cutting toggles resolved once for the whole project: `timestamps`
   (emits the `AuditableEntity` base, ADR-007) and `deleteBehavior` (`"soft"` wires the EF global
   query filter, also ADR-007).

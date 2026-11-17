@@ -241,6 +241,35 @@ async function doStart(): Promise<void> {
   ($('toolbar-reopen') as HTMLButtonElement).disabled = true;
 }
 
+/**
+ * Agent mode (ADR-013): hand the description to `create`; the CLI drafts the spec, runs the
+ * pipeline and repairs the spec on failure. Same progress/done/error events as a normal run.
+ */
+async function doCreate(): Promise<void> {
+  if (runState === 'running' || runState === 'paused' || runState === 'awaiting-llm') return;
+  const text = ($('spec-describe') as HTMLTextAreaElement).value.trim();
+  if (!text) {
+    toast('warning', t.toast.describeFirst);
+    return;
+  }
+  if (!(await gui.settingsGet()).apiKeySet) {
+    toast('warning', t.toast.noKey);
+    return;
+  }
+  term.clear();
+  setProgress(0, TOTAL_STAGES, '…', 'running');
+  try {
+    runId = await gui.buildCreate(text);
+  } catch (e) {
+    toast('danger', t.toast.failed, (e as Error).message);
+    return;
+  }
+  setRunState('running');
+  $('settings-sheet').setAttribute('data-open', 'false'); // the terminal is where the agent narrates
+  toast('info', t.toast.agentStarted);
+  ($('toolbar-reopen') as HTMLButtonElement).disabled = true;
+}
+
 async function doStop(): Promise<void> {
   if (!runId) return;
   await gui.buildStop(runId);
@@ -483,6 +512,8 @@ function applyStrings(): void {
   $('spec-well').textContent = t.spec.none;
   $('seed-well').textContent = t.seed.none;
   $('spec-upload').textContent = t.spec.upload;
+  ($('spec-describe') as HTMLTextAreaElement).placeholder = t.spec.describe;
+  $('spec-create').textContent = t.spec.create;
   $('seed-upload').textContent = t.seed.upload;
   ($('seed-claude') as HTMLButtonElement).title = t.seed.claudeHint;
   $('run-start').textContent = t.run.start;
@@ -985,6 +1016,7 @@ function wire(): void {
     onSeedChosen(v === '' ? null : seeds[Number(v)]);
   });
   $('spec-upload').addEventListener('click', () => void uploadFile('spec'));
+  $('spec-create').addEventListener('click', () => void doCreate());
   $('seed-upload').addEventListener('click', () => void uploadFile('seed'));
 
   // run controls

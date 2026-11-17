@@ -40,6 +40,7 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(CH.buildStart, (_e, spec: FileHandle, seed: FileHandle | null) =>
     runner.start(spec, seed),
   );
+  ipcMain.handle(CH.buildCreate, (_e, description: string) => runner.create(description));
   ipcMain.handle(CH.buildPause, (_e, runId: string) => runner.pause(runId));
   ipcMain.handle(CH.buildResume, (_e, runId: string) => runner.resume(runId));
   ipcMain.handle(CH.buildStop, (_e, runId: string) => runner.stop(runId));

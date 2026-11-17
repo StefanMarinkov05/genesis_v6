@@ -14,6 +14,7 @@ import { genesisRoot } from './paths';
 import { effectiveApiKey, effectiveGenesisCommand, effectiveOutDir } from './settings';
 import { recordBuild } from './dedup';
 import { parseCompletionBanner } from './report';
+import { agentStopLine, tryReadProjectName } from './agent-helpers';
 
 // This module owns the CLI child-process lifecycle. It embodies the inviolable rule from
 // docs/explanation/gui-architecture.md: it spawns ONE `run --all` and controls its
@@ -47,6 +48,10 @@ export interface RunnerEvents {
 
 interface RunState {
   runId: RunId;
+  /** 'run' = `run --all` on a chosen spec; 'create' = agent mode, spec drafted by the CLI. */
+  mode: 'run' | 'create';
+  /** create mode only: the description file handed to `create --describe-file`. */
+  descriptionPath: string | null;
   spec: FileHandle;
   seed: FileHandle | null;
   child: ChildProcess | null;
@@ -89,6 +94,8 @@ export class GenesisRunner {
 
     const st: RunState = {
       runId: randomUUID(),
+      mode: 'run',
+      descriptionPath: null,
       spec,
       seed,
       child: null,
@@ -109,6 +116,47 @@ export class GenesisRunner {
     st.index = st.baselineDone;
     this.runs.set(st.runId, st);
 
+    this.spawnChild(st);
+    return st.runId;
+  }
+
+  /**
+   * Agent mode: `create --describe-file <file> --out <out>/agent_<stamp>`. The project name (and
+   * so the log to tail) is unknown until the CLI has drafted the spec, and a repair round may
+   * rename it — readTail re-syncs from the spec file on every poll (syncAgentProject).
+   */
+  create(description: string): RunId {
+    const text = description.trim();
+    if (!text) throw new Error('The project description is empty.');
+    if (!effectiveApiKey()) throw new Error('Agent mode needs an Anthropic API key (Settings).');
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    const outDirAbs = join(effectiveOutDir(), `agent_${stamp}`);
+    mkdirSync(outDirAbs, { recursive: true });
+    const descriptionPath = join(outDirAbs, 'description.txt');
+    writeFileSync(descriptionPath, text, 'utf8');
+
+    const st: RunState = {
+      runId: randomUUID(),
+      mode: 'create',
+      descriptionPath,
+      spec: { path: join(outDirAbs, 'project-spec.json'), name: 'project-spec.json', source: 'uploaded', size: 0 },
+      seed: null,
+      child: null,
+      projectName: '',
+      outDirAbs,
+      projectDir: outDirAbs,
+      logPath: join(outDirAbs, 'dps-nn.log.jsonl'), // placeholder until the spec names the project
+      logOffset: 0,
+      baselineDone: 0,
+      index: 0,
+      stdout: '',
+      stderrTail: [],
+      lastStartedStage: null,
+      tailTimer: null,
+      stopping: false,
+      report: null,
+    };
+    this.runs.set(st.runId, st);
     this.spawnChild(st);
     return st.runId;
   }
@@ -154,16 +202,10 @@ export class GenesisRunner {
   private spawnChild(st: RunState): void {
     const root = genesisRoot();
     const { program, baseArgs } = effectiveGenesisCommand();
-    const args = [
-      ...baseArgs,
-      'run',
-      '--all',
-      '--spec',
-      st.spec.path,
-      '--out',
-      st.outDirAbs,
-      '--no-interactive',
-    ];
+    const args =
+      st.mode === 'create'
+        ? [...baseArgs, 'create', '--describe-file', st.descriptionPath!, '--out', st.outDirAbs, '--no-interactive']
+        : [...baseArgs, 'run', '--all', '--spec', st.spec.path, '--out', st.outDirAbs, '--no-interactive'];
 
     const env = { ...process.env };
     const key = effectiveApiKey();
@@ -211,9 +253,26 @@ export class GenesisRunner {
     }
   }
 
+  /** create mode: point the tail at the project the CLI's spec currently names. */
+  private syncAgentProject(st: RunState): void {
+    const name = tryReadProjectName(st.spec.path);
+    if (!name || name === st.projectName) return;
+    st.projectName = name;
+    st.projectDir = join(st.outDirAbs, name);
+    st.logPath = join(st.projectDir, 'dps-nn.log.jsonl');
+    st.logOffset = 0;
+    st.index = 0;
+  }
+
   private readTail(st: RunState): void {
+    if (st.mode === 'create') this.syncAgentProject(st);
     if (!existsSync(st.logPath)) return;
     const size = statSync(st.logPath).size;
+    if (size < st.logOffset) {
+      // The log was recreated (agent repair round wipes and regenerates the project): start over.
+      st.logOffset = 0;
+      st.index = 0;
+    }
     if (size <= st.logOffset) return;
     const buf = readFileSync(st.logPath);
     const fresh = buf.subarray(st.logOffset, size).toString('utf8');
@@ -266,7 +325,7 @@ export class GenesisRunner {
       const report = parseCompletionBanner(st.stdout, st.projectDir);
       report.summaryPath = summaryPathIfExists(st.projectDir);
       st.report = report;
-      recordBuild(st.spec, st.seed, {
+      if (existsSync(st.spec.path)) recordBuild(st.spec, st.seed, {
         project: st.projectName,
         outDir: st.projectDir,
         ts: new Date().toISOString(),
@@ -286,8 +345,11 @@ export class GenesisRunner {
 
     // Any other non-zero (or null on kill we didn't initiate) is a genuine failure.
     const stage = st.lastStartedStage ?? null;
-    const message = st.stderrTail.slice(-6).join('\n') || `Genesis exited with code ${code}`;
-    recordBuild(st.spec, st.seed, {
+    const message =
+      (st.mode === 'create' ? agentStopLine(st.stdout) : null) ||
+      st.stderrTail.slice(-6).join('\n') ||
+      `Genesis exited with code ${code}`;
+    if (st.mode === 'run') recordBuild(st.spec, st.seed, {
       project: st.projectName,
       outDir: st.projectDir,
       ts: new Date().toISOString(),
@@ -301,15 +363,11 @@ export class GenesisRunner {
 
 /** Read meta.projectName from a spec JSON; the log/state paths are keyed by it. */
 function readProjectName(specPath: string): string {
-  try {
-    const doc = JSON.parse(readFileSync(specPath, 'utf8'));
-    const name = doc?.meta?.projectName;
-    if (typeof name === 'string' && name.length) return name;
-  } catch {
-    /* fall through */
-  }
+  const name = tryReadProjectName(specPath);
+  if (name) return name;
   throw new Error(`Spec at ${specPath} has no meta.projectName — cannot locate its output.`);
 }
+
 
 /** Copy the chosen seed to prompts/in/seed-response.json and clear any stale seed-data.json. */
 function placeSeed(root: string, seedPath: string, projectDir: string): void {

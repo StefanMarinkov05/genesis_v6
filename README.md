@@ -46,6 +46,10 @@ dotnet test
 cd <repo root>   # templates/ + spec.schema.json must be in cwd (or install as a tool)
 dotnet run --project src/Genesis.Cli -- run --all --spec fixtures/project-spec.facenote.json --out out
 
+# or let the agent write the spec from a description (needs ANTHROPIC_API_KEY;
+# it repairs the spec on failure - see docs/explanation/agent-mode.md)
+dotnet run --project src/Genesis.Cli -- create --describe "Онлайн книжарница с автори, отзиви и поръчки"
+
 # optional env vars
 #   ANTHROPIC_API_KEY  - automatic LLM mode (else: manual file contract, exit code 3 = paste needed)
 #   PEXELS_API_KEY / PIXABAY_API_KEY - real stock photos (else picsum fallback)
@@ -60,7 +64,7 @@ Each stage is idempotent and resumable; state lives in `out/<Project>/plan/state
 
 ## LLM stages (spec build, expand review, seed)
 
-File contract per exchange: `prompts/out/<stage>-request.md` / `prompts/in/<stage>-response.json`. With `ANTHROPIC_API_KEY` set the exchange is automatic (claude-haiku-4-5); without it, the tool exits with code 3 and instructions to paste manually, then re-run. Responses are schema-validated with up to 3 retries; everything is hash-logged to `dps-nn.log.jsonl`.
+File contract per exchange: `prompts/out/<stage>-request.md` / `prompts/in/<stage>-response.json`. With `ANTHROPIC_API_KEY` set the exchange is automatic (Sonnet for spec exchanges, Haiku for seed; override with `DPS_NN_MODEL_SPEC` / `DPS_NN_MODEL_SEED`); without it, the tool exits with code 3 and instructions to paste manually, then re-run. Responses are schema-validated with up to 3 retries; everything is hash-logged to `dps-nn.log.jsonl`.
 
 ## Multiple specs / multiple seeds
 
@@ -91,9 +95,10 @@ Two separate `.bat` files at the repo root, matching two separate concerns:
 - `docs/reference/control-flow.md` - the 9-stage pipeline, Mermaid diagram + stage table + verify-gate ordering
 - `docs/reference/spec-format.md` - `project-spec.json` concepts (authoritative shape: `spec.schema.json`)
 - `docs/reference/file-map.md` - generated per-file purpose map (`scripts/generate-file-map.ps1`)
-- `docs/explanation/architecture-decisions.md` - *why* it's built this way, indexing all 11 ADRs
+- `docs/explanation/architecture-decisions.md` - *why* it's built this way, indexing all 14 ADRs
+- `docs/explanation/agent-mode.md` - `dps-nn create`: description → spec → run → repair loop
 - `docs/explanation/techniques.md` - hard-won Scriban/Razor/EF patterns and traps
-- `docs/adr/` - the architecture decision records (ADR-001..010, + 002b)
+- `docs/adr/` - the architecture decision records (ADR-001..013, + 002b)
 - `docs/how-to/` - task guides (adding a stage, adding a template)
 - `docs/01-tutorial-genesis.md` - one-time end-to-end walkthrough
 - `plan/` - living state + decision log (context-handoff format); `plan/task-a-doc-architecture.md`

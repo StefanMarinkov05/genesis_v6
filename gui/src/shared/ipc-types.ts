@@ -111,6 +111,12 @@ export interface GuiApi {
   // ---- dedup + run lifecycle ----
   checkDuplicate(spec: FileHandle, seed: FileHandle | null): Promise<DuplicateMatch | null>;
   buildStart(spec: FileHandle, seed: FileHandle | null, opts?: { force?: boolean }): Promise<RunId>;
+  /**
+   * Agent mode (ADR-013): spawns `create --describe-file` — the CLI drafts the spec from the
+   * description, runs the pipeline and repairs the spec on failure. Needs the API key in settings.
+   * Same lifecycle/push events as buildStart; the project name is learned once the spec exists.
+   */
+  buildCreate(description: string): Promise<RunId>;
   buildPause(runId: RunId): Promise<void>; // phase 2
   buildResume(runId: RunId): Promise<void>; // phase 2
   buildStop(runId: RunId): Promise<void>;
@@ -171,6 +177,7 @@ export const CH = {
   seedGenerateWithClaude: 'seed:generateWithClaude',
   checkDuplicate: 'build:checkDuplicate',
   buildStart: 'build:start',
+  buildCreate: 'build:create',
   buildPause: 'build:pause',
   buildResume: 'build:resume',
   buildStop: 'build:stop',

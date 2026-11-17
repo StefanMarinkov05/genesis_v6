@@ -714,6 +714,9 @@ select {
 .field .hint { font-size: var(--scale-caption); color: var(--text-muted); line-height: 1.4; }
 .field input { background: var(--inset); border: 1px solid var(--border-hairline); border-radius: 0.375rem; padding: 0.4375rem 0.5625rem; color: var(--text-primary); font-family: var(--font-technical); font-size: var(--scale-mono); }
 .field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Agent-mode description box (ADR-013): same tokens as .field input, sized for prose. */
+#spec-describe { width: 100%; box-sizing: border-box; resize: vertical; min-height: 4.5rem; margin-top: 0.5rem; background: var(--inset); border: 1px solid var(--border-hairline); border-radius: 0.375rem; padding: 0.4375rem 0.5625rem; color: var(--text-primary); font-family: var(--font-technical); font-size: var(--scale-mono); }
+#spec-describe:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .key-state { font-size: var(--scale-caption); color: var(--state-start); }
 .key-state.unset { color: var(--state-warning); }
 

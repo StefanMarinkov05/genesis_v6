@@ -8,6 +8,8 @@ export const tr: Strings = {
   toolbar: { debug: 'Inek modu', settings: 'Ayarlar', reopen: 'Son sonuç', recent: 'Son projeler' },
   spec: {
     heading: 'Spesifikasyon',
+    describe: 'Ya da projeyi kendi sözlerinizle anlatın — Claude spesifikasyonu yazar, sonra üretir ve onarır…',
+    create: '✦ Açıklamadan üret',
     upload: 'Yükle…',
     pick: 'Seç…',
     none: 'Spesifikasyon seçilmedi',
@@ -120,6 +122,8 @@ export const tr: Strings = {
     noKey: 'API anahtarı tanımlı değil',
     settingsSaved: 'Ayarlar kaydedildi',
     selectSpecFirst: 'Önce bir spesifikasyon seçin',
+    describeFirst: 'Önce projeyi anlatın',
+    agentStarted: 'Ajan başladı',
     couldNotPlayTrack: 'Parça oynatılamadı',
     noLocalTracks: 'Yerel parça bulunamadı',
     noLocalTracksHint: 'music/ klasörüne MP3/MP4 dosyaları koyun',

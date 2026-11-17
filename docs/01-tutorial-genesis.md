@@ -43,7 +43,7 @@ it starts, and the run ends with a stage-timings summary.
 
 **If it exits with code 3**, an LLM stage (usually `seed`) is waiting for a response and printed
 instructions. Two ways forward:
-- Set `ANTHROPIC_API_KEY` before running, and it resolves automatically next time (`claude-haiku-4-5`).
+- Set `ANTHROPIC_API_KEY` before running, and it resolves automatically next time (Haiku for seed data, Sonnet for spec exchanges).
 - Or follow the printed instructions to paste a response into the indicated
   `prompts/in/<stage>-response.json`, then re-run the same command with `--resume`.
 

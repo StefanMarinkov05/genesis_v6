@@ -9,6 +9,8 @@ export const bg: Strings = {
   toolbar: { debug: 'Режим "Нърд"', settings: 'Настройки', reopen: 'Последен резултат', recent: 'Последни проекти' },
   spec: {
     heading: 'Спецификация',
+    describe: 'Или опишете проекта със свои думи — Claude пише спецификацията, после генерира и поправя…',
+    create: '✦ Генерирай от описание',
     upload: 'Качи…',
     pick: 'Избери…',
     none: 'Няма избрана спецификация',
@@ -121,6 +123,8 @@ export const bg: Strings = {
     noKey: 'Няма зададен API ключ',
     settingsSaved: 'Настройките са запазени',
     selectSpecFirst: 'Първо изберете спецификация',
+    describeFirst: 'Първо опишете проекта',
+    agentStarted: 'Агентът стартира',
     couldNotPlayTrack: 'Записът не можа да се пусне',
     noLocalTracks: 'Няма намерени записи',
     noLocalTracksHint: 'Пуснете MP3/MP4 файлове в music/',

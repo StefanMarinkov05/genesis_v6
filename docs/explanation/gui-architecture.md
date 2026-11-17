@@ -79,6 +79,10 @@ both implement.
 - `seed:generateWithClaude(specHandle)` → **main-process** Anthropic call, writes `prompts/in/seed-response.json`
 - `build:checkDuplicate(specHandle, seedHandle)` → prior completed build for this (spec+seed) hash, or null
 - `build:start(specHandle, seedHandle, outDir)` → spawns the CLI, returns a `runId`
+- `build:create(description)` → agent mode (ADR-013): writes the text to
+  `<out>/agent_<stamp>/description.txt`, spawns `create --describe-file`, returns a `runId`. Same
+  push events as `build:start`; the runner learns the project name by polling the drafted spec
+  (`gui/src/main/agent-helpers.ts`). Rejects when the description is empty or no API key is set.
 - `build:pause(runId)` / `build:resume(runId)` / `build:stop(runId)`
 - `settings:get()` / `settings:set(patch)` → theme, language, genesis-command, api-key
   (**write-only** from the renderer's view — the key is never returned)
@@ -180,6 +184,10 @@ The "Claude" *seed* button specifically is the same mechanism scoped to the seed
 design (model choice, prompt, cost) is Opus Task 3 — this doc only fixes *where* it runs (main) and
 *what* it writes (the seed file the CLI already reads).
 
+**Agent mode** (`build:create`) needs the key — every repair round is an exchange, so the paste
+flow does not apply. Details: `docs/explanation/agent-mode.md`. Agent runs are not recorded in
+the dedup manifest (there is no chosen spec+seed pair to hash).
+
 ## Dedup (entirely GUI-side, CLI untouched)
 
 The 6.5.0 spec wants "(spec, seed) already built → skip". This lives wholly in the main process and
@@ -259,15 +267,22 @@ Task 1 must leave the right seams; it does not choose colours.
 ## Folder layout
 
 ```
-gui/                      # the Electron app — sibling to src/, never contains pipeline logic
-  package.json
-  electron/
-    main.ts               # spawns CLI, owns fs + key, tails log, dedup, IPC handlers
-    preload.ts            # the typed contextBridge surface (the IPC contract above)
-    genesis-runner.ts     # child-process lifecycle: start/pause/resume/stop, progress, exit-3
-  src/                    # renderer web UI (framework TBD by the impl task)
-    screens/  themes/  i18n/  components/
-  ...
+gui/                         # the Electron app — sibling to src/, never contains pipeline logic
+  package.json               # electron-vite build, node --test runner (Node >= 23.6 for .ts tests)
+  src/
+    main/                    # main process: owns fs, the API key, the CLI child
+      index.ts               #   window + app lifecycle
+      ipc.ts                 #   IPC handlers (the contract above)
+      genesis-runner.ts      #   child lifecycle: start/create/pause/resume/stop, log tail, exit codes
+      agent-helpers.ts       #   agent mode: project-name polling, stop-reason parsing (Electron-free)
+      settings.ts paths.ts   #   persisted settings, Genesis-root discovery
+      dedup.ts report.ts     #   (spec+seed) dedup manifest, completion-banner parser
+      recent-projects.ts registry-parser.ts files.ts footer.ts
+      music.ts music-parser.ts media-protocol.ts
+    preload/index.ts         # the typed contextBridge surface
+    shared/ipc-types.ts      # channel names + payload types shared by main/preload/renderer
+    renderer/                # the UI: index.html, main.ts, state.ts, themes.ts, styles.css, i18n/
+  test/                      # node --test suites for the Electron-free modules
 ```
 
 `images/` (logo, flags, wallpapers) and `design/` (`design-specs.md`, `footer.md`) already exist at

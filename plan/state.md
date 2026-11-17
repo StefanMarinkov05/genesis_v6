@@ -385,3 +385,15 @@ context.md/tasks.md moved under plan/, stale GUI claims in CLAUDE.md fixed. Buil
 Found for phase 3: rich-seed images live in gitignored `.image-cache/` (9.6M, 645 files) — a fresh
 clone/installed copy won't have them. New idea raised mid-phase: autonomous agent mode (paste a
 description → LLM writes spec+seed → generator → verify → repair loop) and LaTeX/PUML PDF docs.
+## Session 34 (Opus: public-release prep, phase 2 - agent mode) - changelog 132
+Stefan asked to treat Genesis as an AI agent: paste a description → LLM writes the spec → generator
+runs → failures go back to the LLM. Decided with Stefan: repair edits the SPEC only, never generated
+code (ADR-013 — keeps every app template output; capability gaps go to `meta.unsupportedRequests`
+as the generator backlog instead); Sonnet 5.5 spec/repair, Haiku 5.5 seed; GUI gets ONE textarea +
+button in the existing Specification panel, nothing else. PDF handbook = Markdown+Mermaid via
+pandoc in CI (phase 3). Revised phases: 1 hygiene ✅ → 2 agent ✅ → 3 README + handbook PDF →
+4 installer + `doctor` → 5 lite mirror → 6 visibility (ask first). Built `dps-nn create`
+(AgentRunner + LlmSpecAuthor), `build:create` IPC, docs (ADR-013, agent-mode.md). No API key on
+this machine: e2e verified against a local stub via `ANTHROPIC_BASE_URL`. Found: the old
+`fixtures/seed-response.facenote.json` no longer matches the seed schema; GUI tests need Node ≥ 23.6. Fixed a pre-existing bug: Main returned InvokeAsync's 0 over
+Environment.ExitCode, so exit 2/3 never reached the shell (the GUI's exit-3 awaiting-LLM path never fired).

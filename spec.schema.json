@@ -104,6 +104,28 @@
               "type": "string"
             }
           }
+        },
+        "unsupportedRequests": {
+          "type": "array",
+          "description": "Capability-gap report: things the project description asked for that this spec cannot express with the generator's current features. Written by the agent (`dps-nn create`), surfaced in the report stage's project-summary.json and at the end of the run. Never affects generation.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request",
+              "reason"
+            ],
+            "properties": {
+              "request": {
+                "type": "string",
+                "description": "What was asked for, in the description's own words."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Why the spec cannot express it (which generator capability is missing)."
+              }
+            }
+          }
         }
       }
     },
