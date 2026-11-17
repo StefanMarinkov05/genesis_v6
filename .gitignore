@@ -33,3 +33,7 @@ design/music/songs-audio/*
 design/music/concerts-audio/*
 design/music/concerts-video/*
 !design/music/*/.gitkeep
+
+# Handbook PDF build (scripts/build-handbook.py): intermediates + output
+/build/
+/dist/

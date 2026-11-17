@@ -42,7 +42,9 @@ relative to it. Watch the console: each of the nine stages prints a `=== stage: 
 it starts, and the run ends with a stage-timings summary.
 
 **If it exits with code 3**, an LLM stage (usually `seed`) is waiting for a response and printed
-instructions. Two ways forward:
+instructions. Three ways forward:
+- Use the bundled FaceNote seed: copy `seeds/facenote-rich-seed.json` to
+  `prompts/in/seed-response.json` and re-run with `--resume` — no key needed.
 - Set `ANTHROPIC_API_KEY` before running, and it resolves automatically next time (Haiku for seed data, Sonnet for spec exchanges).
 - Or follow the printed instructions to paste a response into the indicated
   `prompts/in/<stage>-response.json`, then re-run the same command with `--resume`.

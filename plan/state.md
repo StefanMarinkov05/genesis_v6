@@ -397,3 +397,9 @@ pandoc in CI (phase 3). Revised phases: 1 hygiene ✅ → 2 agent ✅ → 3 READ
 this machine: e2e verified against a local stub via `ANTHROPIC_BASE_URL`. Found: the old
 `fixtures/seed-response.facenote.json` no longer matches the seed schema; GUI tests need Node ≥ 23.6. Fixed a pre-existing bug: Main returned InvokeAsync's 0 over
 Environment.ExitCode, so exit 2/3 never reached the shell (the GUI's exit-3 awaiting-LLM path never fired).
+## Session 34b (Opus: public-release prep, phase 3 - README + handbook PDF) - changelog 133
+README rewritten as the public front page; CLI detail moved to new `docs/reference/cli.md`;
+`scripts/build-handbook.py` + `.github/workflows/handbook.yml` build a ~60-page Architecture
+Handbook PDF from docs/ (mermaid-cli, pandoc 3.13, XeLaTeX/DejaVu) — artifact on docs changes,
+attached on release. Verified the key-free quick start (copy the bundled seed to prompts/in).
+Workflow not yet run (needs a push). Next: phase 4 installer + `dps-nn doctor`.
