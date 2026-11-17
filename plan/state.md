@@ -413,3 +413,10 @@ global tools couldn't find a per-user .NET without `DOTNET_ROOT` → `DotnetHost
 ParallelEmit test reproduced (30/30 on one CPU) and fixed. Packaged Linux build verified end to
 end over CDP up to the LocalDB stop. Not verified: the NSIS installer on Windows. Next: Windows
 dry run of `release.yml`, then phase 5 (lite mirror - ask first).
+
+## Session 35b (Opus: public-release prep, phase 5 - lite mirror) - changelog 135
+`lite-mirror.yml` + `scripts/lite-tree.py`: the music-free lite edition is rebuilt from every push
+to master / v* tag and pushed to `StefanMarinkov05/genesis_v6-lite` via a deploy key; fresh linear
+history, tags mirrored so the lite repo builds the Lite installer. Rehearsed against a local bare
+repo. Lite repo + deploy key not created yet (outward step, awaiting Stefan). Next: create the lite
+repo, push, Windows dry run of release.yml, then phase 6 (visibility flip - ask first).

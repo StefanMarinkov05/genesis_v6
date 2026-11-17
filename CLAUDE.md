@@ -40,6 +40,7 @@ Older sessions (1-21) live in `plan/state-archive.md`, split out to keep the aut
 | Consolidating small admin models / adding filters | `docs/explanation/specifications-consolidation.md` (+ ADR-012) |
 | Working on agent mode (`dps-nn create`, description → spec → repair loop) | `docs/explanation/agent-mode.md` (+ ADR-013) |
 | Packaging the Windows installer, `dps-nn doctor`, install root vs workspace | `docs/how-to/build-the-installer.md` (+ ADR-014) |
+| The music-free lite mirror repo (`lite-mirror.yml`, `scripts/lite-tree.py`) | `docs/how-to/mirror-the-lite-edition.md` |
 
 ## Critical rules (DO NOT)
 
