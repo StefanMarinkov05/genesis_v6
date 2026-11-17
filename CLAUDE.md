@@ -4,8 +4,8 @@
 DPS-NN (ASCII `dps-nn`, display `ДПС-НН`) is a C# ASP.NET Core 10 MVC + EF Core application
 generator. Its core module, **Genesis** (`src/Genesis.*` — internal namespaces stay `Genesis.*`
 by design, see ADR-009), is a headless .NET CLI that turns a `project-spec.json` into a complete,
-seeded, Bulgarian-UI web app through a resumable 9-stage pipeline. A GUI is planned (see
-`plan/dps-nn-6.5.0-spec.md`) but does not exist yet — Genesis is CLI-only today.
+seeded, Bulgarian-UI web app through a resumable 9-stage pipeline. An Electron GUI (`gui/`) wraps
+the CLI as a child process (ADR-010, `docs/explanation/gui-architecture.md`).
 
 > This file is a router. It holds almost no content — it points to where the content lives.
 
@@ -23,7 +23,8 @@ Older sessions (1-21) live in `plan/state-archive.md`, split out to keep the aut
 | Working on pipeline order / stages | `docs/reference/control-flow.md` (Mermaid diagram + stage table + verify-gate ordering) |
 | Asking *why* it is built this way | `docs/explanation/architecture-decisions.md` (synthesis, links each of the 13 `docs/adr/adr-*.md`) |
 | Touching `project-spec.json` shape | `spec.schema.json` (authoritative) + `docs/reference/spec-format.md` (concepts) |
-| Looking for the current priority / work queue | `plan/v6-task-breakdown.md` |
+| Looking for what's open right now | `plan/tasks.md` (live queue) → `plan/handoff.md` (last session handoff) |
+| Looking for the v6 feature backlog (all shipped) | `plan/v6-task-breakdown.md` |
 | Tracking a specific bug/decision's history | `plan/decisions.md` |
 | About to write a changelog entry | `changelogs/README.md` (numbering + template convention) |
 | Wondering what a source file does | `docs/reference/file-map.md` (generated — regenerate via `scripts/generate-file-map.ps1`) |
@@ -78,21 +79,19 @@ ordering: `docs/reference/control-flow.md`. Stage implementations live in `src/G
 - `fixtures/` — the canonical dev spec (`project-spec.facenote.json` + its `-en.json` counterpart)
 - `spec.schema.json` — the spec's JSON Schema (source of truth for shape/validation)
 - `changelogs/` — one file per change, see `changelogs/README.md` for the convention
-- `plan/` — `state.md` (session log), `decisions.md` (bug/decision history), `v6-task-breakdown.md`
-  (current priority), `dps-nn-6.5.0-spec.md` (modularization + GUI plan, not yet started)
-- `docs/` — `architecture.md`, `adr/` (13 ADRs), `explanation/gui-architecture.md`
+- `gui/` — Electron shell over the CLI (`npm run dev`; main/preload/renderer/shared under `gui/src/`)
+- `plan/` — `state.md` (session log), `decisions.md` (bug/decision history), `tasks.md` (live
+  queue), `handoff.md` (last-session handoff), `v6-task-breakdown.md` (v6 backlog, all shipped),
+  `dps-nn-6.5.0-spec.md` (modularization + GUI plan)
+- `docs/` — tutorial, `reference/`, `how-to/`, `explanation/`, `adr/` (13 ADRs)
 - `logs/` — `registry.json` + per-project `actions.log.jsonl`, tracks every generation run
 - `prompts/out/schemas/` + `prompts/out/seeds/` — permanent archive of every completed
   generation's spec+seed (gitignored, local-only)
 - `out/` — generated output, disposable, gitignored — **never hand-edit anything under here**
 - `1-build-and-check.bat` / `2-generate.bat` — SDK check+build+test / fresh pipeline run
-- `images/` — GUI asset drop folder (logo, flags, wallpapers), empty until Task B of the 6.5.0 spec
-- `design/design-specs.md` / `design/footer.md` — GUI theme spec + runtime footer content,
-  both placeholders until Task B/Stefan fill them in
+- `images/` — default avatar/product SVGs used by generated apps
+- `design/` — GUI theme spec, footer content, backgrounds, app icon, music (LFS)
+- `LICENSE` (MIT), `VERSION` (single version source, stamped into the CLI via `src/Directory.Build.props`)
 
-**Not yet built** (planned in `plan/dps-nn-6.5.0-spec.md`): the Electron GUI itself (Task B) and
-its supporting content. Task 0's literal "move everything under `./DPS-NN/`" was deliberately
-**not** done — this repo root already *is* ДПС-НН/DPS-NN, and a full physical repositioning would
-touch every path reference in the build scripts, this file, and IDE configs for no benefit until a
-`gui/` sibling actually needs the separation (see ADR-009 for the same reasoning applied to a
-different rename). Only the `images/`/`design/` folders were created at the current root.
+Task 0's literal "move everything under `./DPS-NN/`" was deliberately **not** done — this repo
+root already *is* ДПС-НН/DPS-NN (see ADR-009 for the same reasoning applied to a different rename).

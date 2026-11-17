@@ -1,11 +1,9 @@
 # images/
 
-Asset drop folder for the DPS-NN GUI (`plan/dps-nn-6.5.0-spec.md`, Task B). Empty for now — git
-doesn't track empty directories, so this file exists to keep the folder present in the tree.
+Generic image fallbacks copied into every generated app's `wwwroot/images/` by the scaffold stage
+(`BuildStages.cs`, ADR-011 / `docs/explanation/image-pipeline.md`):
 
-Expected contents, added as the GUI work reaches them:
-- `dps-nn.png` — the app logo (Stefan uploads manually)
-- flag PNGs for the language picker (EN, BG, DE, RU, Romani, + a placeholder for the Standard
-  Galactic Alphabet "language")
-- per-project wallpapers for the generation/loading screen
-- test/placeholder images used until real assets are supplied (per 6.5.0 spec section B.0)
+- `avatar-default.svg` — shown when a user has no profile picture
+- `product-default.svg` — shown when a product has no image (also the seed stage's last-resort fallback)
+
+GUI assets (logo, icon, backgrounds) live under `design/`, not here.

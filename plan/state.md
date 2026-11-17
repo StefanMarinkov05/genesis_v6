@@ -20,8 +20,8 @@ every archived session is preserved verbatim. Check the archive before assuming 
 the v5/early-v6 era ("first real compile", the dotnet-ef race-condition saga, the interactive
 picker, etc.) isn't already solved - it almost certainly is.
 
-## Next (open items, see tasks.md for the live/current picture)
-`tasks.md` is the authoritative open-task list (kept current, unlike this historical log). As
+## Next (open items, see plan/tasks.md for the live/current picture)
+`plan/tasks.md` is the authoritative open-task list (kept current, unlike this historical log). As
 of Session 31: GUI phase 3a (4 more themes incl. the SGA glyph font), phase-3 wallpapers/loading
 animation/recent-projects sheet, and phase-2 Pause/Resume UI are the open Sonnet-tier GUI items.
 `docs/explanation/gui-architecture.md` and `design/design-specs.md` are the GUI contracts.
@@ -375,3 +375,13 @@ inline (~340 lines instead of 744). plan/decisions.md left untouched (separate l
 "read first" list in the same blocking way... actually it IS also read-first per CLAUDE.md - flagged
 as a candidate for the same treatment if it keeps growing, not touched this session since it's
 currently 431 lines, well under state.md's pre-split size).
+## Session 33 (Opus: public-release prep, phase 1 hygiene) - changelog 131
+Stefan plans a public GitHub release: full repo (with LFS music) for students + a music-free lite
+mirror for recruiters; Windows-only installer from Releases; MIT; UI is off-limits ("the code is the
+professional part"). Phases: 1 hygiene → 2 README/docs → 3 installer (+ `dps-nn doctor`) → 4 lite
+mirror → 5 visibility flip (ask first). Phase 1 done on branch `release/public-prep`: LICENSE, CI
+branch fix (was `main`, never ran), VERSION single-sourced via `src/Directory.Build.props`,
+context.md/tasks.md moved under plan/, stale GUI claims in CLAUDE.md fixed. Build 0/0, tests 121/121.
+Found for phase 3: rich-seed images live in gitignored `.image-cache/` (9.6M, 645 files) — a fresh
+clone/installed copy won't have them. New idea raised mid-phase: autonomous agent mode (paste a
+description → LLM writes spec+seed → generator → verify → repair loop) and LaTeX/PUML PDF docs.
