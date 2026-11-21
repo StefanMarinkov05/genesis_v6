@@ -27,8 +27,9 @@ author approved Tier 1 + 2 and rejected Tier 3 (one `workspace/` folder): `promp
 - `/dist/` removed from `.gitignore`: the built handbook PDFs are tracked in the full repo.
   `/build/` (intermediates) stays ignored. The PDFs are ordinary git blobs (~7 MB now), not LFS.
 - `scripts/lite-tree.py`: the lite edition gets the English handbook only — drops
-  `docs/handbook/{bg,de,trump,trump-bg}/` and every `dist/` PDF except `dps-nn-handbook-v2.pdf`
-  and `dps-nn-handbook.pdf`. The build scripts (which carry the LaTeX header/cover/filters) stay.
+  `docs/handbook/{bg,de,trump,trump-bg}/` and every `dist/` PDF except `dps-nn-handbook-v2.pdf`.
+  The first-edition `dps-nn-handbook.pdf` is not committed at all (author: keep only edition 2);
+  CI's `handbook.yml` still builds it as a release asset. The build scripts (which carry the LaTeX header/cover/filters) stay.
 
 **Also:** finished changelog 141's doc sweep, covering the stale preset/verify lines flagged by the
 other session: en 01, 15, 24, 25 and de 15, 24, 25.
