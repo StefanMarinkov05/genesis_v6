@@ -12,7 +12,7 @@ using Xunit;
 namespace Genesis.Tests;
 
 // Paths are relative to the test output dir - the csproj copies fixtures/, templates/,
-// feature-templates/ and spec.schema.json next to the test binaries.
+// templates/features/ and spec.schema.json next to the test binaries.
 public static class Paths
 {
     public static readonly string Schema = "spec.schema.json";
@@ -814,7 +814,7 @@ public class TemplateEmissionTests
     [Fact]
     public void Orders_feature_template_has_receiver_and_address_fields()
     {
-        var json = File.ReadAllText(Path.Combine("feature-templates", "orders.json"));
+        var json = File.ReadAllText(Path.Combine("templates", "features", "orders.json"));
         Assert.Contains("ReceiverName", json);
         Assert.Contains("DeliveryAddress", json);
         Assert.Contains("Получател", json);           // Bulgarian displayName
@@ -986,7 +986,7 @@ public class TemplateEmissionTests
     }
 
     // A5: "Спецификации" consolidation - hand-built minimal spec (not the raw fixture, which has
-    // no isLookup/Review models until spec-expand injects them from feature-templates, and no
+    // no isLookup/Review models until spec-expand injects them from templates/features, and no
     // dependency on the gitignored *.lock.json). Covers all three tab flavours in one render:
     // isSpecification (Brand, CRUD tab reusing its scaffolded controller), isLookup (CartItem,
     // read-only + relation/user filters), and Feedbacks (Review, read-only + product/user/rating
@@ -1403,7 +1403,7 @@ public class CartFeatureExpansionTests : IDisposable
         var spec = loader.Load(specPath);
         var ctx = new StageContext(spec, VariationResolver.Resolve(spec), _dir, ".",
             new StateStore(Path.Combine(_dir, "state.json")), TextWriter.Null);
-        new SpecExpandStage(loader, specPath, lockPath, "feature-templates", null, _ => "n")
+        new SpecExpandStage(loader, specPath, lockPath, Path.Combine("templates", "features"), null, _ => "n")
             .RunAsync(ctx).GetAwaiter().GetResult();
         return System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(lockPath))!.AsObject();
     }
@@ -1440,9 +1440,9 @@ public class CartFeatureExpansionTests : IDisposable
     [Fact]
     public void Cart_and_orders_fragments_define_the_same_CartItem()
     {
-        var cart = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText("feature-templates/cart.json"))!["models"]!.AsArray()
+        var cart = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText("templates/features/cart.json"))!["models"]!.AsArray()
             .First(m => m!["name"]!.GetValue<string>() == "CartItem");
-        var orders = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText("feature-templates/orders.json"))!["models"]!.AsArray()
+        var orders = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText("templates/features/orders.json"))!["models"]!.AsArray()
             .First(m => m!["name"]!.GetValue<string>() == "CartItem");
         Assert.True(System.Text.Json.Nodes.JsonNode.DeepEquals(cart, orders),
             "cart.json and orders.json must define an identical CartItem, or enabling both conflicts");

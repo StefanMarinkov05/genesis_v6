@@ -67,7 +67,7 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
         var node = JsonNode.Parse(await File.ReadAllTextAsync(specPath, ct))!.AsObject();
 
         // 1. Deterministic feature expansion: each enabled feature merges its
-        //    models/controllers/views fragments from feature-templates/{name}.json.
+        //    models/controllers/views fragments from templates/features/{name}.json.
         foreach (var (feature, cfg) in spec.Features)
         {
             if (!cfg.TryGetProperty("enabled", out var en) || !en.GetBoolean()) continue;
