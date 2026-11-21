@@ -157,19 +157,32 @@ public sealed class SpecExpandStage(SpecLoader loader, string specPath, string l
             ? m.GetString()!
             : spec.Models.First(x => x.Images is not null).Name;
 
-    /// <summary>Array-append merge for models/controllers; views.pages appended; name-collisions fail loud.</summary>
+    /// <summary>
+    /// Array-append merge for models/dtos/controllers; views.pages appended. A name collision with
+    /// an IDENTICAL definition is skipped - two features may share a model (cart and orders both
+    /// bring CartItem, changelog 141). A collision with a DIFFERENT definition still fails loud:
+    /// silently keeping one of two shapes would hide the conflict until emit or runtime.
+    /// </summary>
     internal static void MergeFragment(JsonObject spec, JsonObject fragment, string feature, JsonElement cfg, StageContext? ctx)
     {
         foreach (var section in new[] { "models", "dtos", "controllers" })
         {
             if (fragment[section] is not JsonArray add) continue;
             var target = spec[section]?.AsArray() ?? (JsonArray)(spec[section] = new JsonArray())!.AsArray();
-            var existing = target.Select(t => t?["name"]?.GetValue<string>()).ToHashSet();
             foreach (var item in add.ToList())
             {
                 var name = item?["name"]?.GetValue<string>();
-                if (existing.Contains(name))
-                    throw new InvalidOperationException($"Feature '{feature}' injects duplicate {section} entry '{name}'.");
+                var same = target.FirstOrDefault(t => t?["name"]?.GetValue<string>() == name);
+                if (same is not null)
+                {
+                    if (JsonNode.DeepEquals(same, item))
+                    {
+                        ctx?.Info($"feature '{feature}': {section} entry '{name}' already merged (identical) - skipped");
+                        continue;
+                    }
+                    throw new InvalidOperationException(
+                        $"Feature '{feature}' injects duplicate {section} entry '{name}' with a different definition.");
+                }
                 item!.Parent!.AsArray().Remove(item);
                 target.Add(item);
             }
