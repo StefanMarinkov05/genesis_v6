@@ -57,7 +57,7 @@ Die vollständige Politik, einschließlich dessen, was „fertig“ für eine Ä
 |---|---|---|
 | build-and-test | Windows, jeder Push/PR zu master | `dotnet build` + `dotnet test` |
 | gui-test | Windows | Typecheck, Build aller drei Ziele, `node --test` |
-| `handbook.yml` | Doku-Änderungen, Releases, manuell | die erste Ausgabe dieses Buches (aus `docs/` zusammengesetzt) baut; bei einem Release wird sie angehängt. Diese Ausgabe wird lokal mit `scripts/build-handbook2.py` gebaut |
+| `handbook.yml` | Doku-Änderungen, Releases, manuell | dieses Buch auf Englisch (`scripts/build-handbook2.py --lang en`) baut; bei einem Release wird es angehängt. Die Übersetzungen werden lokal gebaut |
 | release | Tags | der Windows-Installer entsteht |
 | lite-mirror | master und Tags | die musikfreie Ausgabe wird gebaut |
 
