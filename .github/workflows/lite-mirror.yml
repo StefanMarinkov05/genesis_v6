@@ -43,7 +43,7 @@ jobs:
           git -C lite rev-parse -q --verify HEAD >/dev/null || git -C lite symbolic-ref HEAD refs/heads/master
 
       - name: Rebuild the lite tree
-        run: python3 full/scripts/lite-tree.py lite --lite-repo "$LITE_REPO"
+        run: python3 full/scripts/lite-tree.py lite
 
       - name: Commit and push
         working-directory: lite
